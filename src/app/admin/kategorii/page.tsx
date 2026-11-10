@@ -1,8 +1,9 @@
 import { asc, sql } from "drizzle-orm";
 import { ChevronDown } from "lucide-react";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { CategoryForm } from "@/components/admin/CategoryForm";
-import { Panel, PageTitle } from "@/components/admin/bits";
+import { AdminSkeleton, PageTitle, Panel } from "@/components/admin/bits";
 import { DeleteButton } from "@/components/admin/RowActions";
 import { CategoryIcon } from "@/components/ui";
 import { db } from "@/db";
@@ -12,7 +13,7 @@ import { TONES } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Категории" };
 
-export default async function AdminCategories() {
+async function AdminCategories() {
   await requireAdmin();
   const [all, counts] = await Promise.all([
     db.select().from(categories).orderBy(asc(categories.sort), asc(categories.id)),
@@ -68,5 +69,13 @@ export default async function AdminCategories() {
         ))}
       </div>
     </>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<AdminSkeleton />}>
+      <AdminCategories />
+    </Suspense>
   );
 }

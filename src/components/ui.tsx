@@ -99,8 +99,8 @@ export function Logo({ className = "", light = false }: { className?: string; li
       className={`group/logo inline-flex items-center transition-transform duration-300 hover:scale-[1.02] ${className}`}
     >
       <svg
-        viewBox="0 0 264 54"
-        className="h-10 w-auto sm:h-11"
+        viewBox="0 0 264 56"
+        className="h-8 w-auto min-[400px]:h-10 sm:h-11"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden
@@ -120,7 +120,7 @@ export function Logo({ className = "", light = false }: { className?: string; li
         </defs>
 
         {/* Unified Brand Symbol (Stylized Boutique Bag & Awning Fusion) */}
-        <g transform="translate(6, 4)">
+        <g transform="translate(6, 5)">
           <path
             d="M14 15 C14 8 19 3 25 3 C31 3 36 8 36 15"
             stroke={light ? "#38BDF8" : "url(#logoCyanGrad)"}
@@ -156,7 +156,7 @@ export function Logo({ className = "", light = false }: { className?: string; li
           {/* Main Word: ПОРЪЧКИ — Perfectly centered in this panel */}
           <text
             x="95"
-            y="22"
+            y="21"
             textAnchor="middle"
             fontFamily="'Unbounded', var(--font-unbounded), -apple-system, system-ui, sans-serif"
             fontWeight="900"
@@ -167,31 +167,36 @@ export function Logo({ className = "", light = false }: { className?: string; li
             ПОРЪЧКИ
           </text>
 
-          {/* Subtitle Panel Capsule — Symmetrically centered around x=95 (no icons on the ends) */}
-          <g transform="translate(6, 28)">
+          {/* Subtitle Panel Capsule — Symmetrically enlarged and centered */}
+          <g transform="translate(-1, 26)">
             <rect
               x="0"
               y="0"
-              width="178"
-              height="18"
-              rx="9"
+              width="192"
+              height="22"
+              rx="11"
               fill={light ? "#FFFFFF" : "#0284C7"}
-              fillOpacity={light ? "0.15" : "0.09"}
+              fillOpacity={light ? "0.15" : "0.08"}
               stroke={light ? "#38BDF8" : "#0284C7"}
-              strokeWidth="1.2"
-              strokeOpacity={light ? "0.5" : "0.28"}
+              strokeWidth="1.3"
+              strokeOpacity={light ? "0.45" : "0.25"}
             />
             <text
-              x="89"
-              y="12.5"
+              x="96"
+              y="14.8"
               textAnchor="middle"
               fontFamily="'Onest', var(--font-onest), -apple-system, system-ui, sans-serif"
               fontWeight="800"
-              fontSize="9.5"
-              fill={light ? "#7DD3FC" : "#0284C7"}
-              letterSpacing="1.4"
+              fontSize="10"
+              letterSpacing="1.2"
             >
-              ЗА МАЛКИ И ГОЛЕМИ
+              <tspan fill={light ? "#E2E8F0" : "#475569"}>ЗА </tspan>
+              <tspan fill="#FF4D6D" fontWeight="900">М</tspan>
+              <tspan fill="#F59E0B" fontWeight="900">А</tspan>
+              <tspan fill="#10B981" fontWeight="900">Л</tspan>
+              <tspan fill="#06B6D4" fontWeight="900">К</tspan>
+              <tspan fill="#8B5CF6" fontWeight="900">И</tspan>
+              <tspan fill={light ? "#E2E8F0" : "#334155"}> И ГОЛЕМИ</tspan>
             </text>
           </g>
         </g>

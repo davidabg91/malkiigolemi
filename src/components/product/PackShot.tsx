@@ -286,8 +286,9 @@ export function ProductVisual({
   className?: string;
 }) {
   if (product.image) {
+    // Multiply blends a studio photo's white backdrop into the tinted card behind it.
     // eslint-disable-next-line @next/next/no-img-element -- admin uploads are served as-is
-    return <img src={product.image} alt={product.name} loading="lazy" className={`${className ?? ""} object-contain`} />;
+    return <img src={product.image} alt={product.name} loading="lazy" className={`${className ?? ""} object-contain mix-blend-multiply`} />;
   }
   return <PackShot pack={product.pack} color={product.color} label={product.brand} className={className} title={product.name} />;
 }

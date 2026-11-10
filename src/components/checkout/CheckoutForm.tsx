@@ -101,7 +101,7 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
             <div className="sm:col-span-2">
               <Field label="Име и фамилия" name="name" required autoComplete="name" defaultValue={defaults.name} error={errors.name} />
             </div>
-            <Field label="Телефон" name="phone" type="tel" required autoComplete="tel" inputMode="tel" placeholder="0888 123 456" defaultValue={defaults.phone} error={errors.phone} />
+            <Field label="Телефон" name="phone" type="tel" required autoComplete="tel" inputMode="tel" placeholder="+359 88 637 8751" defaultValue={defaults.phone} error={errors.phone} />
             <Field label="Имейл" name="email" type="email" required autoComplete="email" defaultValue={defaults.email} error={errors.email} />
           </div>
         </fieldset>

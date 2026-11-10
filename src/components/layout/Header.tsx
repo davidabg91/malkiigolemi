@@ -12,14 +12,16 @@ export async function Header() {
         <div className="container-shop flex h-9 items-center justify-between text-[0.8rem] font-medium">
           <p className="flex items-center gap-2">
             <Truck className="h-4 w-4 text-cyan-400" aria-hidden />
-            <span>Безплатна доставка за поръчки над 60 €</span>
+            <span className="whitespace-nowrap">
+              Безплатна доставка <span className="hidden sm:inline">за поръчки </span>над 60 €
+            </span>
           </p>
           <a
             href={site.facebookUrl}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Официална Facebook група на Поръчки за малки и големи"
-            className="flex items-center gap-1.5 font-semibold text-cyan-300 transition hover:text-white"
+            className="flex items-center gap-1.5 whitespace-nowrap font-semibold text-cyan-300 transition hover:text-white"
           >
             <FacebookIcon className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Нашата общност:</span>

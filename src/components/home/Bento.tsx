@@ -10,7 +10,135 @@ function plural(n: number) {
   return n === 1 ? "продукт" : "продукта";
 }
 
-/** Three overlapping packs anchored to the bottom-right corner of a tile. */
+interface ShowcaseItem {
+  src: string;
+  alt: string;
+  className: string;
+}
+
+const CATEGORY_SHOWCASES: Record<string, ShowcaseItem[]> = {
+  hrani: [
+    {
+      src: "/dececco-isolated.png",
+      alt: "De Cecco Спагети",
+      className: "bottom-[6%] right-[36%] h-[66%] w-auto -rotate-12 group-hover:-translate-x-2 group-hover:-rotate-[16deg]",
+    },
+    {
+      src: "/food-isolated.png",
+      alt: "Гурме паста с босилек",
+      className: "-bottom-[3%] -right-[3%] h-[66%] w-auto rotate-3 group-hover:translate-x-1 group-hover:rotate-6 group-hover:scale-105",
+    },
+  ],
+  "kafe-i-chai": [
+    {
+      src: "/kafe-2.png",
+      alt: "Illy Espresso кафе",
+      className: "bottom-[6%] right-[34%] h-[52%] w-auto -rotate-10 group-hover:-translate-x-2 group-hover:-rotate-[14deg]",
+    },
+    {
+      src: "/kafe-1.png",
+      alt: "Lavazza Qualità Oro кафе",
+      className: "-bottom-[2%] -right-[2%] h-[72%] w-auto rotate-6 group-hover:translate-x-1 group-hover:rotate-[10deg] group-hover:scale-105",
+    },
+  ],
+  napitki: [
+    {
+      src: "/napitki-juice.png",
+      alt: "Натурален портокалов фреш с плодове",
+      className: "bottom-[2%] right-[52%] h-[54%] w-auto -rotate-6 group-hover:-translate-x-3 group-hover:-rotate-[10deg]",
+    },
+    {
+      src: "/napitki-evian.png",
+      alt: "Evian натурална минерална вода",
+      className: "bottom-[4%] right-[35%] h-[68%] w-auto rotate-3 group-hover:-translate-y-2 group-hover:rotate-6",
+    },
+    {
+      src: "/napitki-1.png",
+      alt: "San Pellegrino газирана вода",
+      className: "bottom-[1%] right-[18%] h-[72%] w-auto -rotate-6 group-hover:-translate-x-1 group-hover:-rotate-[10deg]",
+    },
+    {
+      src: "/napitki-2.png",
+      alt: "Coca-Cola Classic бутилка",
+      className: "-bottom-[3%] -right-[1%] h-[78%] w-auto rotate-8 group-hover:translate-x-2 group-hover:rotate-[12deg] group-hover:scale-105",
+    },
+  ],
+  "pochistvane-i-prane": [
+    {
+      src: "/pochistvane-1.png",
+      alt: "Ariel All-in-1 Pods капсули",
+      className: "bottom-[6%] right-[32%] h-[52%] w-auto -rotate-8 group-hover:-translate-x-2 group-hover:-rotate-[12deg]",
+    },
+    {
+      src: "/pochistvane-2.png",
+      alt: "Lenor Gold Orchid омекотител",
+      className: "-bottom-[2%] -right-[2%] h-[74%] w-auto rotate-6 group-hover:translate-x-1 group-hover:rotate-[10deg] group-hover:scale-105",
+    },
+  ],
+  kozmetika: [
+    {
+      src: "/kozmetika-1.png",
+      alt: "Nivea Creme крем",
+      className: "bottom-[6%] right-[38%] h-[50%] w-auto -rotate-12 group-hover:-translate-x-2 group-hover:-rotate-[16deg]",
+    },
+    {
+      src: "/kozmetika-2.png",
+      alt: "L'Oréal Revitalift серум",
+      className: "-bottom-[2%] -right-[1%] h-[70%] w-auto rotate-6 group-hover:translate-x-1 group-hover:rotate-[10deg] group-hover:scale-105",
+    },
+  ],
+  "bebe-i-dete": [
+    {
+      src: "/bebe-1.png",
+      alt: "Pampers Premium Care пелени",
+      className: "bottom-[5%] right-[32%] h-[58%] w-auto -rotate-8 group-hover:-translate-x-2 group-hover:-rotate-[12deg]",
+    },
+    {
+      src: "/bebe-2.png",
+      alt: "Hipp Organic бебешко пюре",
+      className: "-bottom-[1%] -right-[1%] h-[60%] w-auto rotate-6 group-hover:translate-x-1 group-hover:rotate-[10deg] group-hover:scale-105",
+    },
+  ],
+  "dom-i-ofis": [
+    {
+      src: "/dom-2.png",
+      alt: "Moleskine тефтер и Parker химикалка",
+      className: "bottom-[5%] right-[32%] h-[58%] w-auto -rotate-8 group-hover:-translate-x-2 group-hover:-rotate-[12deg]",
+    },
+    {
+      src: "/dom-1.png",
+      alt: "Yankee Candle ароматна свещ",
+      className: "-bottom-[2%] -right-[1%] h-[68%] w-auto rotate-4 group-hover:translate-x-1 group-hover:rotate-[8deg] group-hover:scale-105",
+    },
+  ],
+};
+
+/** Category showcase art with realistic 3D isolated brand products */
+function CategoryArt({ slug, deep }: { slug: string; deep: string }) {
+  const items = CATEGORY_SHOWCASES[slug];
+  const fly = "absolute drop-shadow-[0_16px_20px_rgb(20_38_28/0.24)] transition-transform duration-500 ease-out-soft";
+
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+      <span
+        className="absolute -bottom-[30%] -right-[12%] aspect-square w-[80%] rounded-full opacity-65 transition-transform duration-700 ease-out-soft group-hover:scale-110"
+        style={{ background: deep }}
+      />
+      {items?.map((item, i) => (
+        <img
+          key={i}
+          src={item.src}
+          alt={item.alt}
+          className={`${fly} ${item.className} object-contain`}
+          loading="lazy"
+          decoding="async"
+        />
+      ))}
+    </div>
+  );
+}
+
+/** Fallback three overlapping packs anchored to the bottom-right corner of a tile. */
 function TileArt({ products, deep }: { products: ProductCardData[]; deep: string }) {
   const [a, b, c] = products;
   const fly = "absolute drop-shadow-[0_14px_14px_rgb(20_38_28/0.18)] transition-transform duration-500 ease-out-soft";
@@ -45,28 +173,16 @@ function CategoryTile({
   index: number;
 }) {
   const tone = TONES[category.tone] ?? TONES.cream;
+  const hasShowcase = Boolean(CATEGORY_SHOWCASES[category.slug]);
+
   return (
     <Link
       href={`/kategoria/${category.slug}`}
       className={`group relative isolate min-h-44 animate-rise overflow-hidden rounded-tile p-5 transition-shadow duration-300 hover:shadow-lift sm:p-6 ${area}`}
       style={{ background: tone.bg, color: tone.ink, animationDelay: `${80 + index * 60}ms` }}
     >
-      {category.slug === "hrani" ? (
-        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-          <span
-            className="absolute -bottom-[30%] -right-[12%] aspect-square w-[85%] rounded-full opacity-65 transition-transform duration-700 ease-out-soft group-hover:scale-110"
-            style={{ background: tone.deep }}
-          />
-          <div className="absolute -bottom-3 -right-3 h-[90%] w-[66%] overflow-hidden rounded-2xl border-2 border-white/70 shadow-lift rotate-2 transition-transform duration-500 ease-out-soft group-hover:rotate-4 group-hover:scale-105">
-            <Image
-              src="/food-magazine.jpg"
-              alt="Храни — кулинарно списание"
-              fill
-              className="object-cover object-center"
-              sizes="320px"
-            />
-          </div>
-        </div>
+      {hasShowcase ? (
+        <CategoryArt slug={category.slug} deep={tone.deep} />
       ) : (
         <TileArt products={products} deep={tone.deep} />
       )}

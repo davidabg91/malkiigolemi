@@ -31,10 +31,10 @@ function useLockScroll(locked: boolean) {
   }, [locked]);
 }
 
-function CountBadge({ n }: { n: number }) {
+function CountBadge({ n, className = "-right-0.5 -top-0.5" }: { n: number; className?: string }) {
   if (n <= 0) return null;
   return (
-    <span className="absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-tomato px-1 text-[0.68rem] font-bold text-white">
+    <span className={`absolute grid h-5 min-w-5 place-items-center rounded-full bg-tomato px-1 text-[0.68rem] font-bold text-white shadow-sm pointer-events-none ${className}`}>
       {n > 99 ? "99+" : n}
     </span>
   );
@@ -114,9 +114,9 @@ export function HeaderClient({ tree }: { tree: MenuCategory[] }) {
               className="relative ml-1 inline-flex h-12 items-center gap-2.5 rounded-full bg-lime pl-4 pr-4 font-semibold text-ink transition hover:bg-lime-deep sm:pr-5"
               aria-label={`Количка, ${count} продукта`}
             >
-              <span className="relative">
+              <span className="relative inline-flex">
                 <ShoppingBag className="h-[22px] w-[22px]" strokeWidth={1.75} />
-                <CountBadge n={count} />
+                <CountBadge n={count} className="-right-2.5 -top-2.5" />
               </span>
               <span className="hidden text-sm tabular-nums sm:inline">{formatPrice(subtotal)}</span>
             </button>
