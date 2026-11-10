@@ -1,13 +1,13 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import { and, eq } from "drizzle-orm";
-import { refresh } from "next/cache";
+import { and, eq, sql } from "drizzle-orm";
+import { refresh, updateTag } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
-import { orderItems, orders, users } from "@/db/schema";
+import { orderItems, orders, products, users } from "@/db/schema";
 import { createSession, getSession, tooManyAttempts } from "@/lib/auth";
-import { getLiveCards, type ProductCardData } from "@/lib/queries";
+import { CATALOG_TAG, getLiveCards, type ProductCardData } from "@/lib/queries";
 import { DELIVERY_METHODS } from "@/lib/site";
 
 export type AccountFormState = { ok?: boolean; error?: string; fieldErrors?: Record<string, string> } | undefined;
@@ -174,4 +174,64 @@ export async function reorder(orderId: number): Promise<ReorderResult> {
     items.push({ ...p, qty });
   }
   return { ok: true, items, missing, reduced };
+}
+
+export type CancelOrderResult = { ok: boolean; error?: string };
+
+/** Allows a customer to cancel an unfulfilled order (new or confirmed) directly from their profile. */
+export async function cancelOrder(orderId: number): Promise<CancelOrderResult> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "Сесията ти е изтекла. Влез отново." };
+
+  const [order] = await db
+    .select()
+    .from(orders)
+    .where(and(eq(orders.id, orderId), eq(orders.userId, session.uid)))
+    .limit(1);
+
+  if (!order) return { ok: false, error: "Поръчката не е намерена." };
+
+  if (order.status === "cancelled") {
+    return { ok: false, error: "Поръчката вече е отказана." };
+  }
+
+  if (order.status !== "new" && order.status !== "confirmed") {
+    return {
+      ok: false,
+      error: "Поръчката вече се подготвя за изпращане или е изпратена и не може да бъде отказана от тук. Моля, свържи се с нас за съдействие.",
+    };
+  }
+
+  const cancelDateStr = new Intl.DateTimeFormat("bg-BG", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Europe/Sofia",
+  }).format(new Date());
+
+  const cancellationNote = `[Отказана от клиента на ${cancelDateStr}]`;
+  const updatedNote = order.note ? `${order.note}\n${cancellationNote}` : cancellationNote;
+
+  await db.transaction(async (tx) => {
+    // Return items to inventory
+    const items = await tx.select().from(orderItems).where(eq(orderItems.orderId, order.id));
+    for (const item of items) {
+      if (item.productId == null) continue;
+      await tx
+        .update(products)
+        .set({ stock: sql`max(0, ${products.stock} + ${item.qty})` })
+        .where(eq(products.id, item.productId));
+    }
+
+    await tx
+      .update(orders)
+      .set({
+        status: "cancelled",
+        note: updatedNote,
+      })
+      .where(eq(orders.id, order.id));
+  });
+
+  updateTag(CATALOG_TAG);
+  refresh();
+  return { ok: true };
 }
