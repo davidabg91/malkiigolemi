@@ -88,7 +88,9 @@ export function CourierSettingsForm({
               <div>
                 {/* Header with Logo and Toggle */}
                 <div className="flex items-center justify-between gap-3">
-                  <CourierLogo courier={id} className="h-8 w-auto" />
+                  <div className="flex h-9 items-center">
+                    <CourierLogo courier={id} className="h-8 max-h-8 max-w-[150px] w-auto" />
+                  </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
