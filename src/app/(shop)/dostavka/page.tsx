@@ -1,12 +1,18 @@
 import type { Metadata } from "next";
 import { InfoPage, DeliveryTable } from "@/components/InfoPage";
+import { StoreLocation } from "@/components/StoreLocation";
 
 export const metadata: Metadata = { title: "Доставка и плащане" };
 
 export default function Page() {
   return (
-    <InfoPage title="Доставка и плащане" lead="Доставяме в цялата страна с куриер — до офис, адрес или автомат.">
+    <InfoPage title="Доставка и плащане" lead="Доставяме в цялата страна с куриер — до офис, адрес или автомат. Можеш и да вземеш поръчката сам от магазина ни в Плевен.">
       <DeliveryTable />
+      <h2>Вземане от магазина</h2>
+      <p>
+        Избери „От магазина“ при поръчка — доставката е безплатна, а ние ще ти се обадим, когато пакетът е готов. Плащаш на място в брой или с карта.
+      </p>
+      <StoreLocation />
       <h2>Срокове</h2>
       <p>Поръчки, направени до 15:00 ч. в работен ден, се изпращат същия ден и пристигат на следващия работен ден.</p>
       <h2>Плащане</h2>

@@ -40,7 +40,23 @@ export const DELIVERY_METHODS = [
     price: 490,
     addressLabel: "Улица, номер, вход, етаж",
   },
+  {
+    id: "store",
+    label: "От магазина",
+    hint: "Взимаш сам от нашия магазин в Плевен",
+    price: 0,
+    addressLabel: "Магазин",
+  },
 ] as const;
+
+/** Physical shop used for the "pick up from the store" delivery option. */
+const STORE_QUERY = "ул. Анастасия Димитрова 22, ж.к. Сторгозия, Плевен";
+export const STORE = {
+  city: "Плевен",
+  address: "ж.к. Сторгозия, ул. „Анастасия Димитрова“ 22, Плевен",
+  mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(STORE_QUERY)}`,
+  embedUrl: `https://maps.google.com/maps?q=${encodeURIComponent(STORE_QUERY)}&z=16&output=embed`,
+} as const;
 
 export type DeliveryId = (typeof DELIVERY_METHODS)[number]["id"];
 

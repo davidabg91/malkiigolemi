@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { StoreLocation } from "@/components/StoreLocation";
 import { btn } from "@/components/ui";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
@@ -19,6 +20,7 @@ async function Confirmation({ params }: Pick<Props, "params">) {
   const order = await db.query.orders.findFirst({ where: eq(orders.number, number), with: { items: true } });
   if (!order) notFound();
   const delivery = DELIVERY_METHODS.find((d) => d.id === order.delivery);
+  const pickup = order.delivery === "store";
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -51,13 +53,17 @@ async function Confirmation({ params }: Pick<Props, "params">) {
             <dd className="font-medium tabular-nums">{order.shipping === 0 ? "Безплатно" : formatPrice(order.shipping)}</dd>
           </div>
           <div className="flex justify-between text-lg">
-            <dt className="font-semibold">Общо (наложен платеж)</dt>
+            <dt className="font-semibold">{pickup ? "Общо (плащане в магазина)" : "Общо (наложен платеж)"}</dt>
             <dd className="font-bold tabular-nums">{formatPrice(order.total)}</dd>
           </div>
         </dl>
-        <p className="mt-5 rounded-2xl bg-sand px-4 py-3 text-sm text-ink-soft">
-          Доставяме до: {order.city}, {order.address}
-        </p>
+        {pickup ? (
+          <StoreLocation className="mt-5" />
+        ) : (
+          <p className="mt-5 rounded-2xl bg-sand px-4 py-3 text-sm text-ink-soft">
+            Доставяме до: {order.city}, {order.address}
+          </p>
+        )}
       </div>
 
       <div className="mt-6 flex flex-wrap justify-center gap-3">

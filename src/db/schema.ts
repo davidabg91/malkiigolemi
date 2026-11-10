@@ -73,6 +73,8 @@ export const users = sqliteTable("users", {
   passwordHash: text("password_hash").notNull(),
   name: text("name").notNull(),
   phone: text("phone"),
+  /** Saved delivery preference (a DELIVERY_METHODS id) used to prefill checkout. */
+  preferredDelivery: text("preferred_delivery"),
   city: text("city"),
   address: text("address"),
   role: text("role", { enum: ["customer", "admin"] }).notNull().default("customer"),
