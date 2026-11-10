@@ -56,7 +56,11 @@ export async function getCategoryTree(): Promise<CategoryNode[]> {
   cacheLife("hours");
   cacheTag(CATALOG_TAG);
 
-  const all = await db.select().from(categories).orderBy(asc(categories.sort), asc(categories.id));
+  const all = await db
+    .select()
+    .from(categories)
+    .where(eq(categories.active, true))
+    .orderBy(asc(categories.sort), asc(categories.id));
   const counts = await db
     .select({ categoryId: products.categoryId, n: sql<number>`count(*)` })
     .from(products)
