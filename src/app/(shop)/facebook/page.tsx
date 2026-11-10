@@ -1,4 +1,4 @@
-import { ArrowUpRight, CheckCircle2, MessageCircle, Sparkles, Users } from "lucide-react";
+import { ArrowUpRight, CheckCircle2, MessageCircle, Tag, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Breadcrumbs, FacebookIcon } from "@/components/ui";
@@ -87,7 +87,7 @@ export default function FacebookPage() {
 
             <div className="rounded-2xl border border-line bg-sand/40 p-5">
               <div className="flex items-center gap-3 text-cyan-600">
-                <Sparkles className="h-6 w-6" />
+                <Tag className="h-6 w-6" />
                 <h3 className="font-semibold text-ink">Ежедневни ексклузивни оферти</h3>
               </div>
               <p className="mt-2 text-sm text-ink-soft">

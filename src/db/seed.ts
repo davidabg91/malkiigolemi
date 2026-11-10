@@ -85,7 +85,7 @@ const CATEGORIES: {
     slug: "kozmetika",
     name: "Козметика",
     tone: "rose",
-    icon: "Sparkles",
+    icon: "Flower2",
     description: "Грижа за коса, лице и тяло за всеки ден.",
     children: [
       ["za-kosa", "За коса"],

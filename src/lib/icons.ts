@@ -5,7 +5,7 @@ export const CATEGORY_ICON_NAMES = [
   "Coffee",
   "GlassWater",
   "SprayCan",
-  "Sparkles",
+  "Flower2",
   "Baby",
   "Lamp",
 ];
@@ -16,7 +16,7 @@ export const CATEGORY_ICON_LABELS: Record<string, string> = {
   Coffee: "Кафе",
   GlassWater: "Напитки",
   SprayCan: "Препарати",
-  Sparkles: "Козметика",
+  Flower2: "Козметика",
   Baby: "Бебе",
   Lamp: "Дом",
 };

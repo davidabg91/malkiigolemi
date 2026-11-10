@@ -1,4 +1,4 @@
-import { ArrowUpRight, CheckCircle2, MessageCircle, Sparkles, Users } from "lucide-react";
+import { ArrowUpRight, BadgePercent, CheckCircle2, MessageCircle, Users } from "lucide-react";
 import Image from "next/image";
 import { FacebookIcon } from "@/components/ui";
 import { site } from "@/lib/site";
@@ -31,7 +31,7 @@ export function FacebookSection() {
               <span>Хиляди активни членове</span>
             </li>
             <li className="flex items-center gap-2.5 rounded-xl bg-white/80 p-3 text-sm font-medium text-ink shadow-xs">
-              <Sparkles className="h-5 w-5 shrink-0 text-cyan-600" />
+              <BadgePercent className="h-5 w-5 shrink-0 text-cyan-600" />
               <span>Ежедневни нови оферти</span>
             </li>
             <li className="flex items-center gap-2.5 rounded-xl bg-white/80 p-3 text-sm font-medium text-ink shadow-xs">
