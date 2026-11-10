@@ -4,12 +4,11 @@ import { and, eq, ne, sql } from "drizzle-orm";
 import { refresh, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { randomBytes } from "node:crypto";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { z } from "zod";
 import { db } from "@/db";
 import { brands, categories, ORDER_STATUSES, orderItems, orders, products, type OrderStatus } from "@/db/schema";
 import { assertAdmin } from "@/lib/auth";
+import { removeImage, saveImage } from "@/lib/images";
 import { PACKS } from "@/lib/listing";
 import { CATALOG_TAG } from "@/lib/queries";
 import { ORIGIN_LABELS, TONES } from "@/lib/site";
@@ -18,30 +17,6 @@ import { CATEGORY_ICON_NAMES } from "@/lib/icons";
 
 export type AdminFormState = { error?: string; fieldErrors?: Record<string, string> } | undefined;
 
-const UPLOAD_DIR = path.join(process.cwd(), "data", "uploads");
-const IMAGE_TYPES: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-  "image/avif": "avif",
-};
-const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
-
-/** Stores an uploaded photo under data/uploads with a random name; the extension comes from the MIME type, never the client file name. */
-async function saveImage(file: File) {
-  const ext = IMAGE_TYPES[file.type];
-  if (!ext) throw new Error("Позволени са само JPG, PNG, WebP и AVIF изображения.");
-  if (file.size > MAX_IMAGE_BYTES) throw new Error("Изображението е по-голямо от 4 MB.");
-  const name = `${randomBytes(12).toString("hex")}.${ext}`;
-  await mkdir(UPLOAD_DIR, { recursive: true });
-  await writeFile(path.join(UPLOAD_DIR, name), Buffer.from(await file.arrayBuffer()));
-  return `/uploads/${name}`;
-}
-
-async function removeImage(url: string | null) {
-  const name = url?.match(/^\/uploads\/([a-f0-9]{24}\.[a-z0-9]+)$/)?.[1];
-  if (name) await unlink(path.join(UPLOAD_DIR, name)).catch(() => {});
-}
 
 /** "12,50" or "12.50" euros → cents. Empty → null. */
 const money = z
