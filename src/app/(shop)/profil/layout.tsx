@@ -1,6 +1,5 @@
 import { LogOut, Settings } from "lucide-react";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { logout } from "@/actions/auth";
 import { ProfileNav } from "@/components/account/ProfileNav";
@@ -9,7 +8,8 @@ import { getSession } from "@/lib/auth";
 
 async function Greeting() {
   const session = await getSession();
-  if (!session) redirect("/vhod?next=/profil");
+  // Each page redirects with its own ?next=, so the visitor lands back on the tab they asked for.
+  if (!session) return null;
   return (
     <header className="flex flex-wrap items-end justify-between gap-4">
       <div>
