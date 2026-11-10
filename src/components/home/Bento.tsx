@@ -1,4 +1,5 @@
 import { ArrowRight, ArrowUpRight } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { ProductVisual } from "@/components/product/PackShot";
 import { btn, ShopMark } from "@/components/ui";
@@ -50,7 +51,25 @@ function CategoryTile({
       className={`group relative isolate min-h-44 animate-rise overflow-hidden rounded-tile p-5 transition-shadow duration-300 hover:shadow-lift sm:p-6 ${area}`}
       style={{ background: tone.bg, color: tone.ink, animationDelay: `${80 + index * 60}ms` }}
     >
-      <TileArt products={products} deep={tone.deep} />
+      {category.slug === "hrani" ? (
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          <span
+            className="absolute -bottom-[30%] -right-[12%] aspect-square w-[85%] rounded-full opacity-65 transition-transform duration-700 ease-out-soft group-hover:scale-110"
+            style={{ background: tone.deep }}
+          />
+          <div className="absolute -bottom-3 -right-3 h-[90%] w-[66%] overflow-hidden rounded-2xl border-2 border-white/70 shadow-lift rotate-2 transition-transform duration-500 ease-out-soft group-hover:rotate-4 group-hover:scale-105">
+            <Image
+              src="/food-magazine.jpg"
+              alt="Храни — кулинарно списание"
+              fill
+              className="object-cover object-center"
+              sizes="320px"
+            />
+          </div>
+        </div>
+      ) : (
+        <TileArt products={products} deep={tone.deep} />
+      )}
       <div className="relative z-10 flex h-full flex-col">
         <h2 className="max-w-[11ch] font-display text-lg font-semibold leading-[1.15] tracking-tight sm:text-xl xl:text-[1.4rem]">
           {category.name}
