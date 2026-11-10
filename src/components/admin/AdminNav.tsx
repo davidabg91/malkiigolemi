@@ -17,7 +17,8 @@ export function AdminNav({ name, newOrders }: { name: string; newOrders: number 
   const pathname = usePathname();
   return (
     <aside className="flex shrink-0 flex-col border-b border-line bg-paper lg:sticky lg:top-0 lg:h-dvh lg:w-64 lg:border-b-0 lg:border-r">
-      <div className="flex items-center justify-between gap-3 px-5 py-4 lg:py-6">
+      {/* In the narrow sidebar the badge sits under the logo so the two never overlap. */}
+      <div className="flex items-center justify-between gap-3 px-5 py-4 lg:flex-col lg:items-start lg:gap-2 lg:py-6">
         <Logo />
         <span className="rounded-full bg-ink px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-lime">Админ</span>
       </div>

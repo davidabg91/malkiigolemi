@@ -100,7 +100,7 @@ export function Logo({ className = "", light = false }: { className?: string; li
     >
       <svg
         viewBox="0 0 264 56"
-        className="h-10 w-auto sm:h-11"
+        className="h-8 w-auto min-[400px]:h-10 sm:h-11"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden

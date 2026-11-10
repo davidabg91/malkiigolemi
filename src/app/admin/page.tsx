@@ -1,7 +1,8 @@
 import { asc, desc, eq, lt, ne, sql } from "drizzle-orm";
 import { AlertTriangle, Euro, Package, ReceiptText } from "lucide-react";
 import Link from "next/link";
-import { Panel, PageTitle, td, th } from "@/components/admin/bits";
+import { Suspense } from "react";
+import { AdminSkeleton, PageTitle, Panel, td, th } from "@/components/admin/bits";
 import { StatusPill } from "@/components/StatusPill";
 import { db } from "@/db";
 import { orders, products } from "@/db/schema";
@@ -10,7 +11,7 @@ import { formatDate, formatPrice } from "@/lib/format";
 
 const LOW_STOCK = 10;
 
-export default async function AdminDashboard() {
+async function AdminDashboard() {
   await requireAdmin();
 
   const [[stats], [catalog], recent, low] = await Promise.all([
@@ -122,5 +123,13 @@ export default async function AdminDashboard() {
         </Panel>
       </div>
     </>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<AdminSkeleton />}>
+      <AdminDashboard />
+    </Suspense>
   );
 }

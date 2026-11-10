@@ -3,8 +3,9 @@ import { ArrowLeft, Mail, MapPin, Phone, StickyNote } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { setOrderStatus } from "@/actions/admin";
-import { Panel, td, th } from "@/components/admin/bits";
+import { AdminSkeleton, Panel, td, th } from "@/components/admin/bits";
 import { StatusPill } from "@/components/StatusPill";
 import { btn } from "@/components/ui";
 import { db } from "@/db";
@@ -15,7 +16,7 @@ import { DELIVERY_METHODS, ORDER_STATUS_LABELS } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Поръчка" };
 
-export default async function AdminOrder({ params }: PageProps<"/admin/porachki/[id]">) {
+async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "params">) {
   await requireAdmin();
   const id = Number((await params).id);
   if (!Number.isInteger(id)) notFound();
@@ -133,5 +134,13 @@ export default async function AdminOrder({ params }: PageProps<"/admin/porachki/
         </div>
       </div>
     </>
+  );
+}
+
+export default function Page({ params }: PageProps<"/admin/porachki/[id]">) {
+  return (
+    <Suspense fallback={<AdminSkeleton />}>
+      <AdminOrder params={params} />
+    </Suspense>
   );
 }

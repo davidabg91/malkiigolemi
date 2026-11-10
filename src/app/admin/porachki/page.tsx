@@ -1,7 +1,8 @@
 import { desc, eq, sql } from "drizzle-orm";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Panel, PageTitle, td, th } from "@/components/admin/bits";
+import { Suspense } from "react";
+import { AdminSkeleton, PageTitle, Panel, td, th } from "@/components/admin/bits";
 import { StatusPill } from "@/components/StatusPill";
 import { db } from "@/db";
 import { ORDER_STATUSES, orders, type OrderStatus } from "@/db/schema";
@@ -11,7 +12,7 @@ import { DELIVERY_METHODS, ORDER_STATUS_LABELS } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Поръчки" };
 
-export default async function AdminOrders({ searchParams }: PageProps<"/admin/porachki">) {
+async function AdminOrders({ searchParams }: Pick<PageProps<"/admin/porachki">, "searchParams">) {
   await requireAdmin();
   const sp = await searchParams;
   const status = ORDER_STATUSES.find((s) => s === sp.status) as OrderStatus | undefined;
@@ -93,5 +94,13 @@ export default async function AdminOrders({ searchParams }: PageProps<"/admin/po
         )}
       </Panel>
     </>
+  );
+}
+
+export default function Page({ searchParams }: PageProps<"/admin/porachki">) {
+  return (
+    <Suspense fallback={<AdminSkeleton />}>
+      <AdminOrders searchParams={searchParams} />
+    </Suspense>
   );
 }

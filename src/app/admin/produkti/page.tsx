@@ -2,7 +2,8 @@ import { and, asc, desc, eq, inArray, like, lt, sql, type SQL } from "drizzle-or
 import { Pencil, Plus, Search } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Panel, PageTitle, td, th } from "@/components/admin/bits";
+import { Suspense } from "react";
+import { AdminSkeleton, PageTitle, Panel, td, th } from "@/components/admin/bits";
 import { DeleteButton, ToggleActive } from "@/components/admin/RowActions";
 import { ProductVisual } from "@/components/product/PackShot";
 import { btn } from "@/components/ui";
@@ -15,7 +16,7 @@ export const metadata: Metadata = { title: "Продукти" };
 
 const PER_PAGE = 30;
 
-export default async function AdminProducts({ searchParams }: PageProps<"/admin/produkti">) {
+async function AdminProducts({ searchParams }: Pick<PageProps<"/admin/produkti">, "searchParams">) {
   await requireAdmin();
   const sp = await searchParams;
   const q = (typeof sp.q === "string" ? sp.q : "").trim().slice(0, 60);
@@ -179,5 +180,13 @@ export default async function AdminProducts({ searchParams }: PageProps<"/admin/
         </nav>
       )}
     </>
+  );
+}
+
+export default function Page({ searchParams }: PageProps<"/admin/produkti">) {
+  return (
+    <Suspense fallback={<AdminSkeleton />}>
+      <AdminProducts searchParams={searchParams} />
+    </Suspense>
   );
 }
