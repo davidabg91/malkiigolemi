@@ -3,7 +3,7 @@
 import { Eye, EyeOff, Loader2, Trash2 } from "lucide-react";
 import { useTransition } from "react";
 import { toast } from "sonner";
-import { deleteCategory, deleteProduct, toggleProduct } from "@/actions/admin";
+import { deleteCategory, deleteProduct, toggleCategoryActive, toggleProduct } from "@/actions/admin";
 
 const icon = "grid h-9 w-9 place-items-center rounded-full text-ink-soft transition hover:bg-sand disabled:opacity-50";
 
@@ -45,6 +45,36 @@ export function DeleteButton({ id, name, kind }: { id: number; name: string; kin
       title="Изтрий"
     >
       {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+    </button>
+  );
+}
+
+export function ToggleCategoryActive({ id, active }: { id: number; active: boolean }) {
+  const [pending, start] = useTransition();
+  return (
+    <button
+      type="button"
+      disabled={pending}
+      onClick={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        start(async () => {
+          try {
+            await toggleCategoryActive(id);
+            toast.success(active ? "Категорията е деактивирана" : "Категорията е активирана");
+          } catch {
+            toast.error("Неуспешна промяна на статуса");
+          }
+        });
+      }}
+      className={`rounded-full px-2.5 py-0.5 text-xs font-semibold transition ${
+        active
+          ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+      } ${pending ? "opacity-60 pointer-events-none" : ""}`}
+      title={active ? "Натисни за деактивиране" : "Натисни за активиране"}
+    >
+      {pending ? "..." : active ? "Активна" : "Неактивна"}
     </button>
   );
 }
