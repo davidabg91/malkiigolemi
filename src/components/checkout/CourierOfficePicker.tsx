@@ -162,7 +162,9 @@ export function CourierOfficePicker({
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <CourierLogo courier={c.id} className="h-6 w-auto" />
+                  <div className="flex h-7 items-center">
+                    <CourierLogo courier={c.id} className="h-6 max-h-6 max-w-[125px] w-auto" />
+                  </div>
                   {active ? (
                     <span className="grid h-5 w-5 place-items-center rounded-full bg-forest text-white">
                       <Check className="h-3 w-3 stroke-[3]" />
