@@ -43,14 +43,24 @@ const CATEGORY_SHOWCASES: Record<string, ShowcaseItem[]> = {
   ],
   napitki: [
     {
+      src: "/napitki-juice.png",
+      alt: "Натурален портокалов фреш с плодове",
+      className: "bottom-[2%] right-[52%] h-[54%] w-auto -rotate-6 group-hover:-translate-x-3 group-hover:-rotate-[10deg]",
+    },
+    {
+      src: "/napitki-evian.png",
+      alt: "Evian натурална минерална вода",
+      className: "bottom-[4%] right-[35%] h-[68%] w-auto rotate-3 group-hover:-translate-y-2 group-hover:rotate-6",
+    },
+    {
       src: "/napitki-1.png",
-      alt: "San Pellegrino минерална вода",
-      className: "bottom-[2%] right-[30%] h-[68%] w-auto -rotate-8 group-hover:-translate-x-2 group-hover:-rotate-[12deg]",
+      alt: "San Pellegrino газирана вода",
+      className: "bottom-[1%] right-[18%] h-[72%] w-auto -rotate-6 group-hover:-translate-x-1 group-hover:-rotate-[10deg]",
     },
     {
       src: "/napitki-2.png",
       alt: "Coca-Cola Classic бутилка",
-      className: "-bottom-[3%] -right-[1%] h-[72%] w-auto rotate-8 group-hover:translate-x-1 group-hover:rotate-[12deg] group-hover:scale-105",
+      className: "-bottom-[3%] -right-[1%] h-[78%] w-auto rotate-8 group-hover:translate-x-2 group-hover:rotate-[12deg] group-hover:scale-105",
     },
   ],
   "pochistvane-i-prane": [
