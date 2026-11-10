@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { ArrowLeft, Mail, MapPin, Phone, Printer, StickyNote, Truck } from "lucide-react";
+import { AlertCircle, ArrowLeft, Mail, MapPin, Phone, Printer, StickyNote, Truck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -29,6 +29,21 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
         <ArrowLeft className="h-4 w-4" />
         Всички поръчки
       </Link>
+
+      {order.status === "cancelled" && (
+        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-900 shadow-xs">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+          <div className="text-sm">
+            <p className="font-semibold text-base text-red-950">Поръчката е отказана</p>
+            <p className="mt-1 text-red-800">
+              {order.note?.includes("Отказана от клиента")
+                ? "Тази поръчка беше отказана директно от клиента от секция „Моите поръчки“. Артикулите са автоматично върнати в складовата наличност."
+                : "Тази поръчка е анулирана. Артикулите са възстановени в складовата наличност."}
+            </p>
+          </div>
+        </div>
+      )}
+
       <header className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2">
         <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">{order.number}</h1>
         <StatusPill status={order.status} />

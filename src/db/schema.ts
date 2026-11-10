@@ -156,6 +156,7 @@ export const ordersRelations = relations(orders, ({ many, one }) => ({
 
 export const orderItemsRelations = relations(orderItems, ({ one }) => ({
   order: one(orders, { fields: [orderItems.orderId], references: [orders.id] }),
+  product: one(products, { fields: [orderItems.productId], references: [products.id] }),
 }));
 
 export const settings = sqliteTable("settings", {
