@@ -3,10 +3,12 @@
 import { Check, Loader2 } from "lucide-react";
 import { useActionState, useState, type ReactNode } from "react";
 import { changePassword, saveDeliveryPrefs, saveProfile, type AccountFormState } from "@/actions/account";
+import { CourierOfficePicker } from "@/components/checkout/CourierOfficePicker";
 import { DeliveryOptions } from "@/components/checkout/DeliveryOptions";
 import { StoreLocation } from "@/components/StoreLocation";
 import { btn } from "@/components/ui";
 import { DELIVERY_METHODS, type DeliveryId } from "@/lib/site";
+import type { CourierId, CourierOffice } from "@/lib/couriers";
 
 function Input({
   label,
@@ -77,34 +79,86 @@ function Submit({ pending, children }: { pending: boolean; children: string }) {
 
 const isDeliveryId = (v: string | null): v is DeliveryId => DELIVERY_METHODS.some((d) => d.id === v);
 
-export function DeliveryPrefsForm({ initial }: { initial: { delivery: string | null; city: string; address: string } }) {
+export function DeliveryPrefsForm({
+  initial,
+}: {
+  initial: {
+    delivery: string | null;
+    city: string;
+    address: string;
+    courier?: string | null;
+    officeCode?: string | null;
+    officeName?: string | null;
+  };
+}) {
   const [state, action, pending] = useActionState(saveDeliveryPrefs, undefined);
-  const [delivery, setDelivery] = useState<DeliveryId>(isDeliveryId(initial.delivery) ? initial.delivery : "office");
-  const method = DELIVERY_METHODS.find((d) => d.id === delivery)!;
+  const [delivery, setDelivery] = useState<DeliveryId>(
+    isDeliveryId(initial.delivery) ? initial.delivery : "office"
+  );
+  const [courier, setCourier] = useState<CourierId>(
+    (initial.courier as CourierId) || "speedy"
+  );
+  const [city, setCity] = useState<string>(initial.city || "Плевен");
+  const [address, setAddress] = useState<string>(initial.address || "");
+  const [selectedOffice, setSelectedOffice] = useState<CourierOffice | null>(
+    initial.officeCode
+      ? {
+          id: `${initial.courier || "speedy"}-${initial.officeCode}`,
+          code: initial.officeCode,
+          name: initial.officeName || "",
+          address: initial.address || "",
+          city: initial.city || "Плевен",
+          courier: (initial.courier as CourierId) || "speedy",
+          type: initial.delivery === "box" ? "box" : "office",
+        }
+      : null
+  );
+
+  const pickup = delivery === "store";
   const errors = state?.fieldErrors ?? {};
 
   return (
-    <Card title="Предпочитана доставка" text="Попълваме я автоматично при всяка поръчка. Винаги можеш да я смениш на момента.">
+    <Card
+      title="Предпочитана доставка"
+      text="Попълваме я автоматично при всяка поръчка. Винаги можеш да я смениш на момента."
+    >
       <form action={action} className="space-y-5">
-        <DeliveryOptions value={delivery} onChange={setDelivery} />
-        {delivery === "store" ? (
-          <StoreLocation />
+        <DeliveryOptions
+          value={delivery}
+          onChange={(d) => {
+            setDelivery(d);
+            setSelectedOffice(null);
+          }}
+        />
+        {pickup ? (
+          <div className="mt-5">
+            <StoreLocation defaultOpen />
+            <p className="mt-3 text-sm text-ink-soft">
+              Ще ти се обадим, когато поръчката е готова за вземане.
+            </p>
+          </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-[1fr_1.6fr]">
-            <Input label="Населено място" name="city" autoComplete="address-level2" defaultValue={initial.city} error={errors.city} />
-            <Input label={method.addressLabel} name="address" autoComplete="street-address" defaultValue={initial.address} error={errors.address} />
+          <div className="mt-5">
+            <CourierOfficePicker
+              delivery={delivery as "office" | "box" | "address"}
+              courier={courier}
+              onCourierChange={setCourier}
+              city={city}
+              onCityChange={setCity}
+              selectedOffice={selectedOffice}
+              onOfficeChange={setSelectedOffice}
+              address={address}
+              onAddressChange={setAddress}
+              errors={errors}
+            />
           </div>
         )}
-        {delivery === "store" && (
-          // Keep the saved courier address when switching to pickup.
-          <>
-            <input type="hidden" name="city" value={initial.city} />
-            <input type="hidden" name="address" value={initial.address} />
-          </>
-        )}
-        <div className="flex flex-wrap items-center gap-4">
-          <Submit pending={pending}>Запази</Submit>
-          <Feedback state={state} success="Запазено. Ще го попълним при следващата поръчка." />
+        <div className="flex flex-wrap items-center gap-4 pt-2">
+          <Submit pending={pending}>Запази предпочитанията</Submit>
+          <Feedback
+            state={state}
+            success="Запазено. Данните за куриер и офис ще се попълват автоматично при поръчка."
+          />
         </div>
       </form>
     </Card>
