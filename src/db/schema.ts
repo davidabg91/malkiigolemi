@@ -157,9 +157,16 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
   order: one(orders, { fields: [orderItems.orderId], references: [orders.id] }),
 }));
 
+export const settings = sqliteTable("settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
+});
+
 export type Category = typeof categories.$inferSelect;
 export type Brand = typeof brands.$inferSelect;
 export type Product = typeof products.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type OrderItem = typeof orderItems.$inferSelect;
+export type Setting = typeof settings.$inferSelect;

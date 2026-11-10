@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, MapPin, Package, Search, Store, X } from "lucide-react";
+import { CourierLogo } from "@/components/couriers/CourierLogos";
 import {
   COURIERS,
   getCouriersForDelivery,
@@ -39,6 +40,7 @@ export function CourierOfficePicker({
 }: Props) {
   const [cities, setCities] = useState<string[]>([]);
   const [offices, setOffices] = useState<CourierOffice[]>([]);
+  const [activeCouriersConfig, setActiveCouriersConfig] = useState<Record<CourierId, boolean> | null>(null);
   const [loadingOffices, setLoadingOffices] = useState(false);
   const [officeSearch, setOfficeSearch] = useState("");
   const [citySearchOpen, setCitySearchOpen] = useState(false);
@@ -47,14 +49,24 @@ export function CourierOfficePicker({
   const cityInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const availableCouriers = useMemo(() => getCouriersForDelivery(delivery), [delivery]);
+  const availableCouriers = useMemo(
+    () => getCouriersForDelivery(delivery, activeCouriersConfig),
+    [delivery, activeCouriersConfig],
+  );
   const activeCourier = availableCouriers.some((c) => c.id === courier) ? courier : availableCouriers[0]?.id ?? courier;
 
-  // Load cities once on mount
+  // Load cities and courier active settings once on mount
   useEffect(() => {
     fetch("/api/couriers?action=cities")
       .then((r) => r.json())
       .then((d) => setCities(d.cities || []))
+      .catch(() => {});
+
+    fetch("/api/couriers?action=config")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.activeCouriers) setActiveCouriersConfig(d.activeCouriers);
+      })
       .catch(() => {});
   }, []);
 
@@ -132,7 +144,7 @@ export function CourierOfficePicker({
         <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-ink-soft">
           1. Избери куриерска фирма
         </label>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
           {availableCouriers.map((c) => {
             const active = activeCourier === c.id;
             return (
@@ -143,21 +155,26 @@ export function CourierOfficePicker({
                   onCourierChange(c.id);
                   onOfficeChange(null);
                 }}
-                className={`relative flex items-center justify-between rounded-xl border-2 px-3.5 py-2.5 text-left transition ${
+                className={`relative flex flex-col justify-between rounded-xl border-2 p-3 text-left transition ${
                   active
-                    ? "border-forest bg-cream shadow-xs font-semibold text-ink"
-                    : "border-line bg-paper/60 hover:bg-paper hover:border-ink/20 text-ink-soft"
+                    ? "border-forest bg-cream shadow-xs"
+                    : "border-line bg-paper hover:bg-sand/40 hover:border-ink/30"
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <span
-                    className="grid h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: c.color }}
-                    aria-hidden
-                  />
-                  <span>{c.name}</span>
+                <div className="flex items-center justify-between gap-2">
+                  <CourierLogo courier={c.id} className="h-6 w-auto" />
+                  {active ? (
+                    <span className="grid h-5 w-5 place-items-center rounded-full bg-forest text-white">
+                      <Check className="h-3 w-3 stroke-[3]" />
+                    </span>
+                  ) : (
+                    <span className="h-5 w-5 rounded-full border border-line" />
+                  )}
                 </div>
-                {active && <Check className="h-4 w-4 text-forest" />}
+                <div className="mt-2.5">
+                  <span className="block font-semibold text-sm text-ink">{c.name}</span>
+                  <span className="block text-[0.75rem] text-ink-soft leading-snug">{c.tagline}</span>
+                </div>
               </button>
             );
           })}

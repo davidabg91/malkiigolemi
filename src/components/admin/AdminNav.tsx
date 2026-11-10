@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, FolderTree, LayoutDashboard, LogOut, Package, ReceiptText } from "lucide-react";
+import { ExternalLink, FolderTree, LayoutDashboard, LogOut, Package, ReceiptText, Truck } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/actions/auth";
@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/admin/porachki", label: "Поръчки", icon: ReceiptText },
   { href: "/admin/produkti", label: "Продукти", icon: Package },
   { href: "/admin/kategorii", label: "Категории", icon: FolderTree },
+  { href: "/admin/kurieri", label: "Куриери", icon: Truck },
 ];
 
 export function AdminNav({ name, newOrders }: { name: string; newOrders: number }) {

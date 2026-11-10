@@ -1,7 +1,7 @@
 import officesData from "@/../data/couriers/offices.json";
 import citiesData from "@/../data/couriers/cities.json";
 
-export type CourierId = "econt" | "speedy" | "boxnow";
+export type CourierId = "econt" | "speedy" | "boxnow" | "penguin";
 export type DeliveryType = "office" | "box" | "address" | "store";
 
 export interface CourierOffice {
@@ -61,23 +61,47 @@ export const COURIERS: Record<CourierId, CourierMeta> = {
     hasBoxes: true,
     hasAddress: false,
   },
+  penguin: {
+    id: "penguin",
+    name: "Penguin Express",
+    tagline: "Доставки 7 дни в седмицата, офиси и автомати",
+    badge: "Penguin",
+    color: "#0f766e",
+    bgLight: "#f0fdfa",
+    hasOffices: true,
+    hasBoxes: true,
+    hasAddress: true,
+  },
+};
+
+export const DEFAULT_ACTIVE_COURIERS: Record<CourierId, boolean> = {
+  econt: true,
+  speedy: true,
+  boxnow: true,
+  penguin: true,
 };
 
 const allOffices = officesData as CourierOffice[];
 const allCities = citiesData as string[];
 
-/** Return couriers eligible for a specific delivery method */
-export function getCouriersForDelivery(delivery: DeliveryType): CourierMeta[] {
+/** Return couriers eligible for a specific delivery method, filtered by active settings */
+export function getCouriersForDelivery(
+  delivery: DeliveryType,
+  activeFilter?: Record<CourierId, boolean> | null,
+): CourierMeta[] {
+  let list: CourierMeta[] = [];
   if (delivery === "office") {
-    return [COURIERS.econt, COURIERS.speedy];
+    list = [COURIERS.econt, COURIERS.speedy, COURIERS.penguin];
+  } else if (delivery === "box") {
+    list = [COURIERS.speedy, COURIERS.econt, COURIERS.boxnow, COURIERS.penguin];
+  } else if (delivery === "address") {
+    list = [COURIERS.speedy, COURIERS.econt, COURIERS.penguin];
   }
-  if (delivery === "box") {
-    return [COURIERS.speedy, COURIERS.econt, COURIERS.boxnow];
+
+  if (activeFilter) {
+    list = list.filter((c) => activeFilter[c.id] !== false);
   }
-  if (delivery === "address") {
-    return [COURIERS.speedy, COURIERS.econt];
-  }
-  return [];
+  return list;
 }
 
 /** Get list of available Bulgarian cities/settlements, optionally filtered by courier or type */

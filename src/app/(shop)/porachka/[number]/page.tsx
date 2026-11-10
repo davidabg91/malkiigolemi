@@ -75,6 +75,8 @@ async function Confirmation({ params }: Pick<Props, "params">) {
                     ? "Спиди"
                     : order.courier === "boxnow"
                     ? "Box Now"
+                    : order.courier === "penguin"
+                    ? "Penguin Express"
                     : "Куриер"}
                 </strong>
               </span>
