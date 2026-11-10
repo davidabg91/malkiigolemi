@@ -14,6 +14,8 @@ import { CATALOG_TAG } from "@/lib/queries";
 import { ORIGIN_LABELS, TONES } from "@/lib/site";
 import { searchTextOf, slugify } from "@/lib/slug";
 import { CATEGORY_ICON_NAMES } from "@/lib/icons";
+import { setActiveCouriersConfig } from "@/lib/couriers-server";
+import type { CourierId } from "@/lib/couriers";
 
 export type AdminFormState = { error?: string; fieldErrors?: Record<string, string> } | undefined;
 
@@ -268,5 +270,17 @@ export async function deleteCategory(id: number): Promise<void> {
   if (child || product) throw new Error("Категорията не е празна.");
   await db.delete(categories).where(eq(categories.id, id));
   updateTag(CATALOG_TAG);
+  refresh();
+}
+
+export async function updateCourierSettings(formData: FormData) {
+  await assertAdmin();
+  const config: Record<CourierId, boolean> = {
+    econt: formData.get("econt") === "on",
+    speedy: formData.get("speedy") === "on",
+    boxnow: formData.get("boxnow") === "on",
+    penguin: formData.get("penguin") === "on",
+  };
+  await setActiveCouriersConfig(config);
   refresh();
 }

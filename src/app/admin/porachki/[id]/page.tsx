@@ -109,10 +109,18 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
                       ? "bg-blue-100 text-blue-900"
                       : order.courier === "speedy"
                       ? "bg-red-100 text-red-900"
-                      : "bg-emerald-100 text-emerald-900"
+                      : order.courier === "boxnow"
+                      ? "bg-emerald-100 text-emerald-900"
+                      : "bg-teal-100 text-teal-900"
                   }`}
                 >
-                  {order.courier === "econt" ? "Еконт" : order.courier === "speedy" ? "Спиди" : "Box Now"}
+                  {order.courier === "econt"
+                    ? "Еконт"
+                    : order.courier === "speedy"
+                    ? "Спиди"
+                    : order.courier === "boxnow"
+                    ? "Box Now"
+                    : "Penguin Express"}
                 </span>
               )}
             </div>
@@ -155,7 +163,7 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
                 <div className="mt-3 rounded-xl border border-dashed border-line bg-sand/20 p-3 text-xs text-ink-soft">
                   <p className="font-medium text-ink">Готово за генериране на товарителница</p>
                   <p className="mt-0.5">
-                    Куриер: {order.courier === "econt" ? "Еконт" : order.courier === "speedy" ? "Спиди" : "Box Now"} ·
+                    Куриер: {order.courier === "econt" ? "Еконт" : order.courier === "speedy" ? "Спиди" : order.courier === "boxnow" ? "Box Now" : "Penguin Express"} ·
                     Код: {order.officeCode || "До адрес"} · НП: {formatPrice(order.total)}
                   </p>
                 </div>

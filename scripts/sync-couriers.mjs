@@ -98,10 +98,38 @@ function getBoxNowLockers() {
   return common;
 }
 
+// Penguin Express offices and 24/7 automated lockers
+function getPenguinExpressLocations() {
+  return [
+    { id: "pe-5801", code: "PE-5801", name: "Penguin Express Офис - Сан Стефано", city: "Плевен", address: "ул. Сан Стефано 12", type: "office", courier: "penguin", phone: "0700 89 000" },
+    { id: "pe-5802", code: "PE-5802", name: "Penguin Express Автомат 24/7 - Сторгозия", city: "Плевен", address: "ж.к. Сторгозия, до бл. 15", type: "box", courier: "penguin", phone: "0700 89 000" },
+    { id: "pe-5803", code: "PE-5803", name: "Penguin Express Автомат 24/7 - Център", city: "Плевен", address: "бул. Данаил Попов 2", type: "box", courier: "penguin", phone: "0700 89 000" },
+    { id: "pe-5804", code: "PE-5804", name: "Penguin Express Автомат 24/7 - Дружба", city: "Плевен", address: "ж.к. Дружба 1, Т-Маркет", type: "box", courier: "penguin", phone: "0700 89 000" },
+    { id: "pe-1001", code: "PE-1001", name: "Penguin Express Офис - Център", city: "София", address: "ул. Граф Игнатиев 44", type: "office", courier: "penguin", phone: "0700 89 000" },
+    { id: "pe-1002", code: "PE-1002", name: "Penguin Express Офис - Младост", city: "София", address: "ж.к. Младост 1, бул. Ал. Малинов 23", type: "office", courier: "penguin", phone: "0700 89 000" },
+    { id: "pe-1003", code: "PE-1003", name: "Penguin Express Автомат 24/7 - НДК", city: "София", address: "пл. България 1, подлез НДК", type: "box", courier: "penguin", phone: "0700 89 000" },
+    { id: "pe-1004", code: "PE-1004", name: "Penguin Express Автомат 24/7 - Люлин", city: "София", address: "ж.к. Люлин 4, пазар Люлин", type: "box", courier: "penguin", phone: "0700 89 000" },
+    { id: "pe-1005", code: "PE-1005", name: "Penguin Express Автомат 24/7 - Студентски град", city: "София", address: "ул. Акад. Борис Стефанов 1", type: "box", courier: "penguin", phone: "0700 89 000" },
+    { id: "pe-4001", code: "PE-4001", name: "Penguin Express Офис - Център", city: "Пловдив", address: "ул. Христо Г. Данов 18", type: "office", courier: "penguin", phone: "0700 89 000" },
+    { id: "pe-4002", code: "PE-4002", name: "Penguin Express Автомат 24/7 - Тракия", city: "Пловдив", address: "ж.к. Тракия, бул. Освобождение 3", type: "box", courier: "penguin", phone: "0700 89 000" },
+    { id: "pe-9001", code: "PE-9001", name: "Penguin Express Офис - Център", city: "Варна", address: "бул. Владислав Варненчик 55", type: "office", courier: "penguin", phone: "0700 89 000" },
+    { id: "pe-9002", code: "PE-9002", name: "Penguin Express Автомат 24/7 - Чайка", city: "Варна", address: "кв. Чайка, до бл. 27", type: "box", courier: "penguin", phone: "0700 89 000" },
+    { id: "pe-8001", code: "PE-8001", name: "Penguin Express Офис - Център", city: "Бургас", address: "ул. Александровска 88", type: "office", courier: "penguin", phone: "0700 89 000" },
+    { id: "pe-8002", code: "PE-8002", name: "Penguin Express Автомат 24/7 - Лазур", city: "Бургас", address: "ж.к. Лазур, бул. Демокрация 104", type: "box", courier: "penguin", phone: "0700 89 000" },
+    { id: "pe-7001", code: "PE-7001", name: "Penguin Express Офис - Център", city: "Русе", address: "ул. Александровска 42", type: "office", courier: "penguin", phone: "0700 89 000" },
+    { id: "pe-7002", code: "PE-7002", name: "Penguin Express Автомат 24/7 - Родина", city: "Русе", address: "кв. Родина 1, ул. Тича 2", type: "box", courier: "penguin", phone: "0700 89 000" },
+    { id: "pe-6001", code: "PE-6001", name: "Penguin Express Офис - Център", city: "Стара Загора", address: "бул. Цар Симеон Велики 112", type: "office", courier: "penguin", phone: "0700 89 000" },
+    { id: "pe-6002", code: "PE-6002", name: "Penguin Express Автомат 24/7 - Железник", city: "Стара Загора", address: "кв. Железник, ул. Загоре 4", type: "box", courier: "penguin", phone: "0700 89 000" },
+    { id: "pe-5001", code: "PE-5001", name: "Penguin Express Офис - Център", city: "Велико Търново", address: "ул. Васил Левски 29", type: "office", courier: "penguin", phone: "0700 89 000" },
+    { id: "pe-5002", code: "PE-5002", name: "Penguin Express Автомат 24/7 - Колю Фичето", city: "Велико Търново", address: "ул. Симеон Велики 7", type: "box", courier: "penguin", phone: "0700 89 000" },
+  ];
+}
+
 async function main() {
   const [econt, speedy] = await Promise.all([fetchEcont(), fetchSpeedy()]);
   const boxnow = getBoxNowLockers();
-  const all = [...econt, ...speedy, ...boxnow];
+  const penguin = getPenguinExpressLocations();
+  const all = [...econt, ...speedy, ...boxnow, ...penguin];
   
   // Collect unique cities
   const citiesMap = new Map();

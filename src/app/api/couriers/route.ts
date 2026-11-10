@@ -4,6 +4,7 @@ import {
   getOffices,
   type CourierId,
 } from "@/lib/couriers";
+import { getActiveCouriersConfig } from "@/lib/couriers-server";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -13,11 +14,17 @@ export async function GET(request: Request) {
   const city = searchParams.get("city") || undefined;
   const query = searchParams.get("q") || undefined;
 
+  if (action === "config") {
+    const config = await getActiveCouriersConfig();
+    return NextResponse.json({ activeCouriers: config });
+  }
+
   if (action === "cities") {
     const cities = getAvailableCities(courier, type);
     return NextResponse.json({ cities });
   }
 
+  const activeConfig = await getActiveCouriersConfig();
   const offices = getOffices({ city, courier, type, query });
-  return NextResponse.json({ offices });
+  return NextResponse.json({ offices, activeCouriers: activeConfig });
 }

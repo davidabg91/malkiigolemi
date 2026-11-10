@@ -19,7 +19,7 @@ const input = z.object({
     .regex(/^\+?[0-9 ]{8,15}$/, "Въведи валиден телефон."),
   email: z.string().trim().toLowerCase().pipe(z.email("Въведи валиден имейл.")),
   delivery: z.enum(DELIVERY_METHODS.map((d) => d.id) as [string, ...string[]]),
-  courier: z.enum(["econt", "speedy", "boxnow"]).optional(),
+  courier: z.enum(["econt", "speedy", "boxnow", "penguin"]).optional(),
   officeCode: z.string().trim().optional(),
   officeName: z.string().trim().optional(),
   city: z.string().trim().max(80).default(""),
