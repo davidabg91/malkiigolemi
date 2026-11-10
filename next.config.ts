@@ -5,8 +5,9 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   experimental: {
-    // Product photos are uploaded through a Server Action (max 4 MB each).
-    serverActions: { bodySizeLimit: "5mb" },
+    // Product photos are uploaded through a Server Action (max 3 MB each, see MAX_IMAGE_MB).
+    // Keep this under Vercel's 4.5 MB request limit.
+    serverActions: { bodySizeLimit: "4mb" },
   },
   turbopack: {
     rules: {

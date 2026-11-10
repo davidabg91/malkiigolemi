@@ -7,7 +7,7 @@ import { saveProduct } from "@/actions/admin";
 import { PackShot } from "@/components/product/PackShot";
 import { btn } from "@/components/ui";
 import type { Brand, Product } from "@/db/schema";
-import { PACKS } from "@/lib/listing";
+import { MAX_IMAGE_MB, PACKS } from "@/lib/listing";
 import { ORIGIN_LABELS } from "@/lib/site";
 
 type CategoryOption = { id: number; name: string; children: { id: number; name: string }[] };
@@ -37,6 +37,7 @@ export function ProductForm({
   const [color, setColor] = useState(product?.color ?? "#1F5C3F");
   const [brandId, setBrandId] = useState(product?.brandId ? String(product.brandId) : "");
   const [newBrand, setNewBrand] = useState("");
+  const [imageError, setImageError] = useState("");
   const errors = state?.fieldErrors ?? {};
   const previewLabel = newBrand || brands.find((b) => String(b.id) === brandId)?.name || "Марка";
 
@@ -179,13 +180,23 @@ export function ProductForm({
                 name="image"
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/avif"
+                onChange={(e) => {
+                  // Catch oversized photos here: the server would reject the whole request before validation runs.
+                  const file = e.currentTarget.files?.[0];
+                  if (file && file.size > MAX_IMAGE_MB * 1024 * 1024) {
+                    e.currentTarget.value = "";
+                    setImageError(`Снимката е ${(file.size / 1024 / 1024).toFixed(1)} MB. Максимумът е ${MAX_IMAGE_MB} MB.`);
+                  } else {
+                    setImageError("");
+                  }
+                }}
                 className="block w-full text-sm text-ink-soft file:mr-3 file:h-10 file:cursor-pointer file:rounded-full file:border-0 file:bg-sand file:px-4 file:text-sm file:font-semibold file:text-ink hover:file:bg-lime"
                 aria-describedby="image-hint"
               />
               <p id="image-hint" className="mt-1.5 text-xs text-ink-soft">
-                JPG, PNG, WebP или AVIF до 4 MB. Без снимка се показва илюстрацията.
+                JPG, PNG, WebP или AVIF до {MAX_IMAGE_MB} MB. Без снимка се показва илюстрацията.
               </p>
-              {errors.image && <p role="alert" className="mt-1.5 text-sm font-medium text-tomato">{errors.image}</p>}
+              {(imageError || errors.image) && <p role="alert" className="mt-1.5 text-sm font-medium text-tomato">{imageError || errors.image}</p>}
               {product?.image && (
                 <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm">
                   <input type="checkbox" name="removeImage" className="h-4 w-4 accent-[#1f5c3f]" />
