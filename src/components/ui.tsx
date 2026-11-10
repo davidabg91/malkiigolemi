@@ -96,33 +96,106 @@ export function Logo({ className = "", light = false }: { className?: string; li
     <Link
       href="/"
       aria-label={`${site.name} — начало`}
-      className={`group/logo inline-flex items-center gap-2.5 transition ${className}`}
+      className={`group/logo inline-flex items-center transition-transform duration-300 hover:scale-[1.02] ${className}`}
     >
-      <span
-        className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl transition-all duration-300 group-hover/logo:scale-105 group-hover/logo:shadow-md ${
-          light
-            ? "bg-gradient-to-br from-cyan-400 to-sky-600 text-white shadow-cyan-900/30 ring-1 ring-white/20"
-            : "bg-gradient-to-br from-cyan-500 to-sky-600 text-white shadow-sky-500/20"
-        }`}
+      <svg
+        viewBox="0 0 280 54"
+        className="h-10 w-auto sm:h-11"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden
       >
-        <ShopMark className="h-6 w-6" />
-      </span>
-      <span className="flex flex-col text-left leading-tight">
-        <span
-          className={`font-display text-[1.15rem] font-extrabold tracking-tight transition ${
-            light ? "text-cream group-hover/logo:text-white" : "text-ink group-hover/logo:text-cyan-700"
-          }`}
-        >
-          Поръчки
-        </span>
-        <span
-          className={`text-[0.68rem] font-bold uppercase tracking-wider transition ${
-            light ? "text-cyan-300" : "text-cyan-600 group-hover/logo:text-cyan-700"
-          }`}
-        >
-          за малки и големи
-        </span>
-      </span>
+        <defs>
+          <linearGradient id={light ? "logoCyanGradLight" : "logoCyanGrad"} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#06B6D4" />
+            <stop offset="100%" stopColor="#0284C7" />
+          </linearGradient>
+          <linearGradient id="awningLight" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#FFFFFF" />
+            <stop offset="100%" stopColor="#E0F2FE" />
+          </linearGradient>
+          <filter id={light ? "logoGlowLight" : "logoGlow"} x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#0284c7" floodOpacity={light ? "0.4" : "0.25"} />
+          </filter>
+        </defs>
+
+        {/* Unified Brand Symbol (Stylized Boutique Bag & Awning Fusion) */}
+        <g transform="translate(6, 4)">
+          <path
+            d="M14 15 C14 8 19 3 25 3 C31 3 36 8 36 15"
+            stroke={light ? "#38BDF8" : "url(#logoCyanGrad)"}
+            strokeWidth="3"
+            strokeLinecap="round"
+            fill="none"
+          />
+          <rect
+            x="5"
+            y="13"
+            width="40"
+            height="32"
+            rx="8"
+            fill={light ? "url(#logoCyanGradLight)" : "url(#logoCyanGrad)"}
+            filter={light ? "url(#logoGlowLight)" : "url(#logoGlow)"}
+          />
+          <path
+            d="M5 23 C9 26 13 26 17 23 C21 26 25 26 29 23 C33 26 37 26 41 23 C43 24.5 45 23 45 23 L45 13 L5 13 Z"
+            fill="url(#awningLight)"
+          />
+          <line x1="11" y1="13" x2="11" y2="24" stroke="#0284C7" strokeWidth="1.8" strokeLinecap="round" />
+          <line x1="23" y1="13" x2="23" y2="25" stroke="#0284C7" strokeWidth="1.8" strokeLinecap="round" />
+          <line x1="35" y1="13" x2="35" y2="24" stroke="#0284C7" strokeWidth="1.8" strokeLinecap="round" />
+
+          {/* Smiling package arc */}
+          <path d="M17 33 C20 37 30 37 33 33" stroke="#FFFFFF" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+          <circle cx="20" cy="30" r="1.5" fill="#FFFFFF" />
+          <circle cx="30" cy="30" r="1.5" fill="#FFFFFF" />
+        </g>
+
+        {/* Integrated Brand Typography */}
+        <g transform="translate(60, 6)">
+          <text
+            x="0"
+            y="21"
+            fontFamily="'Unbounded', var(--font-unbounded), -apple-system, system-ui, sans-serif"
+            fontWeight="900"
+            fontSize="21.5"
+            fill={light ? "#FBF8F1" : "#0F172A"}
+            letterSpacing="-0.3"
+          >
+            ПОРЪЧКИ
+          </text>
+
+          {/* Integrated Subtitle Capsule */}
+          <g transform="translate(0, 27)">
+            <rect
+              x="0"
+              y="0"
+              width="198"
+              height="17"
+              rx="8.5"
+              fill={light ? "#FFFFFF" : "#0284C7"}
+              fillOpacity={light ? "0.15" : "0.1"}
+              stroke={light ? "#38BDF8" : "#0284C7"}
+              strokeWidth="1.2"
+              strokeOpacity={light ? "0.5" : "0.3"}
+            />
+            <polygon points="12,5 13.5,8.5 17,10 13.5,11.5 12,15 10.5,11.5 7,10 10.5,8.5" fill="#0EA5E9" />
+            <text
+              x="105"
+              y="12"
+              textAnchor="middle"
+              fontFamily="'Onest', var(--font-onest), -apple-system, system-ui, sans-serif"
+              fontWeight="800"
+              fontSize="9.5"
+              fill={light ? "#7DD3FC" : "#0369A1"}
+              letterSpacing="1.2"
+            >
+              ЗА МАЛКИ И ГОЛЕМИ
+            </text>
+            <polygon points="186,5 187.5,8.5 191,10 187.5,11.5 186,15 184.5,11.5 181,10 184.5,8.5" fill="#0EA5E9" />
+          </g>
+        </g>
+      </svg>
     </Link>
   );
 }
