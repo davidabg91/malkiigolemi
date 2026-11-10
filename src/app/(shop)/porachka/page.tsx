@@ -9,7 +9,18 @@ import { getSession } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Поръчка", robots: { index: false } };
 
-const EMPTY: CheckoutDefaults = { name: "", phone: "", email: "", city: "", address: "", delivery: null, signedIn: false };
+const EMPTY: CheckoutDefaults = {
+  name: "",
+  phone: "",
+  email: "",
+  city: "",
+  address: "",
+  delivery: null,
+  courier: null,
+  officeCode: null,
+  officeName: null,
+  signedIn: false,
+};
 
 /** Signed-in customers get their saved details and preferred delivery prefilled. */
 async function Form() {
@@ -25,6 +36,9 @@ async function Form() {
         city: u.city ?? "",
         address: u.address ?? "",
         delivery: (u.preferredDelivery as CheckoutDefaults["delivery"]) ?? null,
+        courier: (u.preferredCourier as CheckoutDefaults["courier"]) ?? null,
+        officeCode: u.preferredOfficeCode ?? null,
+        officeName: u.preferredOfficeName ?? null,
         signedIn: true,
       };
     }

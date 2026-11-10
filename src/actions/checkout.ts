@@ -19,11 +19,15 @@ const input = z.object({
     .regex(/^\+?[0-9 ]{8,15}$/, "Въведи валиден телефон."),
   email: z.string().trim().toLowerCase().pipe(z.email("Въведи валиден имейл.")),
   delivery: z.enum(DELIVERY_METHODS.map((d) => d.id) as [string, ...string[]]),
+  courier: z.enum(["econt", "speedy", "boxnow"]).optional(),
+  officeCode: z.string().trim().optional(),
+  officeName: z.string().trim().optional(),
   city: z.string().trim().max(80).default(""),
   address: z.string().trim().max(200).default(""),
   note: z.string().trim().max(500).optional(),
   /** Signed-in customers can keep these delivery details as their default. */
   saveAsDefault: z.boolean().optional(),
+  payment: z.enum(["cod", "card"]).default("cod"),
   items: z
     .array(z.object({ id: z.number().int().positive(), qty: z.number().int().min(1).max(99) }))
     .min(1, "Количката е празна.")
@@ -32,7 +36,18 @@ const input = z.object({
   // Store pickup needs no address; every courier option does.
   if (d.delivery === "store") return;
   if (d.city.length < 2) ctx.addIssue({ code: "custom", path: ["city"], message: "Въведи населено място." });
-  if (d.address.length < 3) ctx.addIssue({ code: "custom", path: ["address"], message: "Въведи адрес, офис или автомат." });
+  if (d.delivery === "office" || d.delivery === "box") {
+    if (!d.courier) {
+      ctx.addIssue({ code: "custom", path: ["courier"], message: "Избери куриер." });
+    }
+    if (!d.officeCode && d.address.length < 3) {
+      ctx.addIssue({ code: "custom", path: ["office"], message: d.delivery === "box" ? "Избери автомат." : "Избери офис на куриер." });
+    }
+  } else if (d.delivery === "address") {
+    if (d.address.length < 3) {
+      ctx.addIssue({ code: "custom", path: ["address"], message: "Въведи точен адрес (улица, номер)." });
+    }
+  }
 });
 
 export type CheckoutInput = z.input<typeof input>;
@@ -58,6 +73,10 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
     return { ok: false, error: "Моля, провери отбелязаните полета.", fieldErrors };
   }
   const data = parsed.data;
+  // The card option is on the page already, but there is no payment provider behind it yet.
+  if (data.payment === "card") {
+    return { ok: false, error: "Плащането с карта онлайн още не е активно. Избери плащане при получаване." };
+  }
   const pickup = data.delivery === "store";
   const city = pickup ? STORE.city : data.city;
   const address = pickup ? STORE.address : data.address;
@@ -100,9 +119,13 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
           phone: data.phone,
           email: data.email,
           delivery: data.delivery,
+          courier: data.courier || null,
+          officeCode: data.officeCode || null,
+          officeName: data.officeName || null,
           city,
           address,
           note: data.note || null,
+          payment: data.payment,
           subtotal,
           shipping,
           total: subtotal + shipping,
@@ -135,6 +158,9 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
       .set({
         phone: data.phone,
         preferredDelivery: data.delivery,
+        preferredCourier: data.courier || null,
+        preferredOfficeCode: data.officeCode || null,
+        preferredOfficeName: data.officeName || null,
         // Pickup has no address of its own, so keep whatever address the customer had saved.
         ...(pickup ? {} : { city: data.city, address: data.address }),
       })
