@@ -19,6 +19,7 @@ export const categories = sqliteTable(
     /** lucide icon name used in menus. */
     icon: text("icon").notNull().default("ShoppingBasket"),
     sort: integer("sort").notNull().default(0),
+    active: integer("active", { mode: "boolean" }).notNull().default(true),
   },
   (t) => [index("categories_parent_idx").on(t.parentId)],
 );

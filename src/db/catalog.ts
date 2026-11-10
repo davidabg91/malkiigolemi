@@ -3,7 +3,7 @@
  * and `src/db/setup.ts` (runs on every Vercel build).
  */
 import bcrypt from "bcryptjs";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { searchTextOf, slugify } from "../lib/slug";
 import * as schema from "./schema";
@@ -17,6 +17,7 @@ type Opts = {
   feat?: boolean;
   origin?: string;
   desc?: string;
+  image?: string;
 };
 type Row = [sub: string, brand: string, name: string, unit: string, price: number, pack: string, color: string, opts?: Opts];
 
@@ -26,6 +27,7 @@ const CATEGORIES: {
   tone: string;
   icon: string;
   description: string;
+  active?: boolean;
   children: [slug: string, name: string][];
 }[] = [
   {
@@ -56,11 +58,27 @@ const CATEGORIES: {
     ],
   },
   {
+    slug: "igrachki",
+    name: "Играчки",
+    tone: "sky",
+    icon: "Gamepad2",
+    description: "Конструктори, плюшени играчки, колички и развиващи игри за всяка възраст.",
+    active: true,
+    children: [
+      ["konstruktori-i-lego", "Конструктори и LEGO"],
+      ["plyusheni-igrachki", "Плюшени играчки"],
+      ["kolichki-i-figurki", "Колички и фигурки"],
+      ["obrazovatelni-igri", "Образователни игри"],
+      ["kukli-i-aksesoari", "Кукли и аксесоари"],
+    ],
+  },
+  {
     slug: "napitki",
     name: "Вода и напитки",
     tone: "sky",
     icon: "GlassWater",
     description: "Минерална вода, газирани напитки, сокове и вино.",
+    active: false,
     children: [
       ["voda", "Вода"],
       ["bezalkoholni", "Безалкохолни"],
@@ -141,6 +159,10 @@ const BRANDS: [name: string, country: string][] = [
   ["Nuvola", "IT"],
   ["Aegea Care", "GR"],
   ["Piccolo", "IT"],
+  ["LEGO", "DK"],
+  ["Aurora World", "GB"],
+  ["Hot Wheels", "US"],
+  ["Hape", "DE"],
 ];
 
 const P: Row[] = [
@@ -250,11 +272,18 @@ const P: Row[] = [
   ["domashni-potrebi", "Bianca Casa", "Гъби за съдове", "5 бр", 149, "pack", "#F2C230"],
   ["domashni-potrebi", "Bianca Casa", "Торби за смет 35 л", "30 бр", 189, "roll", "#3A3F47"],
   ["domashni-potrebi", "Bianca Casa", "Алуминиево фолио", "30 м", 269, "box", "#9AA7B2"],
+
+  // ── Играчки
+  ["konstruktori-i-lego", "LEGO", "Конструктор LEGO Classic Творчески кубчета", "1 бр", 3990, "box", "#D8402B", { feat: true, isNew: true, image: "/igrachki-lego.png", desc: "Класически цветен конструктор LEGO за стимулиране на детското въображение, креативност и пространствено мислене. Подходящ за деца над 4 години." }],
+  ["plyusheni-igrachki", "Aurora World", "Плюшено мече Кристофър с панделка 35см", "1 бр", 2490, "box", "#C98B3E", { feat: true, isNew: true, image: "/igrachki-bear.png", desc: "Изключително меко и пухкаво плюшено мече от хипоалергенни материали. Перфектният гушкав приятел за сладки сънища и весели игри." }],
+  ["kolichki-i-figurki", "Hot Wheels", "Спортна метална количка Die-Cast Speedster", "1 бр", 690, "box", "#C82D2D", { feat: true, isNew: true, image: "/igrachki-car.png", desc: "Детайлен метален модел на бърз спортен автомобил в ярко червен цвят с хромирани джанти и аеродинамичен спойлер." }],
+  ["obrazovatelni-igri", "Hape", "Монтесори дървена пирамида за нанизване Дъга", "1 бр", 2190, "box", "#4FB3A2", { feat: true, isNew: true, image: "/igrachki-wood.png", desc: "Образователна играчка по метода Монтесори от естествено масивно дърво с безопасни бои на водна основа. Развива фината моторика и координацията." }],
 ];
 
 const GENERIC_DESC: Record<string, string> = {
   hrani: "Подбран продукт с автентичен средиземноморски вкус. Съхранявайте на сухо и хладно място.",
   "kafe-i-chai": "Ароматна напитка за бавни сутрини и бързи следобеди. Съхранявайте в плътно затворена опаковка.",
+  igrachki: "Качествена и безопасна детска играчка, създадена за весели игри и детско развитие.",
   napitki: "Сервирайте охладено. Съхранявайте на сухо и защитено от слънце място.",
   "pochistvane-i-prane": "Ефективна формула с дълготраен свеж аромат. Използвайте според указанията на етикета.",
   kozmetika: "Нежна грижа за всеки ден с подбрани съставки. Дерматологично тестван продукт.",
@@ -279,12 +308,28 @@ export async function seedCatalog(db: Db) {
   for (const [i, c] of CATEGORIES.entries()) {
     const [root] = await db
       .insert(schema.categories)
-      .values({ slug: c.slug, name: c.name, tone: c.tone, icon: c.icon, description: c.description, sort: i })
+      .values({
+        slug: c.slug,
+        name: c.name,
+        tone: c.tone,
+        icon: c.icon,
+        description: c.description,
+        sort: i,
+        active: c.active ?? true,
+      })
       .returning();
     for (const [j, [slug, name]] of c.children.entries()) {
       const [sub] = await db
         .insert(schema.categories)
-        .values({ slug, name, parentId: root.id, tone: c.tone, icon: c.icon, sort: j })
+        .values({
+          slug,
+          name,
+          parentId: root.id,
+          tone: c.tone,
+          icon: c.icon,
+          sort: j,
+          active: c.active ?? true,
+        })
         .returning();
       subToId.set(slug, sub.id);
       subToRoot.set(slug, c.slug);
@@ -317,6 +362,7 @@ export async function seedCatalog(db: Db) {
       bulkMinQty: o.bulk?.[0] ?? null,
       bulkPrice: o.bulk?.[1] ?? null,
       unit,
+      image: o.image ?? null,
       pack,
       color,
       origin: o.origin ?? brand.country,
@@ -329,6 +375,187 @@ export async function seedCatalog(db: Db) {
   }
 
   return { categories: CATEGORIES.length, brands: BRANDS.length, products: P.length };
+}
+
+/**
+ * Ensures "Играчки" exists and is active, while "Вода и напитки" is deactivated.
+ * Seeds sample toy products and brands if not already present.
+ */
+export async function syncCategoriesAndToys(db: Db) {
+  const [existingToys] = await db
+    .select()
+    .from(schema.categories)
+    .where(eq(schema.categories.slug, "igrachki"));
+
+  if (!existingToys) {
+    // 1. Deactivate "Вода и напитки" and its children
+    const [napitki] = await db
+      .select()
+      .from(schema.categories)
+      .where(eq(schema.categories.slug, "napitki"));
+
+    if (napitki) {
+      await db
+        .update(schema.categories)
+        .set({ active: false, sort: 99 })
+        .where(eq(schema.categories.id, napitki.id));
+      await db
+        .update(schema.categories)
+        .set({ active: false })
+        .where(eq(schema.categories.parentId, napitki.id));
+    }
+
+    // 2. Insert "Играчки" root category at sort: 2
+    const [root] = await db
+      .insert(schema.categories)
+      .values({
+        slug: "igrachki",
+        name: "Играчки",
+        tone: "sky",
+        icon: "Gamepad2",
+        description: "Конструктори, плюшени играчки, колички и развиващи игри за всяка възраст.",
+        sort: 2,
+        active: true,
+      })
+      .returning();
+
+    // 3. Subcategories for "Играчки"
+    const TOY_SUBS: [slug: string, name: string][] = [
+      ["konstruktori-i-lego", "Конструктори и LEGO"],
+      ["plyusheni-igrachki", "Плюшени играчки"],
+      ["kolichki-i-figurki", "Колички и фигурки"],
+      ["obrazovatelni-igri", "Образователни игри"],
+      ["kukli-i-aksesoari", "Кукли и аксесоари"],
+    ];
+    const subMap = new Map<string, number>();
+    for (const [j, [slug, name]] of TOY_SUBS.entries()) {
+      const [sub] = await db
+        .insert(schema.categories)
+        .values({
+          slug,
+          name,
+          parentId: root.id,
+          tone: "sky",
+          icon: "Gamepad2",
+          sort: j,
+          active: true,
+        })
+        .returning();
+      subMap.set(slug, sub.id);
+    }
+
+    // 4. Toy brands
+    const TOY_BRANDS = [
+      { name: "LEGO", country: "DK" },
+      { name: "Aurora World", country: "GB" },
+      { name: "Hot Wheels", country: "US" },
+      { name: "Hape", country: "DE" },
+    ];
+    const brandMap = new Map<string, number>();
+    for (const b of TOY_BRANDS) {
+      const bSlug = slugify(b.name);
+      const [found] = await db.select().from(schema.brands).where(eq(schema.brands.slug, bSlug));
+      if (found) {
+        brandMap.set(b.name, found.id);
+      } else {
+        const [inserted] = await db
+          .insert(schema.brands)
+          .values({ name: b.name, slug: bSlug, country: b.country })
+          .returning();
+        brandMap.set(b.name, inserted.id);
+      }
+    }
+
+    // 5. Toy products
+    const TOY_PRODUCTS = [
+      {
+        sub: "konstruktori-i-lego",
+        brand: "LEGO",
+        name: "Конструктор LEGO Classic Творчески кубчета",
+        unit: "1 бр",
+        price: 3990,
+        oldPrice: 4590,
+        sku: "TOY-101",
+        image: "/igrachki-lego.png",
+        pack: "box",
+        color: "#D8402B",
+        desc: "Класически цветен конструктор LEGO за стимулиране на детското въображение, креативност и пространствено мислене. Подходящ за деца над 4 години.",
+      },
+      {
+        sub: "plyusheni-igrachki",
+        brand: "Aurora World",
+        name: "Плюшено мече Кристофър с панделка 35см",
+        unit: "1 бр",
+        price: 2490,
+        oldPrice: 2990,
+        sku: "TOY-102",
+        image: "/igrachki-bear.png",
+        pack: "box",
+        color: "#C98B3E",
+        desc: "Изключително меко и пухкаво плюшено мече от хипоалергенни материали. Перфектният гушкав приятел за сладки сънища и весели игри.",
+      },
+      {
+        sub: "kolichki-i-figurki",
+        brand: "Hot Wheels",
+        name: "Спортна метална количка Die-Cast Speedster",
+        unit: "1 бр",
+        price: 690,
+        oldPrice: 890,
+        sku: "TOY-103",
+        image: "/igrachki-car.png",
+        pack: "box",
+        color: "#C82D2D",
+        desc: "Детайлен метален модел на бърз спортен автомобил в ярко червен цвят с хромирани джанти и аеродинамичен спойлер.",
+      },
+      {
+        sub: "obrazovatelni-igri",
+        brand: "Hape",
+        name: "Монтесори дървена пирамида за нанизване Дъга",
+        unit: "1 бр",
+        price: 2190,
+        oldPrice: 2590,
+        sku: "TOY-104",
+        image: "/igrachki-wood.png",
+        pack: "box",
+        color: "#4FB3A2",
+        desc: "Образователна играчка по метода Монтесори от естествено масивно дърво с безопасни бои на водна основа. Развива фината моторика и координацията.",
+      },
+    ];
+
+    for (const p of TOY_PRODUCTS) {
+      const brandId = brandMap.get(p.brand);
+      const categoryId = subMap.get(p.sub);
+      if (!brandId || !categoryId) continue;
+
+      const [existing] = await db.select().from(schema.products).where(eq(schema.products.sku, p.sku));
+      if (existing) continue;
+
+      const fullName = `${p.name} ${p.brand}`;
+      await db.insert(schema.products).values({
+        slug: `${slugify(fullName)}-${p.sku}`,
+        sku: p.sku,
+        name: p.name,
+        description: p.desc,
+        searchText: searchTextOf(p.name, p.brand, p.sku, p.unit),
+        categoryId,
+        brandId,
+        price: p.price,
+        oldPrice: p.oldPrice,
+        unit: p.unit,
+        image: p.image,
+        pack: p.pack,
+        color: p.color,
+        stock: 50,
+        isNew: true,
+        isFeatured: true,
+        active: true,
+      });
+    }
+
+    return { synced: true, message: "Added Играчки, deactivated Вода и напитки" };
+  }
+
+  return { synced: false, message: "Играчки already exists" };
 }
 
 /** Creates the admin account from ADMIN_EMAIL / ADMIN_PASSWORD, or resets its password to match them. */

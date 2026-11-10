@@ -2,6 +2,7 @@ import { asc, sql } from "drizzle-orm";
 import { ChevronDown } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { toggleCategoryActive } from "@/actions/admin";
 import { CategoryForm } from "@/components/admin/CategoryForm";
 import { AdminSkeleton, PageTitle, Panel } from "@/components/admin/bits";
 import { DeleteButton } from "@/components/admin/RowActions";
@@ -35,7 +36,23 @@ async function AdminCategories() {
               <CategoryIcon name={c.icon} className="h-5 w-5" />
             </span>
           )}
-          <span className={`min-w-0 flex-1 truncate ${child ? "" : "font-semibold"}`}>{c.name}</span>
+          <span className={`min-w-0 flex-1 truncate ${child ? "" : "font-semibold"} ${!c.active ? "text-ink-soft opacity-60" : ""}`}>
+            {c.name}
+            {!c.active && <span className="ml-2 text-xs font-normal text-tomato">(неактивна)</span>}
+          </span>
+          <form action={toggleCategoryActive.bind(null, c.id)} onClick={(e) => e.stopPropagation()}>
+            <button
+              type="submit"
+              className={`rounded-full px-2.5 py-0.5 text-xs font-semibold transition ${
+                c.active
+                  ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
+              title={c.active ? "Натисни за деактивиране" : "Натисни за активиране"}
+            >
+              {c.active ? "Активна" : "Неактивна"}
+            </button>
+          </form>
           <span className="text-sm text-ink-soft tabular-nums">{n} прод.</span>
           {n === 0 && !hasChildren ? <DeleteButton id={c.id} name={c.name} kind="category" /> : <span className="w-9" aria-hidden />}
           <ChevronDown className="h-4 w-4 shrink-0 text-ink-soft transition-transform group-open:rotate-180" aria-hidden />

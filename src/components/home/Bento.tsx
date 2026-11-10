@@ -1,5 +1,4 @@
 import { ArrowRight, ArrowUpRight } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { ProductVisual } from "@/components/product/PackShot";
 import { btn, ShopMark } from "@/components/ui";
@@ -39,6 +38,28 @@ const CATEGORY_SHOWCASES: Record<string, ShowcaseItem[]> = {
       src: "/kafe-1.png",
       alt: "Lavazza Qualità Oro кафе",
       className: "-bottom-[2%] -right-[2%] h-[72%] w-auto rotate-6 group-hover:translate-x-1 group-hover:rotate-[10deg] group-hover:scale-105",
+    },
+  ],
+  igrachki: [
+    {
+      src: "/igrachki-wood.png",
+      alt: "Монтесори образователна дървена пирамида",
+      className: "bottom-[2%] right-[54%] h-[56%] w-auto -rotate-6 group-hover:-translate-x-3 group-hover:-rotate-[10deg]",
+    },
+    {
+      src: "/igrachki-bear.png",
+      alt: "Плюшено мече с панделка",
+      className: "bottom-[3%] right-[36%] h-[68%] w-auto rotate-4 group-hover:-translate-y-2 group-hover:rotate-6",
+    },
+    {
+      src: "/igrachki-car.png",
+      alt: "Спортна състезателна количка",
+      className: "bottom-[1%] right-[18%] h-[58%] w-auto -rotate-8 group-hover:-translate-x-1 group-hover:-rotate-[12deg]",
+    },
+    {
+      src: "/igrachki-lego.png",
+      alt: "LEGO строител и конструктор",
+      className: "-bottom-[3%] -right-[1%] h-[78%] w-auto rotate-8 group-hover:translate-x-2 group-hover:rotate-[12deg] group-hover:scale-105",
     },
   ],
   napitki: [

@@ -245,7 +245,16 @@ export async function saveCategory(id: number | null, _prev: AdminFormState, for
     parentId = parent.id;
   }
 
-  const values = { name: d.name, description: d.description || null, parentId, tone: d.tone, icon: d.icon, sort: d.sort };
+  const active = formData.has("active") ? formData.get("active") === "on" : true;
+  const values = {
+    name: d.name,
+    description: d.description || null,
+    parentId,
+    tone: d.tone,
+    icon: d.icon,
+    sort: d.sort,
+    active,
+  };
   if (id) {
     await db.update(categories).set(values).where(eq(categories.id, id));
   } else {
@@ -258,6 +267,16 @@ export async function saveCategory(id: number | null, _prev: AdminFormState, for
   updateTag(CATALOG_TAG);
   refresh();
   return undefined;
+}
+
+export async function toggleCategoryActive(id: number): Promise<void> {
+  await assertAdmin();
+  await db
+    .update(categories)
+    .set({ active: sql`not ${categories.active}` })
+    .where(eq(categories.id, id));
+  updateTag(CATALOG_TAG);
+  refresh();
 }
 
 export async function deleteCategory(id: number): Promise<void> {

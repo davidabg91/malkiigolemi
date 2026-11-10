@@ -71,6 +71,17 @@ export function CategoryForm({ category, roots }: { category?: Category; roots: 
         </label>
         <input id={`sort-${uid}`} name="sort" inputMode="numeric" defaultValue={category?.sort ?? 0} className="field" />
       </div>
+      <div className="flex items-center gap-2.5 pt-6">
+        <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+          <input
+            type="checkbox"
+            name="active"
+            defaultChecked={category?.active ?? true}
+            className="h-4 w-4 rounded accent-[#1f5c3f]"
+          />
+          <span>Активна</span>
+        </label>
+      </div>
       <div className="flex items-end">
         <button type="submit" disabled={pending} className={`${btn.primary} w-full`}>
           {pending && <Loader2 className="h-5 w-5 animate-spin" aria-hidden />}
