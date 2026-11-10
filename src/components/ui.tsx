@@ -99,7 +99,7 @@ export function Logo({ className = "", light = false }: { className?: string; li
       className={`group/logo inline-flex items-center transition-transform duration-300 hover:scale-[1.02] ${className}`}
     >
       <svg
-        viewBox="0 0 280 54"
+        viewBox="0 0 264 54"
         className="h-10 w-auto sm:h-11"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
@@ -151,48 +151,48 @@ export function Logo({ className = "", light = false }: { className?: string; li
           <circle cx="30" cy="30" r="1.5" fill="#FFFFFF" />
         </g>
 
-        {/* Integrated Brand Typography */}
-        <g transform="translate(60, 6)">
+        {/* Integrated Brand Typography Panel (Centered, Clean, Professional) */}
+        <g transform="translate(62, 5)">
+          {/* Main Word: ПОРЪЧКИ — Perfectly centered in this panel */}
           <text
-            x="0"
-            y="21"
+            x="95"
+            y="22"
+            textAnchor="middle"
             fontFamily="'Unbounded', var(--font-unbounded), -apple-system, system-ui, sans-serif"
             fontWeight="900"
-            fontSize="21.5"
+            fontSize="20.5"
             fill={light ? "#FBF8F1" : "#0F172A"}
-            letterSpacing="-0.3"
+            letterSpacing="0.04em"
           >
             ПОРЪЧКИ
           </text>
 
-          {/* Integrated Subtitle Capsule */}
-          <g transform="translate(0, 27)">
+          {/* Subtitle Panel Capsule — Symmetrically centered around x=95 (no icons on the ends) */}
+          <g transform="translate(6, 28)">
             <rect
               x="0"
               y="0"
-              width="198"
-              height="17"
-              rx="8.5"
+              width="178"
+              height="18"
+              rx="9"
               fill={light ? "#FFFFFF" : "#0284C7"}
-              fillOpacity={light ? "0.15" : "0.1"}
+              fillOpacity={light ? "0.15" : "0.09"}
               stroke={light ? "#38BDF8" : "#0284C7"}
               strokeWidth="1.2"
-              strokeOpacity={light ? "0.5" : "0.3"}
+              strokeOpacity={light ? "0.5" : "0.28"}
             />
-            <polygon points="12,5 13.5,8.5 17,10 13.5,11.5 12,15 10.5,11.5 7,10 10.5,8.5" fill="#0EA5E9" />
             <text
-              x="105"
-              y="12"
+              x="89"
+              y="12.5"
               textAnchor="middle"
               fontFamily="'Onest', var(--font-onest), -apple-system, system-ui, sans-serif"
               fontWeight="800"
               fontSize="9.5"
-              fill={light ? "#7DD3FC" : "#0369A1"}
-              letterSpacing="1.2"
+              fill={light ? "#7DD3FC" : "#0284C7"}
+              letterSpacing="1.4"
             >
               ЗА МАЛКИ И ГОЛЕМИ
             </text>
-            <polygon points="186,5 187.5,8.5 191,10 187.5,11.5 186,15 184.5,11.5 181,10 184.5,8.5" fill="#0EA5E9" />
           </g>
         </g>
       </svg>
