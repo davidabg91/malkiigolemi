@@ -14,7 +14,18 @@ async function Form() {
   if (!session) redirect("/vhod?next=/profil/adres");
   const [u] = await db.select().from(users).where(eq(users.id, session.uid)).limit(1);
   if (!u) redirect("/vhod?next=/profil/adres");
-  return <DeliveryPrefsForm initial={{ delivery: u.preferredDelivery, city: u.city ?? "", address: u.address ?? "" }} />;
+  return (
+    <DeliveryPrefsForm
+      initial={{
+        delivery: u.preferredDelivery,
+        city: u.city ?? "",
+        address: u.address ?? "",
+        courier: u.preferredCourier ?? null,
+        officeCode: u.preferredOfficeCode ?? null,
+        officeName: u.preferredOfficeName ?? null,
+      }}
+    />
+  );
 }
 
 export default function Page() {

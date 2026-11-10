@@ -21,13 +21,27 @@ function firstErrors(issues: { path: PropertyKey[]; message: string }[]) {
 const deliverySchema = z
   .object({
     delivery: z.enum(DELIVERY_METHODS.map((d) => d.id) as [string, ...string[]], { message: "Избери начин на доставка." }),
+    courier: z.string().trim().optional(),
+    officeCode: z.string().trim().optional(),
+    officeName: z.string().trim().optional(),
     city: z.string().trim().max(80),
     address: z.string().trim().max(200),
   })
   .superRefine((d, ctx) => {
     if (d.delivery === "store") return;
     if (d.city.length < 2) ctx.addIssue({ code: "custom", path: ["city"], message: "Въведи населено място." });
-    if (d.address.length < 3) ctx.addIssue({ code: "custom", path: ["address"], message: "Въведи адрес, офис или автомат." });
+    if (d.delivery === "office" || d.delivery === "box") {
+      if (!d.courier) {
+        ctx.addIssue({ code: "custom", path: ["courier"], message: "Избери куриер." });
+      }
+      if (!d.officeCode && d.address.length < 3) {
+        ctx.addIssue({ code: "custom", path: ["office"], message: d.delivery === "box" ? "Избери автомат." : "Избери офис на куриер." });
+      }
+    } else if (d.delivery === "address") {
+      if (d.address.length < 3) {
+        ctx.addIssue({ code: "custom", path: ["address"], message: "Въведи точен адрес (улица, номер)." });
+      }
+    }
   });
 
 export async function saveDeliveryPrefs(_prev: AccountFormState, formData: FormData): Promise<AccountFormState> {
@@ -36,18 +50,31 @@ export async function saveDeliveryPrefs(_prev: AccountFormState, formData: FormD
 
   const parsed = deliverySchema.safeParse({
     delivery: String(formData.get("delivery") ?? ""),
+    courier: String(formData.get("courier") ?? ""),
+    officeCode: String(formData.get("officeCode") ?? ""),
+    officeName: String(formData.get("officeName") ?? ""),
     city: String(formData.get("city") ?? ""),
     address: String(formData.get("address") ?? ""),
   });
   if (!parsed.success) return { error: "Провери отбелязаните полета.", fieldErrors: firstErrors(parsed.error.issues) };
   const d = parsed.data;
 
+  const isStore = d.delivery === "store";
+  const isCourierOffice = d.delivery === "office" || d.delivery === "box";
+
   await db
     .update(users)
     .set({
       preferredDelivery: d.delivery,
-      // Picking up from the store keeps the courier address for later, in case they switch back.
-      ...(d.delivery === "store" ? {} : { city: d.city, address: d.address }),
+      ...(isStore
+        ? {}
+        : {
+            preferredCourier: d.courier || null,
+            preferredOfficeCode: isCourierOffice ? (d.officeCode || null) : null,
+            preferredOfficeName: isCourierOffice ? (d.officeName || null) : null,
+            city: d.city,
+            address: d.delivery === "address" ? d.address : (d.officeName ? `${d.officeName}, ${d.address}` : d.address),
+          }),
     })
     .where(eq(users.id, session.uid));
   refresh();
