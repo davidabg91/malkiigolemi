@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 64" fill="none">
+  <defs>
+    <linearGradient id="hGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06B6D4" />
+      <stop offset="100%" stop-color="#0284C7" />
+    </linearGradient>
+  </defs>
+
+  <!-- Shop Icon Mini -->
+  <g transform="translate(4, 4) scale(0.56)">
+    <!-- Base -->
+    <rect x="12" y="86" width="76" height="4" rx="2" fill="#0F172A" />
+    <!-- Body -->
+    <rect x="18" y="44" width="64" height="42" rx="5" fill="#F8FAFC" stroke="#0F172A" stroke-width="3.5" />
+    <!-- Window -->
+    <rect x="24" y="52" width="30" height="26" rx="4" fill="#E0F2FE" stroke="#0F172A" stroke-width="3" />
+    <path d="M26 56 L38 56" stroke="#38BDF8" stroke-width="2.5" stroke-linecap="round" />
+    <circle cx="34" cy="67" r="4.5" fill="#06B6D4" />
+    <!-- Door -->
+    <rect x="58" y="52" width="18" height="34" rx="3" fill="#F1F5F9" stroke="#0F172A" stroke-width="3" />
+    <rect x="62" y="56" width="10" height="13" rx="2" fill="#E0F2FE" stroke="#0F172A" stroke-width="2" />
+    <circle cx="63.5" cy="73.5" r="1.5" fill="#0F172A" />
+    <!-- Awning -->
+    <path d="M15 36 L85 36 L83 48 C83 50.5 80 51.5 77.5 49.5 C75 51.5 72 51.5 69.5 49.5 C67 51.5 64 51.5 61.5 49.5 C59 51.5 56 51.5 53.5 49.5 C51 51.5 48 51.5 45.5 49.5 C43 51.5 40 51.5 37.5 49.5 C35 51.5 32 51.5 29.5 49.5 C27 51.5 24 51.5 21.5 49.5 C19 51.5 16 50.5 16 48 Z" fill="#FFFFFF" stroke="#0F172A" stroke-width="3" stroke-linejoin="round" />
+    <path d="M22 36 L29 36 L28.5 48 C27 50.5 23.5 50.5 22 48 Z" fill="url(#hGrad)" stroke="#0F172A" stroke-width="2" />
+    <path d="M36 36 L43 36 L42.5 48 C41 50.5 37.5 50.5 36 48 Z" fill="url(#hGrad)" stroke="#0F172A" stroke-width="2" />
+    <path d="M50 36 L57 36 L56.5 48 C55 50.5 51.5 50.5 50 48 Z" fill="url(#hGrad)" stroke="#0F172A" stroke-width="2" />
+    <path d="M64 36 L71 36 L70.5 48 C69 50.5 65.5 50.5 64 48 Z" fill="url(#hGrad)" stroke="#0F172A" stroke-width="2" />
+    <path d="M78 36 L84 36 L82.5 48 C81 50 78.5 49.5 78 48 Z" fill="url(#hGrad)" stroke="#0F172A" stroke-width="2" />
+    <path d="M13 36 L87 36" stroke="#0F172A" stroke-width="3.5" stroke-linecap="round" />
+    <!-- Roof sign -->
+    <line x1="39" y1="26" x2="39" y2="36" stroke="#0F172A" stroke-width="2.5" />
+    <line x1="61" y1="26" x2="61" y2="36" stroke="#0F172A" stroke-width="2.5" />
+    <rect x="31" y="14" width="38" height="15" rx="4" fill="url(#hGrad)" stroke="#0F172A" stroke-width="3" />
+    <text x="50" y="25" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="900" font-size="8.5" fill="#FFFFFF">SHOP</text>
+  </g>
+
+  <!-- Typography -->
+  <g transform="translate(68, 14)">
+    <text x="0" y="20" font-family="'Unbounded', system-ui, sans-serif" font-weight="800" font-size="18" fill="#0F172A" letter-spacing="-0.3">
+      ПОРЪЧКИ
+    </text>
+    <text x="0" y="38" font-family="'Onest', system-ui, sans-serif" font-weight="700" font-size="13" fill="#0891B2" letter-spacing="0.2">
+      за малки и големи
+    </text>
+  </g>
+</svg>

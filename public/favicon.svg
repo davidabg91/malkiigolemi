@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="16" fill="#0EA5E9" />
+  <g transform="translate(6, 6) scale(0.52)">
+    <!-- Base -->
+    <rect x="12" y="86" width="76" height="4" rx="2" fill="#FFFFFF" />
+    <!-- Body -->
+    <rect x="18" y="44" width="64" height="42" rx="5" fill="#FFFFFF" />
+    <!-- Window -->
+    <rect x="24" y="52" width="30" height="26" rx="4" fill="#0284C7" />
+    <circle cx="34" cy="67" r="4" fill="#FFFFFF" />
+    <!-- Door -->
+    <rect x="58" y="52" width="18" height="34" rx="3" fill="#0369A1" />
+    <rect x="62" y="56" width="10" height="13" rx="2" fill="#BAE6FD" />
+    <!-- Canopy -->
+    <path d="M15 36 L85 36 L83 48 C83 51 80 52 77.5 50 C75 52 72 52 69.5 50 C67 52 64 52 61.5 50 C59 52 56 52 53.5 50 C51 52 48 52 45.5 50 C43 52 40 52 37.5 50 C35 52 32 52 29.5 50 C27 52 24 52 21.5 50 C19 52 16 51 16 48 Z" fill="#FFFFFF" />
+    <path d="M22 36 L29 36 L28.5 48 C27 50.5 23.5 50.5 22 48 Z" fill="#0284C7" />
+    <path d="M36 36 L43 36 L42.5 48 C41 50.5 37.5 50.5 36 48 Z" fill="#0284C7" />
+    <path d="M50 36 L57 36 L56.5 48 C55 50.5 51.5 50.5 50 48 Z" fill="#0284C7" />
+    <path d="M64 36 L71 36 L70.5 48 C69 50.5 65.5 50.5 64 48 Z" fill="#0284C7" />
+    <path d="M78 36 L84 36 L82.5 48 C81 50 78.5 49.5 78 48 Z" fill="#0284C7" />
+    <!-- Roof sign -->
+    <rect x="31" y="14" width="38" height="15" rx="4" fill="#FFFFFF" />
+    <text x="50" y="25" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="900" font-size="8.5" fill="#0284C7">SHOP</text>
+  </g>
+</svg>

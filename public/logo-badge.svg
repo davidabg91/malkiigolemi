@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="none">
+  <defs>
+    <!-- Background Gradient inspired by original Facebook group photo -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00D2FF" />
+      <stop offset="50%" stop-color="#0EA5E9" />
+      <stop offset="100%" stop-color="#0284C7" />
+    </linearGradient>
+
+    <!-- Awning / Accents Gradient -->
+    <linearGradient id="shopAccent" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#0284C7" />
+    </linearGradient>
+
+    <!-- Modern Badge Shadow -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0369a1" flood-opacity="0.35"/>
+    </filter>
+
+    <filter id="bannerShadow" x="-10%" y="-20%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Main Background Container with rounded modern corners -->
+  <rect width="400" height="400" rx="48" fill="url(#bgGrad)" />
+
+  <!-- Subtle modern background aura / light burst -->
+  <circle cx="200" cy="150" r="140" fill="#FFFFFF" opacity="0.12" />
+
+  <!-- Storefront Group -->
+  <g transform="translate(100, 35)">
+    <!-- Ground Line -->
+    <rect x="15" y="180" width="170" height="8" rx="4" fill="#0F172A" />
+
+    <!-- Building Body -->
+    <rect x="25" y="85" width="150" height="95" rx="8" fill="#FFFFFF" stroke="#0F172A" stroke-width="6" stroke-linejoin="round" />
+
+    <!-- Window -->
+    <rect x="38" y="105" width="68" height="60" rx="6" fill="#F0F9FF" stroke="#0F172A" stroke-width="5" />
+    <!-- Window Shelves & Decorative Goods -->
+    <line x1="38" y1="140" x2="106" y2="140" stroke="#0F172A" stroke-width="3" stroke-dasharray="4 3" opacity="0.4" />
+    <circle cx="56" cy="130" r="8" fill="#38BDF8" />
+    <rect x="74" y="120" width="16" height="20" rx="3" fill="#F59E0B" />
+    <path d="M44 112 L64 112" stroke="#BAE6FD" stroke-width="4" stroke-linecap="round" />
+
+    <!-- Door -->
+    <rect x="118" y="105" width="42" height="75" rx="6" fill="#F8FAFC" stroke="#0F172A" stroke-width="5" />
+    <rect x="126" y="114" width="26" height="30" rx="4" fill="#E0F2FE" stroke="#0F172A" stroke-width="3.5" />
+    <circle cx="128" cy="152" r="3.5" fill="#0F172A" />
+
+    <!-- Canopy / Awning -->
+    <path d="M15 65 L185 65 L180 92 C180 98 172 100 167 96 C162 100 154 100 149 96 C144 100 136 100 131 96 C126 100 118 100 113 96 C108 100 100 100 95 96 C90 100 82 100 77 96 C72 100 64 100 59 96 C54 100 46 100 41 96 C36 100 28 98 25 92 Z" fill="#FFFFFF" stroke="#0F172A" stroke-width="5.5" stroke-linejoin="round" />
+
+    <!-- Awning Stripes -->
+    <path d="M30 65 L46 65 L44 93 C41 98 33 97 31 92 Z" fill="url(#shopAccent)" stroke="#0F172A" stroke-width="3" />
+    <path d="M62 65 L78 65 L76 94 C73 99 65 98 63 93 Z" fill="url(#shopAccent)" stroke="#0F172A" stroke-width="3" />
+    <path d="M94 65 L110 65 L108 94 C105 99 97 98 95 93 Z" fill="url(#shopAccent)" stroke="#0F172A" stroke-width="3" />
+    <path d="M126 65 L142 65 L140 94 C137 99 129 98 127 93 Z" fill="url(#shopAccent)" stroke="#0F172A" stroke-width="3" />
+    <path d="M158 65 L174 65 L171 93 C168 98 160 97 159 92 Z" fill="url(#shopAccent)" stroke="#0F172A" stroke-width="3" />
+
+    <!-- Top canopy rim -->
+    <line x1="10" y1="65" x2="190" y2="65" stroke="#0F172A" stroke-width="6.5" stroke-linecap="round" />
+
+    <!-- Roof Sign Poles -->
+    <line x1="72" y1="42" x2="72" y2="65" stroke="#0F172A" stroke-width="4.5" />
+    <line x1="128" y1="42" x2="128" y2="65" stroke="#0F172A" stroke-width="4.5" />
+
+    <!-- Roof Sign -->
+    <rect x="55" y="16" width="90" height="34" rx="8" fill="url(#shopAccent)" stroke="#0F172A" stroke-width="5" />
+    <text x="100" y="39" text-anchor="middle" font-family="'Unbounded', -apple-system, system-ui, sans-serif" font-weight="900" font-size="19" fill="#FFFFFF" letter-spacing="2">SHOP</text>
+  </g>
+
+  <!-- Modern Brush / Banner Plate (Modern evolution of the black brush stroke from the original photo) -->
+  <g filter="url(#bannerShadow)">
+    <rect x="24" y="278" width="352" height="96" rx="28" fill="#0F172A" />
+    <rect x="28" y="282" width="344" height="88" rx="24" fill="#1E293B" stroke="#334155" stroke-width="1.5" />
+  </g>
+
+  <!-- Brand Typography in Cyrillic -->
+  <text x="200" y="318" text-anchor="middle" font-family="'Unbounded', -apple-system, system-ui, sans-serif" font-weight="800" font-size="20" fill="#FFFFFF" letter-spacing="0.5">
+    ПОРЪЧКИ
+  </text>
+  <text x="200" y="348" text-anchor="middle" font-family="'Onest', -apple-system, system-ui, sans-serif" font-weight="600" font-size="16" fill="#38BDF8" letter-spacing="1">
+    ЗА МАЛКИ И ГОЛЕМИ
+  </text>
+</svg>
