@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { ArrowLeft, Mail, MapPin, Phone, StickyNote } from "lucide-react";
+import { ArrowLeft, Mail, MapPin, Phone, Printer, StickyNote, Truck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -100,6 +100,70 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
           </Panel>
 
           <Panel className="p-5">
+            <div className="flex items-center justify-between">
+              <h2 className="font-display text-lg font-semibold">Доставка & Товарителница</h2>
+              {order.courier && (
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                    order.courier === "econt"
+                      ? "bg-blue-100 text-blue-900"
+                      : order.courier === "speedy"
+                      ? "bg-red-100 text-red-900"
+                      : "bg-emerald-100 text-emerald-900"
+                  }`}
+                >
+                  {order.courier === "econt" ? "Еконт" : order.courier === "speedy" ? "Спиди" : "Box Now"}
+                </span>
+              )}
+            </div>
+            <div className="mt-3 space-y-2 text-sm">
+              <div className="flex items-start gap-2.5">
+                <Truck className="mt-0.5 h-4 w-4 shrink-0 text-forest" />
+                <div>
+                  <p className="font-semibold text-ink">
+                    {DELIVERY_METHODS.find((d) => d.id === order.delivery)?.label ?? order.delivery}
+                  </p>
+                  {order.officeName && (
+                    <p className="mt-0.5 text-ink">
+                      {order.officeName}{" "}
+                      {order.officeCode && <span className="text-xs text-ink-soft">(код: {order.officeCode})</span>}
+                    </p>
+                  )}
+                  <p className="mt-0.5 text-xs text-ink-soft">
+                    {order.city}, {order.address}
+                  </p>
+                </div>
+              </div>
+
+              {order.trackingNumber ? (
+                <div className="mt-4 rounded-xl border border-line bg-sand/40 p-3">
+                  <p className="text-xs text-ink-soft">Номер на товарителница:</p>
+                  <p className="font-mono text-base font-bold text-forest">{order.trackingNumber}</p>
+                  {order.waybillUrl && (
+                    <a
+                      href={order.waybillUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-forest hover:underline"
+                    >
+                      <Printer className="h-3.5 w-3.5" />
+                      Печат на товарителница (PDF)
+                    </a>
+                  )}
+                </div>
+              ) : order.delivery !== "store" ? (
+                <div className="mt-3 rounded-xl border border-dashed border-line bg-sand/20 p-3 text-xs text-ink-soft">
+                  <p className="font-medium text-ink">Готово за генериране на товарителница</p>
+                  <p className="mt-0.5">
+                    Куриер: {order.courier === "econt" ? "Еконт" : order.courier === "speedy" ? "Спиди" : "Box Now"} ·
+                    Код: {order.officeCode || "До адрес"} · НП: {formatPrice(order.total)}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </Panel>
+
+          <Panel className="p-5">
             <h2 className="font-display text-lg font-semibold">Клиент</h2>
             <p className="mt-3 font-semibold">{order.name}</p>
             <ul className="mt-3 space-y-2.5 text-[0.95rem]">
@@ -118,8 +182,6 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
               <li className="flex gap-3">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-forest" aria-hidden />
                 <span>
-                  {DELIVERY_METHODS.find((d) => d.id === order.delivery)?.label ?? order.delivery}
-                  <br />
                   {order.city}, {order.address}
                 </span>
               </li>

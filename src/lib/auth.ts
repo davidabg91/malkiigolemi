@@ -1,7 +1,11 @@
 import "server-only";
+import { eq } from "drizzle-orm";
 import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { cache } from "react";
+import { db } from "@/db";
+import { users } from "@/db/schema";
 
 const COOKIE = "limona_session";
 const MAX_AGE = 60 * 60 * 24 * 30;
@@ -31,17 +35,29 @@ export async function createSession(session: Session) {
   });
 }
 
-export async function getSession(): Promise<Session | null> {
+/**
+ * The cookie only proves who signed in; the account itself is read from the database so a deleted
+ * or demoted user stops counting as signed in (a stale cookie otherwise loops between /vhod and /profil).
+ * Cached per request because the header, page and actions all ask.
+ */
+export const getSession = cache(async (): Promise<Session | null> => {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
+  let uid: number;
   try {
     const { payload } = await jwtVerify(token, secret(), { algorithms: ["HS256"] });
-    if (typeof payload.uid !== "number" || (payload.role !== "customer" && payload.role !== "admin")) return null;
-    return { uid: payload.uid, role: payload.role, name: String(payload.name ?? ""), email: String(payload.email ?? "") };
+    if (typeof payload.uid !== "number") return null;
+    uid = payload.uid;
   } catch {
     return null;
   }
-}
+  const [user] = await db
+    .select({ id: users.id, role: users.role, name: users.name, email: users.email })
+    .from(users)
+    .where(eq(users.id, uid))
+    .limit(1);
+  return user ? { uid: user.id, role: user.role, name: user.name, email: user.email } : null;
+});
 
 export async function destroySession() {
   (await cookies()).delete(COOKIE);

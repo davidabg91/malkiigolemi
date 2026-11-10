@@ -60,9 +60,35 @@ async function Confirmation({ params }: Pick<Props, "params">) {
         {pickup ? (
           <StoreLocation className="mt-5" />
         ) : (
-          <p className="mt-5 rounded-2xl bg-sand px-4 py-3 text-sm text-ink-soft">
-            Доставяме до: {order.city}, {order.address}
-          </p>
+          <div className="mt-5 rounded-2xl bg-sand p-4 text-sm space-y-1">
+            <div className="flex items-center gap-2 font-medium text-ink">
+              <span>
+                {order.delivery === "box"
+                  ? "Доставка до автомат: "
+                  : order.delivery === "office"
+                  ? "Доставка до офис: "
+                  : "Доставка до адрес: "}
+                <strong>
+                  {order.courier === "econt"
+                    ? "Еконт"
+                    : order.courier === "speedy"
+                    ? "Спиди"
+                    : order.courier === "boxnow"
+                    ? "Box Now"
+                    : "Куриер"}
+                </strong>
+              </span>
+              {order.officeCode && (
+                <span className="rounded bg-paper px-1.5 py-0.5 text-xs font-semibold text-ink-soft">
+                  Код #{order.officeCode}
+                </span>
+              )}
+            </div>
+            {order.officeName && <p className="font-semibold text-ink">{order.officeName}</p>}
+            <p className="text-ink-soft">
+              {order.city}, {order.address}
+            </p>
+          </div>
         )}
       </div>
 

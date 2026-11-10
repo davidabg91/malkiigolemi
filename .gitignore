@@ -23,6 +23,8 @@
 # misc
 .DS_Store
 *.pem
+__pycache__/
+*.pyc
 
 # debug
 npm-debug.log*
@@ -42,6 +44,7 @@ yarn-error.log*
 next-env.d.ts
 
 # local database and uploads
-/data/
+/data/*
+!/data/couriers/
 /public/uploads/
 .claude/

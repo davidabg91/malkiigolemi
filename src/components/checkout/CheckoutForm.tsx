@@ -1,17 +1,20 @@
 "use client";
 
-import { Banknote, Loader2, Lock } from "lucide-react";
+import { Banknote, CreditCard, Info, Loader2, Lock } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
 import { placeOrder } from "@/actions/checkout";
 import { ProductVisual } from "@/components/product/PackShot";
 import { StoreLocation } from "@/components/StoreLocation";
+import { CourierOfficePicker } from "./CourierOfficePicker";
 import { DeliveryOptions } from "./DeliveryOptions";
+import { PaymentBrands } from "./PaymentBrands";
 import { btn } from "@/components/ui";
 import { formatPrice, unitPriceFor } from "@/lib/format";
-import { DELIVERY_METHODS, shippingFor, type DeliveryId } from "@/lib/site";
+import { DELIVERY_METHODS, shippingFor, STORE, type DeliveryId } from "@/lib/site";
 import { cartTotals, useCart, useHydrated } from "@/lib/store";
+import type { CourierId, CourierOffice } from "@/lib/couriers";
 
 export type CheckoutDefaults = {
   name: string;
@@ -20,10 +23,15 @@ export type CheckoutDefaults = {
   city: string;
   address: string;
   delivery: DeliveryId | null;
+  courier?: CourierId | null;
+  officeCode?: string | null;
+  officeName?: string | null;
   signedIn: boolean;
 };
 
-const isDeliveryId = (v: string | null): v is DeliveryId => DELIVERY_METHODS.some((d) => d.id === v);
+type Payment = "cod" | "card";
+
+const isDeliveryId =(v: string | null): v is DeliveryId => DELIVERY_METHODS.some((d) => d.id === v);
 
 function Field({
   label,
@@ -46,14 +54,65 @@ function Field({
   );
 }
 
+function PaymentOption({
+  active,
+  onSelect,
+  value,
+  icon,
+  title,
+  text,
+  children,
+}: {
+  active: boolean;
+  onSelect: () => void;
+  value: Payment;
+  icon: React.ReactNode;
+  title: string;
+  text: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <label
+      className={`relative flex cursor-pointer gap-4 rounded-2xl border-2 p-4 transition ${active ? "border-forest bg-lime/25" : "border-line hover:border-ink/30"}`}
+    >
+      <input type="radio" name="payment" value={value} checked={active} onChange={onSelect} className="peer sr-only" />
+      <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full ${active ? "bg-forest text-white" : "bg-sand text-ink"}`}>{icon}</span>
+      <span className="min-w-0">
+        <span className="block font-semibold">{title}</span>
+        <span className="mt-0.5 block text-sm text-ink-soft">{text}</span>
+        {children}
+      </span>
+      <span className="pointer-events-none absolute inset-0 rounded-2xl peer-focus-visible:ring-2 peer-focus-visible:ring-forest peer-focus-visible:ring-offset-2" />
+    </label>
+  );
+}
+
 export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
   const router = useRouter();
   const hydrated = useHydrated();
   const items = useCart((s) => s.items);
   const clear = useCart((s) => s.clear);
   const [delivery, setDelivery] = useState<DeliveryId>(isDeliveryId(defaults.delivery) ? defaults.delivery : "office");
+  const [courier, setCourier] = useState<CourierId>((defaults.courier as CourierId) || "speedy");
+  const [city, setCity] = useState<string>(defaults.city || "Плевен");
+  const [address, setAddress] = useState<string>(defaults.address || "");
+  const [selectedOffice, setSelectedOffice] = useState<CourierOffice | null>(
+    defaults.officeCode
+      ? {
+          id: `${defaults.courier || "speedy"}-${defaults.officeCode}`,
+          code: defaults.officeCode,
+          name: defaults.officeName || "",
+          address: defaults.address || "",
+          city: defaults.city || "Плевен",
+          courier: (defaults.courier as CourierId) || "speedy",
+          type: defaults.delivery === "box" ? "box" : "office",
+        }
+      : null,
+  );
+
   // Offer to remember the details by default only when nothing is saved yet.
   const [saveAsDefault, setSaveAsDefault] = useState(defaults.signedIn && !defaults.delivery);
+  const [payment, setPayment] = useState<Payment>("cod");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState("");
   const [pending, start] = useTransition();
@@ -84,15 +143,29 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
     setErrors({});
     setFormError("");
     start(async () => {
+      const courierVal = pickup ? undefined : ((text("courier") || courier) as CourierId);
+      const officeCodeVal = pickup ? undefined : (text("officeCode") || selectedOffice?.code || undefined);
+      const officeNameVal = pickup ? undefined : (text("officeName") || selectedOffice?.name || undefined);
+      const finalCity = pickup ? STORE.city : (text("city") || city);
+      const finalAddress = pickup
+        ? STORE.address
+        : delivery === "office" || delivery === "box"
+        ? (selectedOffice?.address || text("address") || address)
+        : (text("address") || address);
+
       const result = await placeOrder({
         name: text("name"),
         phone: text("phone"),
         email: text("email"),
         delivery,
-        city: text("city"),
-        address: text("address"),
+        courier: courierVal,
+        officeCode: officeCodeVal,
+        officeName: officeNameVal,
+        city: finalCity,
+        address: finalAddress,
         note: text("note"),
         saveAsDefault: defaults.signedIn && saveAsDefault,
+        payment,
         items: items.map((i) => ({ id: i.id, qty: i.qty })),
       });
       if (result.ok) {
@@ -125,7 +198,14 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
         <fieldset className="rounded-tile bg-paper p-6 shadow-soft sm:p-8">
           <legend className="float-left mb-5 font-display text-lg font-semibold">2. Доставка</legend>
           <div className="clear-both">
-            <DeliveryOptions value={delivery} onChange={setDelivery} priceFor={(id) => shippingFor(id, subtotal)} />
+            <DeliveryOptions
+              value={delivery}
+              onChange={(d) => {
+                setDelivery(d);
+                setSelectedOffice(null);
+              }}
+              priceFor={(id) => shippingFor(id, subtotal)}
+            />
           </div>
           {pickup ? (
             <div className="mt-5">
@@ -133,9 +213,19 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
               <p className="mt-3 text-sm text-ink-soft">Ще ти се обадим, когато поръчката е готова за вземане.</p>
             </div>
           ) : (
-            <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_1.6fr]">
-              <Field label="Населено място" name="city" required autoComplete="address-level2" defaultValue={defaults.city} error={errors.city} />
-              <Field label={method.addressLabel} name="address" required autoComplete="street-address" defaultValue={defaults.address} error={errors.address} />
+            <div className="mt-5">
+              <CourierOfficePicker
+                delivery={delivery as "office" | "box" | "address"}
+                courier={courier}
+                onCourierChange={setCourier}
+                city={city}
+                onCityChange={setCity}
+                selectedOffice={selectedOffice}
+                onOfficeChange={setSelectedOffice}
+                address={address}
+                onAddressChange={setAddress}
+                errors={errors}
+              />
             </div>
           )}
           {defaults.signedIn ? (
@@ -166,19 +256,39 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
 
         <fieldset className="rounded-tile bg-paper p-6 shadow-soft sm:p-8">
           <legend className="float-left mb-5 font-display text-lg font-semibold">3. Плащане</legend>
-          <div className="clear-both flex items-center gap-4 rounded-2xl border-2 border-forest bg-lime/25 p-4">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-forest text-white">
-              <Banknote className="h-5 w-5" aria-hidden />
-            </span>
-            <div>
-              <p className="font-semibold">{pickup ? "Плащане в магазина" : "Наложен платеж"}</p>
-              <p className="text-sm text-ink-soft">
-                {pickup
+          <div className="clear-both grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Начин на плащане">
+            <PaymentOption
+              active={payment === "cod"}
+              onSelect={() => setPayment("cod")}
+              value="cod"
+              icon={<Banknote className="h-5 w-5" aria-hidden />}
+              title={pickup ? "Плащане в магазина" : "Наложен платеж"}
+              text={
+                pickup
                   ? "Плащаш в брой или с карта, когато вземеш поръчката."
-                  : "Плащаш на куриера в брой или с карта, след като прегледаш пратката."}
-              </p>
-            </div>
+                  : "Плащаш на куриера в брой или с карта, след като прегледаш пратката."
+              }
+            />
+            <PaymentOption
+              active={payment === "card"}
+              onSelect={() => setPayment("card")}
+              value="card"
+              icon={<CreditCard className="h-5 w-5" aria-hidden />}
+              title="С карта онлайн"
+              text="Плащаш сигурно с дебитна или кредитна карта."
+            >
+              <PaymentBrands className="mt-3" />
+            </PaymentOption>
           </div>
+          {payment === "card" && (
+            <p role="status" className="mt-4 flex gap-2.5 rounded-2xl bg-sand px-4 py-3 text-sm">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-forest" aria-hidden />
+              <span>
+                Онлайн плащането с карта ще бъде активно съвсем скоро. Дотогава избери „{pickup ? "Плащане в магазина" : "Наложен платеж"}“ — пак можеш да платиш с карта{" "}
+                {pickup ? "в магазина" : "на куриера"}.
+              </span>
+            </p>
+          )}
         </fieldset>
       </div>
 
@@ -218,10 +328,18 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
             {formError}
           </p>
         )}
-        <button type="submit" disabled={pending || placed} className={`${btn.lime} mt-5 w-full`}>
-          {pending || placed ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <Lock className="h-[18px] w-[18px]" aria-hidden />}
-          {pending || placed ? "Изпращаме поръчката…" : "Потвърди поръчката"}
-        </button>
+        {payment === "card" ? (
+          // Placeholder until a card provider is connected; the action refuses "card" as well.
+          <button type="button" disabled className={`${btn.lime} mt-5 w-full`}>
+            <CreditCard className="h-[18px] w-[18px]" aria-hidden />
+            Плати с карта · скоро
+          </button>
+        ) : (
+          <button type="submit" disabled={pending || placed} className={`${btn.lime} mt-5 w-full`}>
+            {pending || placed ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <Lock className="h-[18px] w-[18px]" aria-hidden />}
+            {pending || placed ? "Изпращаме поръчката…" : "Потвърди поръчката"}
+          </button>
+        )}
         <p className="mt-3 text-center text-xs leading-relaxed text-ink-soft">
           С натискането на бутона приемаш{" "}
           <Link href="/usloviya" className="underline underline-offset-2 hover:text-ink">
