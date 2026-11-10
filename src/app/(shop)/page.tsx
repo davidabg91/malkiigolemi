@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Bento } from "@/components/home/Bento";
 import { FacebookSection } from "@/components/home/FacebookSection";
 import { OriginTabs } from "@/components/home/OriginTabs";
+import { PromoRibbon } from "@/components/home/PromoRibbon";
 import { Carousel } from "@/components/product/Carousel";
 import { ProductVisual } from "@/components/product/PackShot";
 import { ProductCard } from "@/components/product/ProductCard";
@@ -28,25 +29,7 @@ export default async function HomePage() {
     <div className="container-shop space-y-16 pt-4 sm:space-y-24 sm:pt-6">
       <Bento tree={tree} showcase={showcase} total={total} />
 
-      {home.promo.length > 0 && (
-        <section aria-labelledby="promo-heading">
-          <SectionHeading
-            id="promo-heading"
-            eyebrow="Само тази седмица"
-            title="Промоции на седмицата"
-            action={
-              <Link href="/promo" className={seeAll}>
-                Всички промоции <ArrowRight className="h-4 w-4" />
-              </Link>
-            }
-          />
-          <Carousel label="Промоции на седмицата">
-            {home.promo.map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </Carousel>
-        </section>
-      )}
+      <PromoRibbon products={home.promo} />
 
       {home.bulk.length > 0 && (
         <section className="relative isolate overflow-hidden rounded-tile bg-forest-deep px-6 py-10 text-cream sm:px-10 sm:py-14" aria-labelledby="bulk-heading">

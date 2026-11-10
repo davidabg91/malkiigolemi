@@ -13,7 +13,6 @@ export async function Header() {
           <p className="flex items-center gap-2">
             <Truck className="h-4 w-4 text-cyan-400" aria-hidden />
             <span>Безплатна доставка за поръчки над 60 €</span>
-            <span className="hidden text-cream/60 md:inline">· доставка до автомат от 1,90 €</span>
           </p>
           <a
             href={site.facebookUrl}
