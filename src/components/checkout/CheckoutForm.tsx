@@ -6,12 +6,24 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
 import { placeOrder } from "@/actions/checkout";
 import { ProductVisual } from "@/components/product/PackShot";
+import { StoreLocation } from "@/components/StoreLocation";
+import { DeliveryOptions } from "./DeliveryOptions";
 import { btn } from "@/components/ui";
 import { formatPrice, unitPriceFor } from "@/lib/format";
 import { DELIVERY_METHODS, shippingFor, type DeliveryId } from "@/lib/site";
 import { cartTotals, useCart, useHydrated } from "@/lib/store";
 
-export type CheckoutDefaults = { name: string; phone: string; email: string; city: string; address: string };
+export type CheckoutDefaults = {
+  name: string;
+  phone: string;
+  email: string;
+  city: string;
+  address: string;
+  delivery: DeliveryId | null;
+  signedIn: boolean;
+};
+
+const isDeliveryId = (v: string | null): v is DeliveryId => DELIVERY_METHODS.some((d) => d.id === v);
 
 function Field({
   label,
@@ -39,7 +51,9 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
   const hydrated = useHydrated();
   const items = useCart((s) => s.items);
   const clear = useCart((s) => s.clear);
-  const [delivery, setDelivery] = useState<DeliveryId>("office");
+  const [delivery, setDelivery] = useState<DeliveryId>(isDeliveryId(defaults.delivery) ? defaults.delivery : "office");
+  // Offer to remember the details by default only when nothing is saved yet.
+  const [saveAsDefault, setSaveAsDefault] = useState(defaults.signedIn && !defaults.delivery);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState("");
   const [pending, start] = useTransition();
@@ -48,6 +62,7 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
   const { subtotal } = cartTotals(items);
   const shipping = shippingFor(delivery, subtotal);
   const method = DELIVERY_METHODS.find((d) => d.id === delivery)!;
+  const pickup = delivery === "store";
 
   if (!hydrated) return <div className="h-96 animate-pulse rounded-tile bg-sand" aria-hidden />;
   if (items.length === 0 && !placed) {
@@ -77,6 +92,7 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
         city: text("city"),
         address: text("address"),
         note: text("note"),
+        saveAsDefault: defaults.signedIn && saveAsDefault,
         items: items.map((i) => ({ id: i.id, qty: i.qty })),
       });
       if (result.ok) {
@@ -108,28 +124,38 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
 
         <fieldset className="rounded-tile bg-paper p-6 shadow-soft sm:p-8">
           <legend className="float-left mb-5 font-display text-lg font-semibold">2. Доставка</legend>
-          <div className="clear-both grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label="Начин на доставка">
-            {DELIVERY_METHODS.map((d) => {
-              const active = d.id === delivery;
-              const price = shippingFor(d.id, subtotal);
-              return (
-                <label
-                  key={d.id}
-                  className={`relative flex cursor-pointer flex-col rounded-2xl border-2 p-4 transition ${active ? "border-forest bg-lime/25" : "border-line hover:border-ink/30"}`}
-                >
-                  <input type="radio" name="delivery" value={d.id} checked={active} onChange={() => setDelivery(d.id)} className="peer sr-only" />
-                  <span className="font-semibold">{d.label}</span>
-                  <span className="mt-1 text-sm text-ink-soft">{d.hint}</span>
-                  <span className="mt-3 font-bold tabular-nums">{price === 0 ? "Безплатно" : formatPrice(price)}</span>
-                  <span className="pointer-events-none absolute inset-0 rounded-2xl peer-focus-visible:ring-2 peer-focus-visible:ring-forest peer-focus-visible:ring-offset-2" />
-                </label>
-              );
-            })}
+          <div className="clear-both">
+            <DeliveryOptions value={delivery} onChange={setDelivery} priceFor={(id) => shippingFor(id, subtotal)} />
           </div>
-          <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_1.6fr]">
-            <Field label="Населено място" name="city" required autoComplete="address-level2" defaultValue={defaults.city} error={errors.city} />
-            <Field label={method.addressLabel} name="address" required autoComplete="street-address" defaultValue={defaults.address} error={errors.address} />
-          </div>
+          {pickup ? (
+            <div className="mt-5">
+              <StoreLocation defaultOpen />
+              <p className="mt-3 text-sm text-ink-soft">Ще ти се обадим, когато поръчката е готова за вземане.</p>
+            </div>
+          ) : (
+            <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_1.6fr]">
+              <Field label="Населено място" name="city" required autoComplete="address-level2" defaultValue={defaults.city} error={errors.city} />
+              <Field label={method.addressLabel} name="address" required autoComplete="street-address" defaultValue={defaults.address} error={errors.address} />
+            </div>
+          )}
+          {defaults.signedIn ? (
+            <label className="mt-4 flex cursor-pointer items-center gap-3 text-sm">
+              <input
+                type="checkbox"
+                checked={saveAsDefault}
+                onChange={(e) => setSaveAsDefault(e.target.checked)}
+                className="h-5 w-5 accent-[#1f5c3f]"
+              />
+              Запази {pickup ? "вземането от магазина" : "този адрес"} като предпочитан за следващи поръчки
+            </label>
+          ) : (
+            <p className="mt-4 text-sm text-ink-soft">
+              <Link href="/vhod?next=/porachka" className="font-semibold text-forest hover:underline">
+                Влез в профила си
+              </Link>
+              , за да запазим адреса ти и да поръчваш по-бързо следващия път.
+            </p>
+          )}
           <div className="mt-4">
             <label htmlFor="note" className="mb-1.5 block text-sm font-medium">
               Бележка към поръчката <span className="font-normal text-ink-soft">(по желание)</span>
@@ -145,8 +171,12 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
               <Banknote className="h-5 w-5" aria-hidden />
             </span>
             <div>
-              <p className="font-semibold">Наложен платеж</p>
-              <p className="text-sm text-ink-soft">Плащаш на куриера в брой или с карта, след като прегледаш пратката.</p>
+              <p className="font-semibold">{pickup ? "Плащане в магазина" : "Наложен платеж"}</p>
+              <p className="text-sm text-ink-soft">
+                {pickup
+                  ? "Плащаш в брой или с карта, когато вземеш поръчката."
+                  : "Плащаш на куриера в брой или с карта, след като прегледаш пратката."}
+              </p>
             </div>
           </div>
         </fieldset>

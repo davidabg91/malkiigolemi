@@ -9,7 +9,7 @@ import { orderItems, orders, products, users } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { unitPriceFor } from "@/lib/format";
 import { CATALOG_TAG } from "@/lib/queries";
-import { DELIVERY_METHODS, shippingFor } from "@/lib/site";
+import { DELIVERY_METHODS, shippingFor, STORE } from "@/lib/site";
 
 const input = z.object({
   name: z.string().trim().min(3, "Въведи име и фамилия.").max(80),
@@ -19,13 +19,20 @@ const input = z.object({
     .regex(/^\+?[0-9 ]{8,15}$/, "Въведи валиден телефон."),
   email: z.string().trim().toLowerCase().pipe(z.email("Въведи валиден имейл.")),
   delivery: z.enum(DELIVERY_METHODS.map((d) => d.id) as [string, ...string[]]),
-  city: z.string().trim().min(2, "Въведи населено място.").max(80),
-  address: z.string().trim().min(3, "Въведи адрес, офис или автомат.").max(200),
+  city: z.string().trim().max(80).default(""),
+  address: z.string().trim().max(200).default(""),
   note: z.string().trim().max(500).optional(),
+  /** Signed-in customers can keep these delivery details as their default. */
+  saveAsDefault: z.boolean().optional(),
   items: z
     .array(z.object({ id: z.number().int().positive(), qty: z.number().int().min(1).max(99) }))
     .min(1, "Количката е празна.")
     .max(100),
+}).superRefine((d, ctx) => {
+  // Store pickup needs no address; every courier option does.
+  if (d.delivery === "store") return;
+  if (d.city.length < 2) ctx.addIssue({ code: "custom", path: ["city"], message: "Въведи населено място." });
+  if (d.address.length < 3) ctx.addIssue({ code: "custom", path: ["address"], message: "Въведи адрес, офис или автомат." });
 });
 
 export type CheckoutInput = z.input<typeof input>;
@@ -51,6 +58,9 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
     return { ok: false, error: "Моля, провери отбелязаните полета.", fieldErrors };
   }
   const data = parsed.data;
+  const pickup = data.delivery === "store";
+  const city = pickup ? STORE.city : data.city;
+  const address = pickup ? STORE.address : data.address;
 
   // Merge duplicate lines, then price everything from the database — the client only tells us ids and quantities.
   const qtyById = new Map<number, number>();
@@ -90,8 +100,8 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
           phone: data.phone,
           email: data.email,
           delivery: data.delivery,
-          city: data.city,
-          address: data.address,
+          city,
+          address,
           note: data.note || null,
           subtotal,
           shipping,
@@ -118,11 +128,16 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
     return { ok: false, error: "Възникна грешка при записване на поръчката. Опитай отново." };
   }
 
-  if (session) {
-    // Remember the delivery details for the next checkout.
+  if (session && data.saveAsDefault) {
+    // Only when asked: silently overwriting a saved address with a one-off gift delivery would be annoying.
     await db
       .update(users)
-      .set({ phone: data.phone, city: data.city, address: data.address })
+      .set({
+        phone: data.phone,
+        preferredDelivery: data.delivery,
+        // Pickup has no address of its own, so keep whatever address the customer had saved.
+        ...(pickup ? {} : { city: data.city, address: data.address }),
+      })
       .where(eq(users.id, session.uid))
       .catch(() => {});
   }

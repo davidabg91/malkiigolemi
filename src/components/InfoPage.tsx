@@ -1,9 +1,9 @@
-import { Clock, Mail, MapPin, Phone } from "lucide-react";
+import { Clock, Mail, MapPin, Phone, Store } from "lucide-react";
 import Link from "next/link";
 import type { ComponentType, ReactNode } from "react";
 import { Breadcrumbs, btn, FacebookIcon, ShopMark } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
-import { DELIVERY_METHODS, FREE_SHIPPING_FROM, site } from "@/lib/site";
+import { DELIVERY_METHODS, FREE_SHIPPING_FROM, site, STORE } from "@/lib/site";
 
 export function InfoPage({ title, lead, children }: { title: string; lead?: string; children: ReactNode }) {
   return (
@@ -51,7 +51,7 @@ export function DeliveryTable() {
                 {d.label}
               </th>
               <td className="px-5 py-3.5">{d.hint}</td>
-              <td className="px-5 py-3.5 text-right font-semibold text-ink tabular-nums">{formatPrice(d.price)}</td>
+              <td className="px-5 py-3.5 text-right font-semibold text-ink tabular-nums">{d.price === 0 ? "Безплатно" : formatPrice(d.price)}</td>
             </tr>
           ))}
           <tr className="bg-lime/30">
@@ -71,6 +71,7 @@ export function ContactCards() {
     { icon: FacebookIcon, label: "Facebook група", value: "Поръчки за малки и големи", href: site.facebookUrl, external: true },
     { icon: Phone, label: "Телефон", value: site.phone, href: site.phoneHref },
     { icon: Mail, label: "Имейл", value: site.email, href: `mailto:${site.email}` },
+    { icon: Store, label: "Магазин", value: STORE.address, href: STORE.mapsUrl, external: true },
     { icon: MapPin, label: "Доставка", value: site.address },
     { icon: Clock, label: "Работно време", value: site.workHours },
   ];

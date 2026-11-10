@@ -9,15 +9,25 @@ import { getSession } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Поръчка", robots: { index: false } };
 
-const EMPTY: CheckoutDefaults = { name: "", phone: "", email: "", city: "", address: "" };
+const EMPTY: CheckoutDefaults = { name: "", phone: "", email: "", city: "", address: "", delivery: null, signedIn: false };
 
-/** Signed-in customers get their saved details prefilled. */
+/** Signed-in customers get their saved details and preferred delivery prefilled. */
 async function Form() {
   const session = await getSession();
   let defaults = EMPTY;
   if (session) {
     const [u] = await db.select().from(users).where(eq(users.id, session.uid)).limit(1);
-    if (u) defaults = { name: u.name, phone: u.phone ?? "", email: u.email, city: u.city ?? "", address: u.address ?? "" };
+    if (u) {
+      defaults = {
+        name: u.name,
+        phone: u.phone ?? "",
+        email: u.email,
+        city: u.city ?? "",
+        address: u.address ?? "",
+        delivery: (u.preferredDelivery as CheckoutDefaults["delivery"]) ?? null,
+        signedIn: true,
+      };
+    }
   }
   return <CheckoutForm defaults={defaults} />;
 }

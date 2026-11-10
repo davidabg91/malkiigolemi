@@ -46,6 +46,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               border: "none",
               fontFamily: "var(--font-onest)",
             },
+            // Sonner's default description colour is dark grey, which disappears on the dark toast.
+            classNames: { description: "text-cream/80!" },
           }}
         />
       </body>

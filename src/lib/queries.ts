@@ -261,3 +261,9 @@ export async function searchSuggestions(q: string) {
     .orderBy(desc(products.isFeatured), asc(products.id))
     .limit(6);
 }
+
+/** Current card data for specific products, read fresh (no cache) because it decides what can be re-ordered. */
+export async function getLiveCards(ids: number[]) {
+  if (ids.length === 0) return [];
+  return cards().where(and(inArray(products.id, ids), eq(products.active, true)));
+}
