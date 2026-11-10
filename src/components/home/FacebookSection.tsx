@@ -64,18 +64,18 @@ export function FacebookSection() {
         {/* Facebook Group Preview Card */}
         <div className="relative mx-auto w-full max-w-md">
           <div className="relative overflow-hidden rounded-2xl border border-line bg-paper shadow-lift">
-            {/* Banner / Cover */}
-            <div className="relative h-44 w-full bg-gradient-to-r from-sky-400 to-cyan-500">
+            {/* Banner / Cover with Original Photo */}
+            <div className="relative h-52 w-full bg-slate-900">
               <Image
-                src="/brand-showcase.png"
-                alt="Поръчки за малки и големи корица"
+                src="/facebook-original.jpg"
+                alt="Оригинална снимка на Facebook групата Поръчки за малки и големи"
                 fill
-                className="object-cover"
+                className="object-cover object-center"
                 sizes="(max-width: 768px) 100vw, 400px"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
-              <div className="absolute right-3 top-3 rounded-full bg-black/50 px-2.5 py-1 text-[0.7rem] font-medium text-white backdrop-blur">
-                Facebook Group
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+              <div className="absolute right-3 top-3 rounded-full bg-black/60 px-3 py-1 text-[0.72rem] font-semibold text-white shadow-sm backdrop-blur">
+                Оригинална Facebook група
               </div>
             </div>
 

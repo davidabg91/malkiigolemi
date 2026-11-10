@@ -16,16 +16,16 @@ export default function FacebookPage() {
       <Breadcrumbs items={[{ label: "Facebook общност" }]} />
 
       <div className="mt-6 overflow-hidden rounded-tile border border-sky-100 bg-paper shadow-lift">
-        {/* Cover Header */}
-        <div className="relative h-56 w-full sm:h-72">
+        {/* Cover Header with Original Photo */}
+        <div className="relative h-60 w-full sm:h-80 bg-slate-900">
           <Image
-            src="/brand-showcase.png"
-            alt="Поръчки за малки и големи Facebook корица"
+            src="/facebook-original.jpg"
+            alt="Оригинална снимка на Facebook групата Поръчки за малки и големи"
             fill
             priority
-            className="object-cover"
+            className="object-cover object-center"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />
 
           <div className="absolute bottom-5 left-5 right-5 flex flex-col gap-3 text-white sm:flex-row sm:items-end sm:justify-between sm:gap-4">
             <div className="flex items-center gap-4">
@@ -41,13 +41,13 @@ export default function FacebookPage() {
               <div>
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-[#1877F2] px-2.5 py-0.5 text-xs font-semibold">
                   <FacebookIcon className="h-3 w-3" />
-                  Публична група
+                  Официална общност
                 </span>
                 <h1 className="mt-1 font-display text-xl font-bold tracking-tight sm:text-2xl lg:text-3xl">
                   {site.facebookGroupName}
                 </h1>
                 <p className="text-xs text-white/80 sm:text-sm">
-                  Хиляди активни членове · Ежедневни нови оферти
+                  Оригиналната Facebook група · Хиляди доволни семейства
                 </p>
               </div>
             </div>
