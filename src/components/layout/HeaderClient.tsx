@@ -95,17 +95,6 @@ export function HeaderClient({ tree }: { tree: MenuCategory[] }) {
 
           <SearchBox className="hidden flex-1 md:block" />
 
-          <a
-            href={site.facebookUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden items-center gap-2 whitespace-nowrap rounded-full bg-cyan-50/80 px-3.5 py-2 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100/90 lg:inline-flex"
-            title="Facebook група: Поръчки за малки и големи"
-          >
-            <FacebookIcon className="h-4 w-4 text-[#1877F2]" />
-            <span>Facebook група</span>
-          </a>
-
           <a href={site.phoneHref} className="hidden items-center gap-2 whitespace-nowrap rounded-full px-3 py-2 text-sm font-semibold hover:bg-sand xl:inline-flex">
             <Phone className="h-4 w-4 text-forest" aria-hidden />
             {site.phone}
