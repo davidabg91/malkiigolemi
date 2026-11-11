@@ -128,7 +128,8 @@ export async function getHomeData() {
   const active = sellable;
   const [promo, fresh, bulk, origins, brandList] = await Promise.all([
     cards().where(and(active, sql`${effectiveOldPrice} is not null`)).orderBy(desc(products.isFeatured), asc(products.id)).limit(12),
-    cards().where(and(active, eq(products.isNew, true))).orderBy(desc(products.createdAt)).limit(10),
+    // Enough for a few pages of the auto-advancing shelf.
+    cards().where(and(active, eq(products.isNew, true))).orderBy(desc(products.createdAt)).limit(20),
     cards().where(and(active, isNotNull(products.bulkPrice))).orderBy(desc(products.isFeatured), asc(products.id)).limit(4),
     // The countries the shop actually sells most products from, for the "by origin" tabs.
     db
@@ -138,7 +139,14 @@ export async function getHomeData() {
       .groupBy(products.origin)
       .orderBy(desc(sql`count(*)`))
       .limit(4),
-    db.select().from(brands).orderBy(asc(brands.name)),
+    // Only brands with something on sale: each one links to its own page.
+    db
+      .select({ id: brands.id, slug: brands.slug, name: brands.name })
+      .from(brands)
+      .innerJoin(products, eq(products.brandId, brands.id))
+      .where(active)
+      .groupBy(brands.id)
+      .orderBy(asc(brands.name)),
   ]);
   const byOrigin = await Promise.all(
     origins
@@ -146,7 +154,7 @@ export async function getHomeData() {
       .map(async (o) => ({
         origin: o.origin!,
         count: o.n,
-        products: await cards().where(and(active, eq(products.origin, o.origin!))).orderBy(desc(products.isFeatured), asc(products.id)).limit(10),
+        products: await cards().where(and(active, eq(products.origin, o.origin!))).orderBy(desc(products.isFeatured), asc(products.id)).limit(20),
       })),
   );
   return { promo, fresh, bulk, byOrigin, brands: brandList };
@@ -166,8 +174,19 @@ export async function getCategoryPath(slugs: string[]) {
   return { root, sub };
 }
 
+/** A brand by its slug, for the brand page. */
+export async function getBrand(slug: string) {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CATALOG_TAG);
+
+  const [brand] = await db.select().from(brands).where(eq(brands.slug, slug)).limit(1);
+  return brand ?? null;
+}
+
 export type ListingScope = {
   categoryIds?: number[];
+  brandId?: number;
   promo?: boolean;
   isNew?: boolean;
   q?: string;
@@ -187,6 +206,7 @@ export type ListingFilters = {
 function scopeWhere(scope: ListingScope) {
   const where: SQL[] = [sellable];
   if (scope.categoryIds?.length) where.push(inArray(products.categoryId, scope.categoryIds));
+  if (scope.brandId) where.push(eq(products.brandId, scope.brandId));
   if (scope.promo) where.push(isPromo);
   if (scope.isNew) where.push(eq(products.isNew, true));
   if (scope.q) {

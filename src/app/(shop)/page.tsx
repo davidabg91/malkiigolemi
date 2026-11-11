@@ -82,7 +82,7 @@ export default async function HomePage() {
               </Link>
             }
           />
-          <Carousel label="Нови продукти">
+          <Carousel label="Нови продукти" autoplay>
             {home.fresh.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
@@ -120,14 +120,17 @@ export default async function HomePage() {
       {home.brands.length > 0 && (
         <section aria-label="Марки" className="-mx-4 overflow-hidden sm:-mx-6 xl:-mx-8">
           <div className="flex w-max animate-marquee gap-4 hover:[animation-play-state:paused]">
+            {/* The list runs twice for a seamless loop; the second copy is hidden from screen readers and the tab order. */}
             {[...home.brands, ...home.brands].map((b, i) => (
-              <span
+              <Link
                 key={`${b.id}-${i}`}
-                aria-hidden={i >= home.brands.length}
-                className="whitespace-nowrap rounded-full border border-line bg-paper px-6 py-3 font-display text-sm font-medium text-ink-soft"
+                href={`/marka/${b.slug}`}
+                aria-hidden={i >= home.brands.length || undefined}
+                tabIndex={i >= home.brands.length ? -1 : undefined}
+                className="whitespace-nowrap rounded-full border border-line bg-paper px-6 py-3 font-display text-sm font-medium text-ink-soft transition hover:border-forest hover:bg-lime hover:text-ink"
               >
                 {b.name}
-              </span>
+              </Link>
             ))}
           </div>
         </section>
