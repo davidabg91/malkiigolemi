@@ -6,6 +6,7 @@ import { BuyBox } from "@/components/product/AddToCart";
 import { Carousel } from "@/components/product/Carousel";
 import { ProductVisual } from "@/components/product/PackShot";
 import { Badges, ProductCard, ProductStamp } from "@/components/product/ProductCard";
+import { ProductZoom } from "@/components/product/ProductZoom";
 import { RecentlyViewed } from "@/components/product/Recent";
 import { Reviews } from "@/components/product/Reviews";
 import { ratingLabel, Stars } from "@/components/product/Stars";
@@ -78,7 +79,9 @@ async function Content({ params }: Pick<Props, "params">) {
             className="relative isolate grid aspect-square place-items-center overflow-hidden rounded-tile lg:sticky lg:top-36 lg:aspect-[1/0.95]"
             style={{ background: `color-mix(in srgb, ${product.color} 14%, #f6f2e8)` }}
           >
-            <ProductVisual product={product} size={640} className="h-[82%] w-[82%] animate-rise drop-shadow-[0_24px_24px_rgb(20_38_28/0.18)]" />
+            <ProductZoom label={product.name} zoomed={<ProductVisual product={product} size={1200} className="h-full w-full" />}>
+              <ProductVisual product={product} size={640} className="h-[82%] w-[82%] animate-rise drop-shadow-[0_24px_24px_rgb(20_38_28/0.18)]" />
+            </ProductZoom>
             <div className="absolute left-5 top-5 scale-110 origin-top-left">
               <Badges product={cardData} />
             </div>
