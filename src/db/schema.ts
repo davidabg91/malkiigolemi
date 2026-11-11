@@ -159,6 +159,26 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
   product: one(products, { fields: [orderItems.productId], references: [products.id] }),
 }));
 
+/**
+ * Customers the shop marked as "некоректен" (did not collect a parcel). Kept by e-mail and phone rather than
+ * by account, so a later order is recognised even when it is placed as a guest.
+ */
+export const flaggedContacts = sqliteTable(
+  "flagged_contacts",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    /** The registered account this was marked on, when there is one. */
+    userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+    /** Lower-cased. */
+    email: text("email"),
+    /** Normalised with normalizePhone (digits only, national format). */
+    phone: text("phone"),
+    note: text("note"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("flagged_contacts_email_idx").on(t.email), index("flagged_contacts_phone_idx").on(t.phone)],
+);
+
 export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
@@ -172,3 +192,4 @@ export type User = typeof users.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type OrderItem = typeof orderItems.$inferSelect;
 export type Setting = typeof settings.$inferSelect;
+export type FlaggedContact = typeof flaggedContacts.$inferSelect;

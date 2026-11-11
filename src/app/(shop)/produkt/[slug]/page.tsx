@@ -73,11 +73,6 @@ async function Content({ params }: Pick<Props, "params">) {
             className="relative isolate grid aspect-square place-items-center overflow-hidden rounded-tile lg:sticky lg:top-36 lg:aspect-[1/0.95]"
             style={{ background: `color-mix(in srgb, ${product.color} 14%, #f6f2e8)` }}
           >
-            <span
-              className="absolute -bottom-[22%] left-1/2 -z-10 aspect-square w-[82%] -translate-x-1/2 rounded-full opacity-25"
-              style={{ background: product.color }}
-              aria-hidden
-            />
             <ProductVisual product={product} size={640} className="h-[82%] w-[82%] animate-rise drop-shadow-[0_24px_24px_rgb(20_38_28/0.18)]" />
             <div className="absolute left-5 top-5 scale-110 origin-top-left">
               <Badges product={cardData} />

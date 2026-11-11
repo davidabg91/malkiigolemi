@@ -43,6 +43,13 @@
       "when": 1794353622615,
       "tag": "0005_rename_penguin_courier",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1794386040807,
+      "tag": "0006_flagged_contacts",
+      "breakpoints": true
     }
   ]
 }

@@ -3,10 +3,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { AdminSkeleton, PageTitle, Panel, td, th } from "@/components/admin/bits";
+import { FlagBadge } from "@/components/admin/Flag";
 import { StatusPill } from "@/components/StatusPill";
 import { db } from "@/db";
 import { ORDER_STATUSES, orders, type OrderStatus } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
+import { findFlag, getFlagIndex } from "@/lib/flags";
 import { formatDate, formatPrice } from "@/lib/format";
 import { DELIVERY_METHODS, ORDER_STATUS_LABELS } from "@/lib/site";
 
@@ -17,7 +19,7 @@ async function AdminOrders({ searchParams }: Pick<PageProps<"/admin/porachki">, 
   const sp = await searchParams;
   const status = ORDER_STATUSES.find((s) => s === sp.status) as OrderStatus | undefined;
 
-  const [list, counts] = await Promise.all([
+  const [list, counts, flags] = await Promise.all([
     db
       .select()
       .from(orders)
@@ -25,6 +27,7 @@ async function AdminOrders({ searchParams }: Pick<PageProps<"/admin/porachki">, 
       .orderBy(desc(orders.createdAt))
       .limit(200),
     db.select({ status: orders.status, n: sql<number>`count(*)` }).from(orders).groupBy(orders.status),
+    getFlagIndex(),
   ]);
   const countOf = (s: string) => counts.find((c) => c.status === s)?.n ?? 0;
   const all = counts.reduce((sum, c) => sum + c.n, 0);
@@ -76,6 +79,7 @@ async function AdminOrders({ searchParams }: Pick<PageProps<"/admin/porachki">, 
                     </td>
                     <td className={td}>
                       {o.name}
+                      {findFlag(flags, { userId: o.userId, email: o.email, phone: o.phone }) && <FlagBadge className="ml-2 align-middle" />}
                       <p className="text-xs text-ink-soft">{o.phone}</p>
                     </td>
                     <td className={td}>

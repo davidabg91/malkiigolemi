@@ -3,10 +3,12 @@ import { AlertTriangle, Euro, Package, ReceiptText } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { AdminSkeleton, PageTitle, Panel, td, th } from "@/components/admin/bits";
+import { FlagBadge } from "@/components/admin/Flag";
 import { StatusPill } from "@/components/StatusPill";
 import { db } from "@/db";
 import { orders, products } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
+import { findFlag, getFlagIndex } from "@/lib/flags";
 import { formatDate, formatPrice } from "@/lib/format";
 
 const LOW_STOCK = 10;
@@ -14,7 +16,7 @@ const LOW_STOCK = 10;
 async function AdminDashboard() {
   await requireAdmin();
 
-  const [[stats], [catalog], recent, low] = await Promise.all([
+  const [[stats], [catalog], recent, low, flags] = await Promise.all([
     db
       .select({
         fresh: sql<number>`coalesce(sum(case when ${orders.status} = 'new' then 1 else 0 end), 0)`,
@@ -32,6 +34,7 @@ async function AdminDashboard() {
       .where(eq(products.active, true)),
     db.select().from(orders).orderBy(desc(orders.createdAt)).limit(8),
     db.select().from(products).where(lt(products.stock, LOW_STOCK)).orderBy(asc(products.stock)).limit(6),
+    getFlagIndex(),
   ]);
 
   const cards = [
@@ -89,7 +92,10 @@ async function AdminDashboard() {
                         </Link>
                         <p className="text-xs text-ink-soft">{formatDate(o.createdAt)}</p>
                       </td>
-                      <td className={td}>{o.name}</td>
+                      <td className={td}>
+                        {o.name}
+                        {findFlag(flags, { userId: o.userId, email: o.email, phone: o.phone }) && <FlagBadge className="ml-2 align-middle" />}
+                      </td>
                       <td className={td}>
                         <StatusPill status={o.status} />
                       </td>

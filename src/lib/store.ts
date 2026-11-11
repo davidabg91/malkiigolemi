@@ -98,6 +98,15 @@ export const useRecent = create<ListState>()(
   ),
 );
 
+// A tab that was opened before an order still holds the old cart in memory, and its next change would
+// write that old cart back. Re-read the saved copy whenever another tab changes it.
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (e) => {
+    if (e.key === "limona-cart") void useCart.persist.rehydrate();
+    if (e.key === "limona-wishlist") void useWishlist.persist.rehydrate();
+  });
+}
+
 const noop = () => () => {};
 
 /** False on the server and during hydration, true afterwards — guards localStorage-backed UI. */
