@@ -50,7 +50,7 @@ export function OriginTabs({ tabs }: { tabs: Tab[] }) {
         </div>
       </div>
       <div role="tabpanel" key={tab.id} className="animate-rise">
-        <Carousel label={`Продукти от ${tab.label}`}>
+        <Carousel label={`Продукти от ${tab.label}`} autoplay>
           {tab.products.map((p) => (
             <ProductCard key={p.id} product={p} />
           ))}

@@ -62,6 +62,16 @@
   }
 }
 
+/* The current carousel dot filling up until the next page (used inline by Carousel). */
+@keyframes carousel-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
