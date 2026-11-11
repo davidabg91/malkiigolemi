@@ -2,7 +2,7 @@
 
 import { ImagePlus, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { startTransition, useActionState, useState, type ReactNode } from "react";
+import { startTransition, useActionState, useId, useState, type ReactNode } from "react";
 import { saveProduct } from "@/actions/admin";
 import { PackShot } from "@/components/product/PackShot";
 import { btn } from "@/components/ui";
@@ -32,6 +32,8 @@ export function ProductForm({
   brands: Brand[];
   categories: CategoryOption[];
 }) {
+  // Per-form id prefix: the new and edit pages can both stay mounted (hidden) after navigating.
+  const uid = useId();
   const [state, action, pending] = useActionState(saveProduct.bind(null, product?.id ?? null), undefined);
   const [pack, setPack] = useState(product?.pack ?? "box");
   const [color, setColor] = useState(product?.color ?? "#1F5C3F");
@@ -43,12 +45,12 @@ export function ProductForm({
 
   const input = (name: string, label: string, props: React.InputHTMLAttributes<HTMLInputElement> = {}, wide = false) => (
     <div className={wide ? "sm:col-span-2" : ""}>
-      <label htmlFor={name} className="mb-1.5 block text-sm font-medium">
+      <label htmlFor={`${uid}-${name}`} className="mb-1.5 block text-sm font-medium">
         {label} {props.required && <span className="text-tomato" aria-hidden>*</span>}
       </label>
-      <input id={name} name={name} className="field" aria-invalid={errors[name] ? true : undefined} aria-describedby={errors[name] ? `${name}-error` : undefined} {...props} />
+      <input id={`${uid}-${name}`} name={name} className="field" aria-invalid={errors[name] ? true : undefined} aria-describedby={errors[name] ? `${uid}-${name}-error` : undefined} {...props} />
       {errors[name] && (
-        <p id={`${name}-error`} role="alert" className="mt-1.5 text-sm font-medium text-tomato">
+        <p id={`${uid}-${name}-error`} role="alert" className="mt-1.5 text-sm font-medium text-tomato">
           {errors[name]}
         </p>
       )}
@@ -84,10 +86,10 @@ export function ProductForm({
           </div>
           {input("unit", "Разфасовка", { defaultValue: product?.unit, placeholder: "напр. 500 г, 1 л, 10 бр" })}
           <div>
-            <label htmlFor="categoryId" className="mb-1.5 block text-sm font-medium">
+            <label htmlFor={`${uid}-categoryId`} className="mb-1.5 block text-sm font-medium">
               Категория <span className="text-tomato" aria-hidden>*</span>
             </label>
-            <select id="categoryId" name="categoryId" required defaultValue={product?.categoryId ?? ""} className="field" aria-invalid={errors.categoryId ? true : undefined}>
+            <select id={`${uid}-categoryId`} name="categoryId" required defaultValue={product?.categoryId ?? ""} className="field" aria-invalid={errors.categoryId ? true : undefined}>
               <option value="" disabled>
                 Избери…
               </option>
@@ -105,10 +107,10 @@ export function ProductForm({
             {errors.categoryId && <p role="alert" className="mt-1.5 text-sm font-medium text-tomato">{errors.categoryId}</p>}
           </div>
           <div>
-            <label htmlFor="origin" className="mb-1.5 block text-sm font-medium">
+            <label htmlFor={`${uid}-origin`} className="mb-1.5 block text-sm font-medium">
               Произход
             </label>
-            <select id="origin" name="origin" defaultValue={product?.origin ?? ""} className="field">
+            <select id={`${uid}-origin`} name="origin" defaultValue={product?.origin ?? ""} className="field">
               <option value="">Не е посочен</option>
               {Object.entries(ORIGIN_LABELS).map(([k, v]) => (
                 <option key={k} value={k}>
@@ -118,10 +120,10 @@ export function ProductForm({
             </select>
           </div>
           <div>
-            <label htmlFor="brandId" className="mb-1.5 block text-sm font-medium">
+            <label htmlFor={`${uid}-brandId`} className="mb-1.5 block text-sm font-medium">
               Марка
             </label>
-            <select id="brandId" name="brandId" value={brandId} onChange={(e) => setBrandId(e.target.value)} disabled={newBrand !== ""} className="field disabled:opacity-50">
+            <select id={`${uid}-brandId`} name="brandId" value={brandId} onChange={(e) => setBrandId(e.target.value)} disabled={newBrand !== ""} className="field disabled:opacity-50">
               <option value="">Без марка</option>
               {brands.map((b) => (
                 <option key={b.id} value={b.id}>
@@ -133,16 +135,16 @@ export function ProductForm({
             {newBrand !== "" && <input type="hidden" name="brandId" value="" />}
           </div>
           <div>
-            <label htmlFor="newBrand" className="mb-1.5 block text-sm font-medium">
+            <label htmlFor={`${uid}-newBrand`} className="mb-1.5 block text-sm font-medium">
               …или нова марка
             </label>
-            <input id="newBrand" name="newBrand" value={newBrand} onChange={(e) => setNewBrand(e.target.value)} maxLength={80} className="field" placeholder="Име на новата марка" />
+            <input id={`${uid}-newBrand`} name="newBrand" value={newBrand} onChange={(e) => setNewBrand(e.target.value)} maxLength={80} className="field" placeholder="Име на новата марка" />
           </div>
           <div className="sm:col-span-2">
-            <label htmlFor="description" className="mb-1.5 block text-sm font-medium">
+            <label htmlFor={`${uid}-description`} className="mb-1.5 block text-sm font-medium">
               Описание
             </label>
-            <textarea id="description" name="description" rows={5} maxLength={4000} defaultValue={product?.description} className="field h-auto py-3" />
+            <textarea id={`${uid}-description`} name="description" rows={5} maxLength={4000} defaultValue={product?.description} className="field h-auto py-3" />
           </div>
         </Group>
 
@@ -174,12 +176,12 @@ export function ProductForm({
           </div>
           <div className="mt-4 space-y-4">
             <div>
-              <label htmlFor="image" className="mb-1.5 flex items-center gap-2 text-sm font-medium">
+              <label htmlFor={`${uid}-image`} className="mb-1.5 flex items-center gap-2 text-sm font-medium">
                 <ImagePlus className="h-4 w-4" aria-hidden />
                 Снимка на продукта
               </label>
               <input
-                id="image"
+                id={`${uid}-image`}
                 name="image"
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/avif"
@@ -194,9 +196,9 @@ export function ProductForm({
                   }
                 }}
                 className="block w-full text-sm text-ink-soft file:mr-3 file:h-10 file:cursor-pointer file:rounded-full file:border-0 file:bg-sand file:px-4 file:text-sm file:font-semibold file:text-ink hover:file:bg-lime"
-                aria-describedby="image-hint"
+                aria-describedby={`${uid}-image-hint`}
               />
-              <p id="image-hint" className="mt-1.5 text-xs text-ink-soft">
+              <p id={`${uid}-image-hint`} className="mt-1.5 text-xs text-ink-soft">
                 JPG, PNG, WebP или AVIF до {MAX_IMAGE_MB} MB. Без снимка се показва илюстрацията.
               </p>
               {(imageError || errors.image) && <p role="alert" className="mt-1.5 text-sm font-medium text-tomato">{imageError || errors.image}</p>}
@@ -209,10 +211,10 @@ export function ProductForm({
             </div>
             <div className="grid grid-cols-[1fr_auto] gap-3">
               <div>
-                <label htmlFor="pack" className="mb-1.5 block text-sm font-medium">
+                <label htmlFor={`${uid}-pack`} className="mb-1.5 block text-sm font-medium">
                   Илюстрация
                 </label>
-                <select id="pack" name="pack" value={pack} onChange={(e) => setPack(e.target.value)} className="field">
+                <select id={`${uid}-pack`} name="pack" value={pack} onChange={(e) => setPack(e.target.value)} className="field">
                   {Object.entries(PACKS).map(([k, v]) => (
                     <option key={k} value={k}>
                       {v}
@@ -221,10 +223,10 @@ export function ProductForm({
                 </select>
               </div>
               <div>
-                <label htmlFor="color" className="mb-1.5 block text-sm font-medium">
+                <label htmlFor={`${uid}-color`} className="mb-1.5 block text-sm font-medium">
                   Цвят
                 </label>
-                <input id="color" name="color" type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-12 w-16 cursor-pointer rounded-xl border border-line bg-paper p-1" />
+                <input id={`${uid}-color`} name="color" type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-12 w-16 cursor-pointer rounded-xl border border-line bg-paper p-1" />
               </div>
             </div>
           </div>

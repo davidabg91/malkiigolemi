@@ -3,7 +3,7 @@
 import { Check, SlidersHorizontal, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useId, useState, useTransition, type ReactNode } from "react";
 import { btn } from "@/components/ui";
 import { SORTS, type SortKey } from "@/lib/listing";
 import { ORIGIN_LABELS } from "@/lib/site";
@@ -107,6 +107,8 @@ export function ListingShell({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [sheet, setSheet] = useState(false);
+  // Unique per copy: a listing page left behind stays mounted (hidden) after navigating to the next one.
+  const sortId = useId();
 
   useEffect(() => {
     if (!sheet) return;
@@ -225,11 +227,11 @@ export function ListingShell({
               Филтри
               {activeCount > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-forest px-1 text-xs text-white">{activeCount}</span>}
             </button>
-            <label className="sr-only" htmlFor="sort">
+            <label className="sr-only" htmlFor={sortId}>
               Подреждане
             </label>
             <select
-              id="sort"
+              id={sortId}
               value={current.sort}
               onChange={(e) => go({ sort: e.target.value as SortKey })}
               className="h-10 rounded-full border border-line bg-paper pl-4 pr-9 text-sm font-medium outline-none transition hover:border-ink focus-visible:border-forest"

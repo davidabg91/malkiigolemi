@@ -2,19 +2,22 @@
 
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useId, useState } from "react";
 import { login, register, type FormState } from "@/actions/auth";
 import { btn } from "@/components/ui";
 
-function PasswordField({ autoComplete, hint }: { autoComplete: string; hint?: string }) {
+// Field ids get a per-form prefix (useId): after moving between /vhod and /registratsiya
+// the page left behind stays mounted, hidden, and fixed ids would then appear twice.
+
+function PasswordField({ autoComplete, hint, uid }: { autoComplete: string; hint?: string; uid: string }) {
   const [show, setShow] = useState(false);
   return (
     <div>
-      <label htmlFor="password" className="mb-1.5 block text-sm font-medium">
+      <label htmlFor={`${uid}-password`} className="mb-1.5 block text-sm font-medium">
         Парола
       </label>
       <div className="relative">
-        <input id="password" name="password" type={show ? "text" : "password"} required autoComplete={autoComplete} className="field pr-12" aria-describedby={hint ? "password-hint" : undefined} />
+        <input id={`${uid}-password`} name="password" type={show ? "text" : "password"} required autoComplete={autoComplete} className="field pr-12" aria-describedby={hint ? `${uid}-password-hint` : undefined} />
         <button
           type="button"
           onClick={() => setShow((v) => !v)}
@@ -25,7 +28,7 @@ function PasswordField({ autoComplete, hint }: { autoComplete: string; hint?: st
         </button>
       </div>
       {hint && (
-        <p id="password-hint" className="mt-1.5 text-sm text-ink-soft">
+        <p id={`${uid}-password-hint`} className="mt-1.5 text-sm text-ink-soft">
           {hint}
         </p>
       )}
@@ -53,16 +56,17 @@ function Submit({ pending, children }: { pending: boolean; children: string }) {
 
 export function LoginForm({ next }: { next?: string }) {
   const [state, action, pending] = useActionState(login, undefined);
+  const uid = useId();
   return (
     <form action={action} className="space-y-4">
       {next && <input type="hidden" name="next" value={next} />}
       <div>
-        <label htmlFor="email" className="mb-1.5 block text-sm font-medium">
+        <label htmlFor={`${uid}-email`} className="mb-1.5 block text-sm font-medium">
           Имейл
         </label>
-        <input id="email" name="email" type="email" required autoComplete="email" defaultValue={state?.fields?.email} className="field" />
+        <input id={`${uid}-email`} name="email" type="email" required autoComplete="email" defaultValue={state?.fields?.email} className="field" />
       </div>
-      <PasswordField autoComplete="current-password" />
+      <PasswordField uid={uid} autoComplete="current-password" />
       <ErrorNote state={state} />
       <Submit pending={pending}>Вход</Submit>
       <p className="text-center text-sm text-ink-soft">
@@ -77,30 +81,31 @@ export function LoginForm({ next }: { next?: string }) {
 
 export function RegisterForm({ next }: { next?: string }) {
   const [state, action, pending] = useActionState(register, undefined);
+  const uid = useId();
   return (
     <form action={action} className="space-y-4">
       {next && <input type="hidden" name="next" value={next} />}
       <div>
-        <label htmlFor="name" className="mb-1.5 block text-sm font-medium">
+        <label htmlFor={`${uid}-name`} className="mb-1.5 block text-sm font-medium">
           Име и фамилия
         </label>
-        <input id="name" name="name" required autoComplete="name" defaultValue={state?.fields?.name} className="field" />
+        <input id={`${uid}-name`} name="name" required autoComplete="name" defaultValue={state?.fields?.name} className="field" />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label htmlFor="email" className="mb-1.5 block text-sm font-medium">
+          <label htmlFor={`${uid}-email`} className="mb-1.5 block text-sm font-medium">
             Имейл
           </label>
-          <input id="email" name="email" type="email" required autoComplete="email" defaultValue={state?.fields?.email} className="field" />
+          <input id={`${uid}-email`} name="email" type="email" required autoComplete="email" defaultValue={state?.fields?.email} className="field" />
         </div>
         <div>
-          <label htmlFor="phone" className="mb-1.5 block text-sm font-medium">
+          <label htmlFor={`${uid}-phone`} className="mb-1.5 block text-sm font-medium">
             Телефон
           </label>
-          <input id="phone" name="phone" type="tel" required autoComplete="tel" inputMode="tel" defaultValue={state?.fields?.phone} className="field" />
+          <input id={`${uid}-phone`} name="phone" type="tel" required autoComplete="tel" inputMode="tel" defaultValue={state?.fields?.phone} className="field" />
         </div>
       </div>
-      <PasswordField autoComplete="new-password" hint="Поне 8 символа." />
+      <PasswordField uid={uid} autoComplete="new-password" hint="Поне 8 символа." />
       <ErrorNote state={state} />
       <Submit pending={pending}>Създай профил</Submit>
       <p className="text-center text-sm text-ink-soft">
