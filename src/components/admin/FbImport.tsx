@@ -11,7 +11,10 @@ type Row = { name: string; qty: number; comment: string; include: boolean; sure:
 
 export function FbImport({ products }: { products: ProductOption[] }) {
   const [state, action, pending] = useActionState(importFbPost, undefined);
+  const [source, setSource] = useState<"shop" | "manual">("shop");
   const [productId, setProductId] = useState("");
+  const [manualName, setManualName] = useState("");
+  const [manualPrice, setManualPrice] = useState("");
   const [raw, setRaw] = useState("");
   // Edits made in the preview, keyed by the comment's position; re-pasting starts over.
   const [edits, setEdits] = useState<Record<number, Partial<Row>>>({});
@@ -38,26 +41,65 @@ export function FbImport({ products }: { products: ProductOption[] }) {
   const rows = all.map((r, i) => ({ ...r, index: i })).filter((r) => post === null || (r.post ?? "") === post);
   const chosen = rows.filter((r) => r.include && r.qty > 0);
   const total = chosen.reduce((s, r) => s + r.qty, 0);
-  const product = products.find((p) => String(p.id) === productId);
+  const product = source === "shop" ? products.find((p) => String(p.id) === productId) : undefined;
+  const productReady = source === "shop" ? Boolean(productId) : manualName.trim().length >= 2 && Number(manualPrice.replace(",", ".")) > 0;
+  const err = state?.fieldErrors ?? {};
   const edit = (i: number, patch: Partial<Row>) => setEdits((e) => ({ ...e, [i]: { ...e[i], ...patch } }));
 
   return (
     <form action={action} className="space-y-5">
-      <div className="grid gap-4 md:grid-cols-2">
-        <div>
-          <label htmlFor="fb-product" className="mb-1.5 block text-sm font-medium">
-            Продукт от поста <span className="text-tomato">*</span>
-          </label>
-          <select id="fb-product" name="productId" required value={productId} onChange={(e) => setProductId(e.target.value)} className="field">
-            <option value="">Избери продукт…</option>
-            {products.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.label} · {p.stock} бр
-              </option>
-            ))}
-          </select>
-          {state?.fieldErrors?.productId && <p className="mt-1.5 text-sm font-medium text-tomato">{state.fieldErrors.productId}</p>}
+      <fieldset>
+        <legend className="mb-2 text-sm font-medium">
+          Продукт от поста <span className="text-tomato">*</span>
+        </legend>
+        <div className="flex flex-wrap gap-2">
+          {(["shop", "manual"] as const).map((v) => (
+            <label
+              key={v}
+              className={`cursor-pointer rounded-full border-2 px-4 py-2 text-sm font-medium transition ${source === v ? "border-forest bg-lime/25" : "border-line hover:border-ink/30"}`}
+            >
+              <input type="radio" name="productSource" value={v} checked={source === v} onChange={() => setSource(v)} className="sr-only" />
+              {v === "shop" ? "Продукт от сайта" : "Въведи ръчно"}
+            </label>
+          ))}
         </div>
+      </fieldset>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {source === "shop" ? (
+          <div>
+            <label htmlFor="fb-product" className="mb-1.5 block text-sm font-medium">
+              Продукт
+            </label>
+            <select id="fb-product" name="productId" value={productId} onChange={(e) => setProductId(e.target.value)} className="field">
+              <option value="">Избери продукт…</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.label} · {p.stock} бр
+                </option>
+              ))}
+            </select>
+            {err.productId && <p className="mt-1.5 text-sm font-medium text-tomato">{err.productId}</p>}
+          </div>
+        ) : (
+          <div className="grid grid-cols-[1fr_7rem] gap-3">
+            <div>
+              <label htmlFor="fb-manual-name" className="mb-1.5 block text-sm font-medium">
+                Име на продукта
+              </label>
+              <input id="fb-manual-name" name="manualName" value={manualName} onChange={(e) => setManualName(e.target.value)} placeholder="Напр. Музикален волан" className="field" />
+              {err.manualName && <p className="mt-1.5 text-sm font-medium text-tomato">{err.manualName}</p>}
+            </div>
+            <div>
+              <label htmlFor="fb-manual-price" className="mb-1.5 block text-sm font-medium">
+                Цена € / бр
+              </label>
+              <input id="fb-manual-price" name="manualPrice" inputMode="decimal" value={manualPrice} onChange={(e) => setManualPrice(e.target.value)} placeholder="2,00" className="field tabular-nums" />
+              {err.manualPrice && <p className="mt-1.5 text-sm font-medium text-tomato">{err.manualPrice}</p>}
+            </div>
+            <p className="col-span-2 -mt-1 text-xs text-ink-soft">За артикули, които ги няма в сайта. Не се води наличност.</p>
+          </div>
+        )}
         <div>
           <label htmlFor="fb-url" className="mb-1.5 block text-sm font-medium">
             Линк към поста <span className="font-normal text-ink-soft">(по желание)</span>
@@ -152,12 +194,12 @@ export function FbImport({ products }: { products: ProductOption[] }) {
       )}
 
       <input type="hidden" name="claims" value={JSON.stringify(chosen.map(({ name, qty, comment }) => ({ name: name.trim(), qty, comment })))} />
-      {state?.error && !state.fieldErrors?.productId && !state.fieldErrors?.url && (
+      {state?.error && !err.productId && !err.url && !err.manualName && !err.manualPrice && (
         <p role="alert" className="rounded-2xl bg-tomato/10 px-4 py-3 text-sm font-medium text-tomato">
           {state.error}
         </p>
       )}
-      <button type="submit" disabled={pending || chosen.length === 0 || !productId} className={btn.primary}>
+      <button type="submit" disabled={pending || chosen.length === 0 || !productReady} className={btn.primary}>
         {pending && <Loader2 className="h-5 w-5 animate-spin" aria-hidden />}
         Запази {chosen.length > 0 ? `${chosen.length} заявки` : "заявките"}
       </button>

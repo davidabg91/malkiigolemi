@@ -190,8 +190,27 @@ export const fbPosts = sqliteTable("fb_posts", {
   productId: integer("product_id").references(() => products.id, { onDelete: "set null" }),
   /** Product name at import time, so the post still reads right if the product is later deleted. */
   productName: text("product_name").notNull(),
+  /** Price in cents for a product typed in by hand (productId is then null); such items take no stock. */
+  price: integer("price"),
   url: text("url"),
   createdAt: createdAt(),
+});
+
+/**
+ * The last contact and delivery details used for a Facebook name, so the next order from the same person
+ * is filled in the same way. Keyed by the lower-cased name as it appears on Facebook.
+ */
+export const fbContacts = sqliteTable("fb_contacts", {
+  key: text("key").primaryKey(),
+  name: text("name").notNull(),
+  phone: text("phone").notNull(),
+  email: text("email").notNull().default(""),
+  delivery: text("delivery").notNull(),
+  courier: text("courier"),
+  officeCode: text("office_code"),
+  city: text("city").notNull().default(""),
+  address: text("address").notNull().default(""),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
 export const FB_CLAIM_STATUSES = ["pending", "ordered", "rejected"] as const;
