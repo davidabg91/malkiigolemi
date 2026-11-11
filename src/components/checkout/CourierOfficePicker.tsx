@@ -386,7 +386,6 @@ export function CourierOfficePicker({
       {/* Hidden inputs to send courier & office metadata in form submit */}
       <input type="hidden" name="courier" value={activeCourier} />
       <input type="hidden" name="officeCode" value={selectedOffice?.code || ""} />
-      <input type="hidden" name="officeName" value={selectedOffice?.name || ""} />
     </div>
   );
 }

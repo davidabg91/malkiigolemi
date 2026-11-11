@@ -107,7 +107,7 @@ export function SearchBox({ className = "" }: { className?: string }) {
                       className="flex items-center gap-3 rounded-2xl p-2 transition hover:bg-sand"
                     >
                       <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-sand">
-                        <ProductVisual product={p} className="h-10 w-10" />
+                        <ProductVisual product={p} size={96} className="h-10 w-10" />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium">{p.name}</span>

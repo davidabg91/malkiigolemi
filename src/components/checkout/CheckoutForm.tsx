@@ -24,8 +24,8 @@ export type CheckoutDefaults = {
   address: string;
   delivery: DeliveryId | null;
   courier?: CourierId | null;
-  officeCode?: string | null;
-  officeName?: string | null;
+  /** The saved office, already looked up on the server. */
+  office?: CourierOffice | null;
   signedIn: boolean;
 };
 
@@ -95,20 +95,9 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
   const [delivery, setDelivery] = useState<DeliveryId>(isDeliveryId(defaults.delivery) ? defaults.delivery : "office");
   const [courier, setCourier] = useState<CourierId>((defaults.courier as CourierId) || "speedy");
   const [city, setCity] = useState<string>(defaults.city || "Плевен");
-  const [address, setAddress] = useState<string>(defaults.address || "");
-  const [selectedOffice, setSelectedOffice] = useState<CourierOffice | null>(
-    defaults.officeCode
-      ? {
-          id: `${defaults.courier || "speedy"}-${defaults.officeCode}`,
-          code: defaults.officeCode,
-          name: defaults.officeName || "",
-          address: defaults.address || "",
-          city: defaults.city || "Плевен",
-          courier: (defaults.courier as CourierId) || "speedy",
-          type: defaults.delivery === "box" ? "box" : "office",
-        }
-      : null,
-  );
+  // With an office or locker saved, the stored address is the office's own, not a street address to deliver to.
+  const [address, setAddress] = useState<string>(defaults.delivery === "office" || defaults.delivery === "box" ? "" : defaults.address);
+  const [selectedOffice, setSelectedOffice] = useState<CourierOffice | null>(defaults.office ?? null);
 
   // Offer to remember the details by default only when nothing is saved yet.
   const [saveAsDefault, setSaveAsDefault] = useState(defaults.signedIn && !defaults.delivery);
@@ -143,15 +132,12 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
     setErrors({});
     setFormError("");
     start(async () => {
+      const toOffice = delivery === "office" || delivery === "box";
       const courierVal = pickup ? undefined : ((text("courier") || courier) as CourierId);
-      const officeCodeVal = pickup ? undefined : (text("officeCode") || selectedOffice?.code || undefined);
-      const officeNameVal = pickup ? undefined : (text("officeName") || selectedOffice?.name || undefined);
+      // Only the office code is sent; the server reads its name and address from its own list.
+      const officeCodeVal = toOffice ? selectedOffice?.code : undefined;
       const finalCity = pickup ? STORE.city : (text("city") || city);
-      const finalAddress = pickup
-        ? STORE.address
-        : delivery === "office" || delivery === "box"
-        ? (selectedOffice?.address || text("address") || address)
-        : (text("address") || address);
+      const finalAddress = pickup ? STORE.address : toOffice ? "" : (text("address") || address);
 
       const result = await placeOrder({
         name: text("name"),
@@ -160,7 +146,6 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
         delivery,
         courier: courierVal,
         officeCode: officeCodeVal,
-        officeName: officeNameVal,
         city: finalCity,
         address: finalAddress,
         note: text("note"),
@@ -298,7 +283,7 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
           {items.map((i) => (
             <li key={i.id} className="flex items-center gap-3 py-3">
               <span className="relative grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-sand">
-                <ProductVisual product={i} className="h-11 w-11" />
+                <ProductVisual product={i} size={96} className="h-11 w-11" />
                 <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-ink px-1 text-[0.68rem] font-bold text-cream">{i.qty}</span>
               </span>
               <span className="min-w-0 flex-1 text-sm leading-snug">

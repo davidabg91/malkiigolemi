@@ -78,7 +78,7 @@ async function Content({ params }: Pick<Props, "params">) {
               style={{ background: product.color }}
               aria-hidden
             />
-            <ProductVisual product={product} className="h-[82%] w-[82%] animate-rise drop-shadow-[0_24px_24px_rgb(20_38_28/0.18)]" />
+            <ProductVisual product={product} size={640} className="h-[82%] w-[82%] animate-rise drop-shadow-[0_24px_24px_rgb(20_38_28/0.18)]" />
             <div className="absolute left-5 top-5 scale-110 origin-top-left">
               <Badges product={cardData} />
             </div>

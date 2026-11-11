@@ -6,6 +6,7 @@ import { Breadcrumbs } from "@/components/ui";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { getSession } from "@/lib/auth";
+import { savedOffice } from "@/lib/courier-offices";
 
 export const metadata: Metadata = { title: "Поръчка", robots: { index: false } };
 
@@ -17,8 +18,7 @@ const EMPTY: CheckoutDefaults = {
   address: "",
   delivery: null,
   courier: null,
-  officeCode: null,
-  officeName: null,
+  office: null,
   signedIn: false,
 };
 
@@ -37,8 +37,7 @@ async function Form() {
         address: u.address ?? "",
         delivery: (u.preferredDelivery as CheckoutDefaults["delivery"]) ?? null,
         courier: (u.preferredCourier as CheckoutDefaults["courier"]) ?? null,
-        officeCode: u.preferredOfficeCode ?? null,
-        officeName: u.preferredOfficeName ?? null,
+        office: savedOffice(u.preferredDelivery, u.preferredCourier, u.preferredOfficeCode),
         signedIn: true,
       };
     }

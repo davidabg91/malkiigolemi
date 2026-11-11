@@ -8,6 +8,7 @@ import { StoreLocation } from "@/components/StoreLocation";
 import { btn } from "@/components/ui";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
+import { courierName } from "@/lib/couriers";
 import { formatPrice } from "@/lib/format";
 import { DELIVERY_METHODS, site } from "@/lib/site";
 
@@ -69,15 +70,7 @@ async function Confirmation({ params }: Pick<Props, "params">) {
                   ? "Доставка до офис: "
                   : "Доставка до адрес: "}
                 <strong>
-                  {order.courier === "econt"
-                    ? "Еконт"
-                    : order.courier === "speedy"
-                    ? "Спиди"
-                    : order.courier === "boxnow"
-                    ? "Box Now"
-                    : order.courier === "penguin"
-                    ? "Penguin Express"
-                    : "Куриер"}
+                  {courierName(order.courier) ?? "Куриер"}
                 </strong>
               </span>
               {order.officeCode && (

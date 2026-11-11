@@ -11,6 +11,7 @@ import { btn } from "@/components/ui";
 import { db } from "@/db";
 import { ORDER_STATUSES, orders } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
+import { courierName } from "@/lib/couriers";
 import { formatDate, formatPrice } from "@/lib/format";
 import { DELIVERY_METHODS, ORDER_STATUS_LABELS } from "@/lib/site";
 
@@ -129,13 +130,7 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
                       : "bg-teal-100 text-teal-900"
                   }`}
                 >
-                  {order.courier === "econt"
-                    ? "Еконт"
-                    : order.courier === "speedy"
-                    ? "Спиди"
-                    : order.courier === "boxnow"
-                    ? "Box Now"
-                    : "Penguin Express"}
+                  {courierName(order.courier) ?? order.courier}
                 </span>
               )}
             </div>
@@ -178,7 +173,7 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
                 <div className="mt-3 rounded-xl border border-dashed border-line bg-sand/20 p-3 text-xs text-ink-soft">
                   <p className="font-medium text-ink">Готово за генериране на товарителница</p>
                   <p className="mt-0.5">
-                    Куриер: {order.courier === "econt" ? "Еконт" : order.courier === "speedy" ? "Спиди" : order.courier === "boxnow" ? "Box Now" : "Penguin Express"} ·
+                    Куриер: {courierName(order.courier) ?? "не е избран"} ·
                     Код: {order.officeCode || "До адрес"} · НП: {formatPrice(order.total)}
                   </p>
                 </div>

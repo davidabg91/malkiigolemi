@@ -7,17 +7,20 @@ import { updateCourierSettings } from "@/actions/admin";
 import { btn } from "@/components/ui";
 import { COURIERS, type CourierId } from "@/lib/couriers";
 
-const COURIER_STATS: Record<CourierId, { count: string; highlight: string }> = {
-  econt: { count: "638 локации", highlight: "Най-популярният куриер с пълно национално покритие" },
-  speedy: { count: "1 385 локации", highlight: "Най-голяма мрежа от 24/7 автомати (АПС) и офиси" },
-  boxnow: { count: "Национална мрежа", highlight: "Евтина и денонощна доставка до соларни автомати" },
-  penguin: { count: "21+ топ локации", highlight: "Доставка 7 дни в седмицата без почивен ден" },
+const COURIER_HIGHLIGHTS: Record<CourierId, string> = {
+  econt: "Най-популярният куриер с пълно национално покритие",
+  speedy: "Най-голяма мрежа от 24/7 автомати (АПС) и офиси",
+  boxnow: "Евтина и денонощна доставка до соларни автомати",
+  pigeon: "Доставка 7 дни в седмицата без почивен ден",
 };
 
 export function CourierSettingsForm({
   initialConfig,
+  locationCounts,
 }: {
   initialConfig: Record<CourierId, boolean>;
+  /** How many offices and lockers of each courier are in the list customers choose from. */
+  locationCounts: Record<CourierId, number>;
 }) {
   const [config, setConfig] = useState(initialConfig);
   const [pending, startTransition] = useTransition();
@@ -28,7 +31,7 @@ export function CourierSettingsForm({
     setSaved(false);
   };
 
-  const courierKeys: CourierId[] = ["econt", "speedy", "boxnow", "penguin"];
+  const courierKeys: CourierId[] = ["econt", "speedy", "boxnow", "pigeon"];
 
   return (
     <form
@@ -74,7 +77,6 @@ export function CourierSettingsForm({
         {courierKeys.map((id) => {
           const c = COURIERS[id];
           const active = config[id] !== false;
-          const stats = COURIER_STATS[id];
 
           return (
             <div
@@ -142,8 +144,8 @@ export function CourierSettingsForm({
 
               {/* Footer info */}
               <div className="mt-5 pt-3.5 border-t border-line/60 flex items-center justify-between text-xs text-ink-soft">
-                <span>{stats?.highlight}</span>
-                <span className="font-semibold text-ink">{stats?.count}</span>
+                <span>{COURIER_HIGHLIGHTS[id]}</span>
+                <span className="shrink-0 font-semibold text-ink">{locationCounts[id]} локации</span>
               </div>
             </div>
           );

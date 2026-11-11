@@ -47,7 +47,7 @@ export function CartLine({ item, onNavigate }: { item: CartItem; onNavigate?: ()
         tabIndex={-1}
         aria-hidden
       >
-        <ProductVisual product={item} className="h-16 w-16" />
+        <ProductVisual product={item} size={96} className="h-16 w-16" />
       </Link>
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-start justify-between gap-2">

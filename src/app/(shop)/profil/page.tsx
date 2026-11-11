@@ -118,11 +118,11 @@ async function Orders() {
                           href={productHref}
                           className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl bg-paper p-1 shadow-xs transition hover:scale-105 sm:h-20 sm:w-20"
                         >
-                          <ProductVisual product={visualData} className="h-full w-full object-contain" />
+                          <ProductVisual product={visualData} size={96} className="h-full w-full object-contain" />
                         </Link>
                       ) : (
                         <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl bg-paper p-1 shadow-xs sm:h-20 sm:w-20">
-                          <ProductVisual product={visualData} className="h-full w-full object-contain" />
+                          <ProductVisual product={visualData} size={96} className="h-full w-full object-contain" />
                         </div>
                       )}
 

@@ -2,6 +2,7 @@ import { ArrowRight, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { ProductVisual } from "@/components/product/PackShot";
 import { btn, ShopMark } from "@/components/ui";
+import { optimizedImage } from "@/lib/optimized-image";
 import type { CategoryNode, ProductCardData } from "@/lib/queries";
 import { TONES } from "@/lib/site";
 
@@ -146,9 +147,10 @@ function CategoryArt({ slug, deep }: { slug: string; deep: string }) {
         style={{ background: deep }}
       />
       {items?.map((item, i) => (
+        // eslint-disable-next-line @next/next/no-img-element -- sized by the tile's classes; the file itself is resized by optimizedImage
         <img
           key={i}
-          src={item.src}
+          {...optimizedImage(item.src, 384)}
           alt={item.alt}
           className={`${fly} ${item.className} object-contain`}
           loading="lazy"

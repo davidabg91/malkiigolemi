@@ -125,7 +125,7 @@ async function AdminProducts({ searchParams }: Pick<PageProps<"/admin/produkti">
                     <td className={td}>
                       <div className="flex items-center gap-3">
                         <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-sand">
-                          <ProductVisual product={{ ...p, brand }} className="h-10 w-10" />
+                          <ProductVisual product={{ ...p, brand }} size={96} className="h-10 w-10" />
                         </span>
                         <div className="min-w-0">
                           <Link href={`/admin/produkti/${p.id}`} className="line-clamp-1 font-medium hover:text-forest">

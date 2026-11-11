@@ -40,12 +40,12 @@ export function BoxNowLogo({ className = "h-6 w-auto" }: { className?: string })
   );
 }
 
-/** Official vector logo for Penguin Express */
-export function PenguinExpressLogo({ className = "h-6 w-auto" }: { className?: string }) {
+/** Official vector logo for Pigeon Express */
+export function PigeonExpressLogo({ className = "h-6 w-auto" }: { className?: string }) {
   return (
     <img
-      src="/penguin-logo.svg"
-      alt="Penguin Express"
+      src="/pigeonexpress-logo.svg"
+      alt="Pigeon Express"
       className={`${className} object-contain`}
       loading="eager"
       decoding="async"
@@ -68,8 +68,8 @@ export function CourierLogo({
       return <SpeedyLogo className={className} />;
     case "boxnow":
       return <BoxNowLogo className={className} />;
-    case "penguin":
-      return <PenguinExpressLogo className={className} />;
+    case "pigeon":
+      return <PigeonExpressLogo className={className} />;
     default:
       return null;
   }

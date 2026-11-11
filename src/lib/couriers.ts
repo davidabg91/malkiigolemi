@@ -1,7 +1,7 @@
-import officesData from "@/../data/couriers/offices.json";
-import citiesData from "@/../data/couriers/cities.json";
+// Courier names and rules only. The office list itself lives in courier-offices.ts and must stay on the server:
+// importing it here would ship ~500 KB of addresses to every browser that opens the checkout.
 
-export type CourierId = "econt" | "speedy" | "boxnow" | "penguin";
+export type CourierId = "econt" | "speedy" | "boxnow" | "pigeon";
 export type DeliveryType = "office" | "box" | "address" | "store";
 
 export interface CourierOffice {
@@ -61,11 +61,11 @@ export const COURIERS: Record<CourierId, CourierMeta> = {
     hasBoxes: true,
     hasAddress: false,
   },
-  penguin: {
-    id: "penguin",
-    name: "Penguin Express",
+  pigeon: {
+    id: "pigeon",
+    name: "Pigeon Express",
     tagline: "Доставки 7 дни в седмицата, офиси и автомати",
-    badge: "Penguin",
+    badge: "Pigeon",
     color: "#0f766e",
     bgLight: "#f0fdfa",
     hasOffices: true,
@@ -78,11 +78,8 @@ export const DEFAULT_ACTIVE_COURIERS: Record<CourierId, boolean> = {
   econt: true,
   speedy: true,
   boxnow: true,
-  penguin: true,
+  pigeon: true,
 };
-
-const allOffices = officesData as CourierOffice[];
-const allCities = citiesData as string[];
 
 /** Return couriers eligible for a specific delivery method, filtered by active settings */
 export function getCouriersForDelivery(
@@ -91,11 +88,11 @@ export function getCouriersForDelivery(
 ): CourierMeta[] {
   let list: CourierMeta[] = [];
   if (delivery === "office") {
-    list = [COURIERS.econt, COURIERS.speedy, COURIERS.penguin];
+    list = [COURIERS.econt, COURIERS.speedy, COURIERS.pigeon];
   } else if (delivery === "box") {
-    list = [COURIERS.speedy, COURIERS.econt, COURIERS.boxnow, COURIERS.penguin];
+    list = [COURIERS.speedy, COURIERS.econt, COURIERS.boxnow, COURIERS.pigeon];
   } else if (delivery === "address") {
-    list = [COURIERS.speedy, COURIERS.econt, COURIERS.penguin];
+    list = [COURIERS.speedy, COURIERS.econt, COURIERS.pigeon];
   }
 
   if (activeFilter) {
@@ -104,61 +101,7 @@ export function getCouriersForDelivery(
   return list;
 }
 
-/** Get list of available Bulgarian cities/settlements, optionally filtered by courier or type */
-export function getAvailableCities(courier?: CourierId, type?: "office" | "box"): string[] {
-  if (!courier && !type) {
-    return allCities;
-  }
-  const matching = new Set<string>();
-  for (const o of allOffices) {
-    if (courier && o.courier !== courier) continue;
-    if (type && o.type !== type) continue;
-    matching.add(o.city);
-  }
-  return allCities.filter((c) => matching.has(c));
-}
+export const isCourierId = (v: unknown): v is CourierId => typeof v === "string" && v in COURIERS;
 
-/** Get offices matching given parameters */
-export function getOffices({
-  city,
-  courier,
-  type,
-  query,
-}: {
-  city?: string;
-  courier?: CourierId;
-  type?: "office" | "box";
-  query?: string;
-}): CourierOffice[] {
-  let list = allOffices;
-
-  if (courier) {
-    list = list.filter((o) => o.courier === courier);
-  }
-
-  if (type) {
-    list = list.filter((o) => o.type === type);
-  }
-
-  if (city) {
-    const normCity = city.trim().toLowerCase();
-    list = list.filter((o) => o.city.toLowerCase() === normCity);
-  }
-
-  if (query && query.trim()) {
-    const q = query.trim().toLowerCase();
-    list = list.filter(
-      (o) =>
-        o.name.toLowerCase().includes(q) ||
-        o.address.toLowerCase().includes(q) ||
-        o.code.toLowerCase().includes(q),
-    );
-  }
-
-  return list;
-}
-
-/** Lookup a specific office by courier and code */
-export function findOffice(courier: CourierId, code: string): CourierOffice | undefined {
-  return allOffices.find((o) => o.courier === courier && o.code === code);
-}
+/** Display name for a courier id stored on an order; null when the order has none (pickup, or placed before couriers existed). */
+export const courierName = (id: string | null | undefined) => (isCourierId(id) ? COURIERS[id].name : null);

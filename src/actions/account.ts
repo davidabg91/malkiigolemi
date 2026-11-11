@@ -1,12 +1,14 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { refresh, updateTag } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
 import { orderItems, orders, products, users } from "@/db/schema";
 import { createSession, getSession, tooManyAttempts } from "@/lib/auth";
+import { savedOffice } from "@/lib/courier-offices";
+import { isCourierId } from "@/lib/couriers";
 import { CATALOG_TAG, getLiveCards, type ProductCardData } from "@/lib/queries";
 import { DELIVERY_METHODS } from "@/lib/site";
 
@@ -21,20 +23,17 @@ function firstErrors(issues: { path: PropertyKey[]; message: string }[]) {
 const deliverySchema = z
   .object({
     delivery: z.enum(DELIVERY_METHODS.map((d) => d.id) as [string, ...string[]], { message: "Избери начин на доставка." }),
-    courier: z.string().trim().optional(),
-    officeCode: z.string().trim().optional(),
-    officeName: z.string().trim().optional(),
+    courier: z.string().trim().max(20).optional(),
+    officeCode: z.string().trim().max(40).optional(),
     city: z.string().trim().max(80),
     address: z.string().trim().max(200),
   })
   .superRefine((d, ctx) => {
     if (d.delivery === "store") return;
     if (d.city.length < 2) ctx.addIssue({ code: "custom", path: ["city"], message: "Въведи населено място." });
+    if (!isCourierId(d.courier)) ctx.addIssue({ code: "custom", path: ["courier"], message: "Избери куриер." });
     if (d.delivery === "office" || d.delivery === "box") {
-      if (!d.courier) {
-        ctx.addIssue({ code: "custom", path: ["courier"], message: "Избери куриер." });
-      }
-      if (!d.officeCode && d.address.length < 3) {
+      if (!d.officeCode) {
         ctx.addIssue({ code: "custom", path: ["office"], message: d.delivery === "box" ? "Избери автомат." : "Избери офис на куриер." });
       }
     } else if (d.delivery === "address") {
@@ -52,7 +51,6 @@ export async function saveDeliveryPrefs(_prev: AccountFormState, formData: FormD
     delivery: String(formData.get("delivery") ?? ""),
     courier: String(formData.get("courier") ?? ""),
     officeCode: String(formData.get("officeCode") ?? ""),
-    officeName: String(formData.get("officeName") ?? ""),
     city: String(formData.get("city") ?? ""),
     address: String(formData.get("address") ?? ""),
   });
@@ -60,20 +58,28 @@ export async function saveDeliveryPrefs(_prev: AccountFormState, formData: FormD
   const d = parsed.data;
 
   const isStore = d.delivery === "store";
-  const isCourierOffice = d.delivery === "office" || d.delivery === "box";
+  // The office's name and address come from our own list, never from the form: the form only says which one.
+  const office = savedOffice(d.delivery, d.courier ?? null, d.officeCode ?? null);
+  if ((d.delivery === "office" || d.delivery === "box") && !office) {
+    return {
+      error: "Провери отбелязаните полета.",
+      fieldErrors: { office: d.delivery === "box" ? "Избери автомат от списъка." : "Избери офис от списъка." },
+    };
+  }
 
   await db
     .update(users)
     .set({
       preferredDelivery: d.delivery,
+      // Picking up from the store keeps the courier details for later, in case they switch back.
       ...(isStore
         ? {}
         : {
             preferredCourier: d.courier || null,
-            preferredOfficeCode: isCourierOffice ? (d.officeCode || null) : null,
-            preferredOfficeName: isCourierOffice ? (d.officeName || null) : null,
-            city: d.city,
-            address: d.delivery === "address" ? d.address : (d.officeName ? `${d.officeName}, ${d.address}` : d.address),
+            preferredOfficeCode: office?.code ?? null,
+            preferredOfficeName: office?.name ?? null,
+            city: office?.city ?? d.city,
+            address: office?.address ?? d.address,
           }),
     })
     .where(eq(users.id, session.uid));
@@ -211,8 +217,18 @@ export async function cancelOrder(orderId: number): Promise<CancelOrderResult> {
   const cancellationNote = `[Отказана от клиента на ${cancelDateStr}]`;
   const updatedNote = order.note ? `${order.note}\n${cancellationNote}` : cancellationNote;
 
+  let cancelled = false;
   await db.transaction(async (tx) => {
-    // Return items to inventory
+    // Flip the status first, and only if it is still open. Two requests at once (a double click, a second tab,
+    // or the shop cancelling at the same moment) then cannot both return the goods to stock.
+    const flipped = await tx
+      .update(orders)
+      .set({ status: "cancelled", note: updatedNote })
+      .where(and(eq(orders.id, order.id), inArray(orders.status, ["new", "confirmed"])))
+      .returning({ id: orders.id });
+    if (flipped.length === 0) return;
+    cancelled = true;
+
     const items = await tx.select().from(orderItems).where(eq(orderItems.orderId, order.id));
     for (const item of items) {
       if (item.productId == null) continue;
@@ -221,15 +237,8 @@ export async function cancelOrder(orderId: number): Promise<CancelOrderResult> {
         .set({ stock: sql`max(0, ${products.stock} + ${item.qty})` })
         .where(eq(products.id, item.productId));
     }
-
-    await tx
-      .update(orders)
-      .set({
-        status: "cancelled",
-        note: updatedNote,
-      })
-      .where(eq(orders.id, order.id));
   });
+  if (!cancelled) return { ok: false, error: "Статусът на поръчката току-що се промени. Обнови страницата." };
 
   updateTag(CATALOG_TAG);
   refresh();

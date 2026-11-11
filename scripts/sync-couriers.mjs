@@ -80,56 +80,90 @@ async function fetchSpeedy() {
   return normalized;
 }
 
-// Sample BoxNow major automated lockers
-function getBoxNowLockers() {
-  const common = [
-    { id: "bn-1", code: "5001", name: "BoxNow Автомат - Central Mall", city: "Плевен", address: "пл. Възраждане 1 (Central Mall)", type: "box", courier: "boxnow", phone: "0700 70 774" },
-    { id: "bn-2", code: "5002", name: "BoxNow Автомат - ж.к. Сторгозия", city: "Плевен", address: "ж.к. Сторгозия, до бл. 22", type: "box", courier: "boxnow", phone: "0700 70 774" },
-    { id: "bn-3", code: "5003", name: "BoxNow Автомат - ж.к. Дружба", city: "Плевен", address: "ж.к. Дружба, до магазин Билла", type: "box", courier: "boxnow", phone: "0700 70 774" },
-    { id: "bn-4", code: "1001", name: "BoxNow Автомат - Mall of Sofia", city: "София", address: "бул. Ал. Стамболийски 101", type: "box", courier: "boxnow", phone: "0700 70 774" },
-    { id: "bn-5", code: "1002", name: "BoxNow Автомат - Paradise Center", city: "София", address: "бул. Черни връх 100", type: "box", courier: "boxnow", phone: "0700 70 774" },
-    { id: "bn-6", code: "1003", name: "BoxNow Автомат - Сердика Център", city: "София", address: "бул. Ситняково 48", type: "box", courier: "boxnow", phone: "0700 70 774" },
-    { id: "bn-7", code: "4001", name: "BoxNow Автомат - Mall Plovdiv", city: "Пловдив", address: "ул. Перущица 8", type: "box", courier: "boxnow", phone: "0700 70 774" },
-    { id: "bn-8", code: "9001", name: "BoxNow Автомат - Grand Mall Varna", city: "Варна", address: "ул. Андрей Сахаров 2", type: "box", courier: "boxnow", phone: "0700 70 774" },
-    { id: "bn-9", code: "8001", name: "BoxNow Автомат - Galleria Burgas", city: "Бургас", address: "ул. Янко Комитов 6", type: "box", courier: "boxnow", phone: "0700 70 774" },
-    { id: "bn-10", code: "7001", name: "BoxNow Автомат - Mall Ruse", city: "Русе", address: "бул. Липник 121", type: "box", courier: "boxnow", phone: "0700 70 774" },
-    { id: "bn-11", code: "6001", name: "BoxNow Автомат - Park Mall", city: "Стара Загора", address: "бул. Никола Петков 52", type: "box", courier: "boxnow", phone: "0700 70 774" },
-  ];
-  return common;
+// Box Now publishes its lockers for its own map widget (widget-v5.boxnow.bg); the id is the locker id their API expects.
+async function fetchBoxNow() {
+  console.log("Fetching Box Now lockers...");
+  const res = await fetch("https://globallockersprod.z28.web.core.windows.net/PROD/bulgaria/lockers/all.json");
+  if (!res.ok) throw new Error(`Box Now request failed: ${res.status}`);
+  const data = await res.json();
+
+  const normalized = [];
+  for (const o of Object.values(data)) {
+    // "ул. Цар Самуил, Плевен, 5802" -> street, settlement, postal code
+    const parts = String(o.address || "").split(",").map((p) => p.trim()).filter(Boolean);
+    if (/^-?\d{4}$/.test(parts[parts.length - 1] || "")) parts.pop();
+    const city = parts.pop();
+    if (!o.id || !city) continue;
+    normalized.push({
+      id: `boxnow-${o.id}`,
+      code: String(o.id),
+      name: String(o.title || `BOX NOW ${o.id}`).replace(/\s*-\s*24\/7\s*$/, "").trim(),
+      courier: "boxnow",
+      type: "box",
+      city,
+      address: parts.join(", ") || city,
+      phone: "",
+    });
+  }
+  console.log(`Box Now: fetched ${normalized.length} lockers.`);
+  return normalized;
 }
 
-// Penguin Express offices and 24/7 automated lockers
-function getPenguinExpressLocations() {
-  return [
-    { id: "pe-5801", code: "PE-5801", name: "Penguin Express Офис - Сан Стефано", city: "Плевен", address: "ул. Сан Стефано 12", type: "office", courier: "penguin", phone: "0700 89 000" },
-    { id: "pe-5802", code: "PE-5802", name: "Penguin Express Автомат 24/7 - Сторгозия", city: "Плевен", address: "ж.к. Сторгозия, до бл. 15", type: "box", courier: "penguin", phone: "0700 89 000" },
-    { id: "pe-5803", code: "PE-5803", name: "Penguin Express Автомат 24/7 - Център", city: "Плевен", address: "бул. Данаил Попов 2", type: "box", courier: "penguin", phone: "0700 89 000" },
-    { id: "pe-5804", code: "PE-5804", name: "Penguin Express Автомат 24/7 - Дружба", city: "Плевен", address: "ж.к. Дружба 1, Т-Маркет", type: "box", courier: "penguin", phone: "0700 89 000" },
-    { id: "pe-1001", code: "PE-1001", name: "Penguin Express Офис - Център", city: "София", address: "ул. Граф Игнатиев 44", type: "office", courier: "penguin", phone: "0700 89 000" },
-    { id: "pe-1002", code: "PE-1002", name: "Penguin Express Офис - Младост", city: "София", address: "ж.к. Младост 1, бул. Ал. Малинов 23", type: "office", courier: "penguin", phone: "0700 89 000" },
-    { id: "pe-1003", code: "PE-1003", name: "Penguin Express Автомат 24/7 - НДК", city: "София", address: "пл. България 1, подлез НДК", type: "box", courier: "penguin", phone: "0700 89 000" },
-    { id: "pe-1004", code: "PE-1004", name: "Penguin Express Автомат 24/7 - Люлин", city: "София", address: "ж.к. Люлин 4, пазар Люлин", type: "box", courier: "penguin", phone: "0700 89 000" },
-    { id: "pe-1005", code: "PE-1005", name: "Penguin Express Автомат 24/7 - Студентски град", city: "София", address: "ул. Акад. Борис Стефанов 1", type: "box", courier: "penguin", phone: "0700 89 000" },
-    { id: "pe-4001", code: "PE-4001", name: "Penguin Express Офис - Център", city: "Пловдив", address: "ул. Христо Г. Данов 18", type: "office", courier: "penguin", phone: "0700 89 000" },
-    { id: "pe-4002", code: "PE-4002", name: "Penguin Express Автомат 24/7 - Тракия", city: "Пловдив", address: "ж.к. Тракия, бул. Освобождение 3", type: "box", courier: "penguin", phone: "0700 89 000" },
-    { id: "pe-9001", code: "PE-9001", name: "Penguin Express Офис - Център", city: "Варна", address: "бул. Владислав Варненчик 55", type: "office", courier: "penguin", phone: "0700 89 000" },
-    { id: "pe-9002", code: "PE-9002", name: "Penguin Express Автомат 24/7 - Чайка", city: "Варна", address: "кв. Чайка, до бл. 27", type: "box", courier: "penguin", phone: "0700 89 000" },
-    { id: "pe-8001", code: "PE-8001", name: "Penguin Express Офис - Център", city: "Бургас", address: "ул. Александровска 88", type: "office", courier: "penguin", phone: "0700 89 000" },
-    { id: "pe-8002", code: "PE-8002", name: "Penguin Express Автомат 24/7 - Лазур", city: "Бургас", address: "ж.к. Лазур, бул. Демокрация 104", type: "box", courier: "penguin", phone: "0700 89 000" },
-    { id: "pe-7001", code: "PE-7001", name: "Penguin Express Офис - Център", city: "Русе", address: "ул. Александровска 42", type: "office", courier: "penguin", phone: "0700 89 000" },
-    { id: "pe-7002", code: "PE-7002", name: "Penguin Express Автомат 24/7 - Родина", city: "Русе", address: "кв. Родина 1, ул. Тича 2", type: "box", courier: "penguin", phone: "0700 89 000" },
-    { id: "pe-6001", code: "PE-6001", name: "Penguin Express Офис - Център", city: "Стара Загора", address: "бул. Цар Симеон Велики 112", type: "office", courier: "penguin", phone: "0700 89 000" },
-    { id: "pe-6002", code: "PE-6002", name: "Penguin Express Автомат 24/7 - Железник", city: "Стара Загора", address: "кв. Железник, ул. Загоре 4", type: "box", courier: "penguin", phone: "0700 89 000" },
-    { id: "pe-5001", code: "PE-5001", name: "Penguin Express Офис - Център", city: "Велико Търново", address: "ул. Васил Левски 29", type: "office", courier: "penguin", phone: "0700 89 000" },
-    { id: "pe-5002", code: "PE-5002", name: "Penguin Express Автомат 24/7 - Колю Фичето", city: "Велико Търново", address: "ул. Симеон Велики 7", type: "box", courier: "penguin", phone: "0700 89 000" },
-  ];
+// Pigeon Express serves its offices and lockers (АПС) to its own locations map from this endpoint.
+async function fetchPigeon() {
+  console.log("Fetching Pigeon Express locations...");
+  const res = await fetch("https://pigeonexpress.com/api/locations?locale=bg&categories=office,locker", {
+    headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0 (office list sync)" },
+  });
+  if (!res.ok) throw new Error(`Pigeon Express request failed: ${res.status}`);
+  const data = await res.json();
+
+  const normalized = [];
+  for (const o of data.locations || []) {
+    const city = (o.city || "").trim();
+    if (!o.code || !city) continue;
+    normalized.push({
+      id: `pigeon-${o.id}`,
+      code: String(o.code),
+      name: (o.name || "").trim(),
+      courier: "pigeon",
+      type: o.type === "locker" ? "box" : "office",
+      city,
+      address: (o.address || "").trim(),
+      phone: o.phone ? `+${String(o.phone).replace(/^\+/, "")}` : "",
+    });
+  }
+  console.log(`Pigeon Express: fetched ${normalized.length} locations (${normalized.filter((o) => o.type === "box").length} lockers).`);
+  return normalized;
+}
+
+// The couriers spell settlements slightly differently ("с. Нови хан", "Варнa" with a Latin "a").
+// Bring them to one spelling so a customer who types a town sees every courier's locations there.
+const LATIN_LOOKALIKES = { a: "а", e: "е", o: "о", p: "р", c: "с", x: "х", y: "у", A: "А", B: "В", E: "Е", K: "К", M: "М", H: "Н", O: "О", P: "Р", C: "С", T: "Т", X: "Х" };
+function cleanCity(city) {
+  let c = city.replace(/^(гр|с)\.\s*/i, "").trim();
+  if (/[а-яА-Я]/.test(c)) c = c.replace(/[aeopcxyABEKMHOPCTX]/g, (ch) => LATIN_LOOKALIKES[ch]);
+  return c.charAt(0).toUpperCase() + c.slice(1);
+}
+function unifyCities(all) {
+  const canonical = new Map();
+  for (const o of all) {
+    o.city = cleanCity(o.city);
+    const key = o.city.toLowerCase();
+    if (!canonical.has(key)) canonical.set(key, o.city);
+    o.city = canonical.get(key);
+  }
 }
 
 async function main() {
-  const [econt, speedy] = await Promise.all([fetchEcont(), fetchSpeedy()]);
-  const boxnow = getBoxNowLockers();
-  const penguin = getPenguinExpressLocations();
-  const all = [...econt, ...speedy, ...boxnow, ...penguin];
+  // Any failed source aborts the run, so a half-empty list never replaces a good one.
+  const [econt, speedy, boxnow, pigeon] = await Promise.all([fetchEcont(), fetchSpeedy(), fetchBoxNow(), fetchPigeon()]);
+  for (const [name, list] of Object.entries({ econt, speedy, boxnow, pigeon })) {
+    if (list.length === 0) throw new Error(`${name} returned no locations`);
+  }
+  // Econt and Speedy first: their spelling of a settlement becomes the common one.
+  const all = [...econt, ...speedy, ...boxnow, ...pigeon];
+  unifyCities(all);
   
   // Collect unique cities
   const citiesMap = new Map();
