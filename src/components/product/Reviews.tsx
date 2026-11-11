@@ -15,6 +15,38 @@ export async function Reviews({ productId, slug }: { productId: number; slug: st
     session ? ownReview(session.uid, productId) : null,
   ]);
 
+  // Nothing to read and nothing this visitor can write yet: one slim line, so the products below stay in view.
+  if (data.count === 0 && !received) {
+    return (
+      <section
+        id="otzivi"
+        aria-labelledby="reviews-heading"
+        className="flex scroll-mt-32 flex-wrap items-center justify-between gap-x-6 gap-y-1 rounded-2xl bg-paper px-4 py-3 text-sm shadow-soft sm:px-5 sm:py-3.5"
+      >
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <Stars value={0} className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          <h2 id="reviews-heading" className="font-semibold">
+            Отзиви
+          </h2>
+          <span className="text-ink-soft">· Все още няма оценки</span>
+        </div>
+        <p className="text-xs text-ink-soft sm:text-sm">
+          {session ? (
+            "Оценка можеш да дадеш след получаване на поръчката."
+          ) : (
+            <>
+              Купил си го?{" "}
+              <Link href={`/vhod?next=/produkt/${slug}%23otzivi`} className="font-semibold text-forest hover:underline">
+                Влез
+              </Link>
+              , за да го оцениш.
+            </>
+          )}
+        </p>
+      </section>
+    );
+  }
+
   return (
     <section id="otzivi" aria-labelledby="reviews-heading" className="scroll-mt-32">
       <h2 id="reviews-heading" className="font-display text-2xl font-semibold tracking-tight">
