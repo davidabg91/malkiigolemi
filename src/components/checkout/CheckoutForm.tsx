@@ -3,7 +3,7 @@
 import { Banknote, CreditCard, Info, Loader2, Lock } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useLayoutEffect, useState, useTransition, type FormEvent } from "react";
+import { useId, useLayoutEffect, useState, useTransition, type FormEvent } from "react";
 import { placeOrder } from "@/actions/checkout";
 import { ProductVisual } from "@/components/product/PackShot";
 import { StoreLocation } from "@/components/StoreLocation";
@@ -43,14 +43,16 @@ function Field({
   error,
   ...props
 }: { label: string; name: string; error?: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+  // Unique per copy: a page left behind stays mounted (hidden), so a plain `name` id could repeat.
+  const id = `${useId()}-${name}`;
   return (
     <div>
-      <label htmlFor={name} className="mb-1.5 block text-sm font-medium">
+      <label htmlFor={id} className="mb-1.5 block text-sm font-medium">
         {label} {props.required && <span className="text-tomato" aria-hidden>*</span>}
       </label>
-      <input id={name} name={name} className="field" aria-invalid={error ? true : undefined} aria-describedby={error ? `${name}-error` : undefined} {...props} />
+      <input id={id} name={name} className="field" aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-error` : undefined} {...props} />
       {error && (
-        <p id={`${name}-error`} role="alert" className="mt-1.5 text-sm font-medium text-tomato">
+        <p id={`${id}-error`} role="alert" className="mt-1.5 text-sm font-medium text-tomato">
           {error}
         </p>
       )}
@@ -93,6 +95,7 @@ function PaymentOption({
 
 export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
   const router = useRouter();
+  const noteId = useId();
   useFreshCartPrices(liveCartData);
   const hydrated = useHydrated();
   const items = useCart((s) => s.items);
@@ -149,7 +152,8 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const fd = new FormData(form);
     const text = (k: string) => String(fd.get(k) ?? "");
     setErrors({});
     setFormError("");
@@ -185,7 +189,9 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
       setErrors(result.fieldErrors ?? {});
       setFormError(result.error);
       const first = Object.keys(result.fieldErrors ?? {})[0];
-      if (first) document.getElementById(first)?.focus();
+      // By name within this form: ids carry a per-copy prefix.
+      const field = first ? form.elements.namedItem(first) : null;
+      if (field instanceof HTMLElement) field.focus();
     });
   };
 
@@ -255,10 +261,10 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
             </p>
           )}
           <div className="mt-4">
-            <label htmlFor="note" className="mb-1.5 block text-sm font-medium">
+            <label htmlFor={noteId} className="mb-1.5 block text-sm font-medium">
               Бележка към поръчката <span className="font-normal text-ink-soft">(по желание)</span>
             </label>
-            <textarea id="note" name="note" rows={3} maxLength={500} className="field h-auto py-3" />
+            <textarea id={noteId} name="note" rows={3} maxLength={500} className="field h-auto py-3" />
           </div>
         </fieldset>
 

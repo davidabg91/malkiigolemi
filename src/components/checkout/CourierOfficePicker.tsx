@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, MapPin, Package, Search, Store, X } from "lucide-react";
 import { CourierLogo } from "@/components/couriers/CourierLogos";
 import {
@@ -39,8 +39,10 @@ export function CourierOfficePicker({
   address,
   onAddressChange,
   errors,
-  idPrefix = "",
+  idPrefix: prefix = "",
 }: Props) {
+  // useId on top: a page left behind stays mounted (hidden), so even one picker per page can repeat.
+  const idPrefix = `${useId()}-${prefix}`;
   const [cities, setCities] = useState<string[]>([]);
   const [offices, setOffices] = useState<CourierOffice[]>([]);
   const [activeCouriersConfig, setActiveCouriersConfig] = useState<Record<CourierId, boolean> | null>(null);

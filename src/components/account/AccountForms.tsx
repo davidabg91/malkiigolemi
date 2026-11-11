@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Loader2 } from "lucide-react";
-import { useActionState, useState, type ReactNode } from "react";
+import { useActionState, useId, useState, type ReactNode } from "react";
 import { changePassword, saveDeliveryPrefs, saveProfile, type AccountFormState } from "@/actions/account";
 import { CourierOfficePicker } from "@/components/checkout/CourierOfficePicker";
 import { DeliveryOptions } from "@/components/checkout/DeliveryOptions";
@@ -17,20 +17,22 @@ function Input({
   hint,
   ...props
 }: { label: string; name: string; error?: string; hint?: string } & React.InputHTMLAttributes<HTMLInputElement>) {
-  const describedBy = error ? `${name}-error` : hint ? `${name}-hint` : undefined;
+  // Unique per copy: a page left behind stays mounted (hidden), so a plain `name` id could repeat.
+  const id = `${useId()}-${name}`;
+  const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
   return (
     <div>
-      <label htmlFor={name} className="mb-1.5 block text-sm font-medium">
+      <label htmlFor={id} className="mb-1.5 block text-sm font-medium">
         {label}
       </label>
-      <input id={name} name={name} className="field" aria-invalid={error ? true : undefined} aria-describedby={describedBy} {...props} />
+      <input id={id} name={name} className="field" aria-invalid={error ? true : undefined} aria-describedby={describedBy} {...props} />
       {error ? (
-        <p id={`${name}-error`} role="alert" className="mt-1.5 text-sm font-medium text-tomato">
+        <p id={`${id}-error`} role="alert" className="mt-1.5 text-sm font-medium text-tomato">
           {error}
         </p>
       ) : (
         hint && (
-          <p id={`${name}-hint`} className="mt-1.5 text-sm text-ink-soft">
+          <p id={`${id}-hint`} className="mt-1.5 text-sm text-ink-soft">
             {hint}
           </p>
         )
