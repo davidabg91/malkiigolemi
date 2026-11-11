@@ -75,6 +75,16 @@ export const ORDER_STATUS_LABELS: Record<string, string> = {
   cancelled: "Отказана",
 };
 
+/** Flag stripes for the "by origin" tabs; `vertical` for flags striped side by side. */
+export const ORIGIN_FLAGS: Record<string, { stripes: string[]; vertical?: boolean }> = {
+  IT: { stripes: ["#1B8A4B", "#FFFFFF", "#D63A1F"], vertical: true },
+  FR: { stripes: ["#1F3F99", "#FFFFFF", "#D63A2F"], vertical: true },
+  GR: { stripes: ["#1F6FB5", "#FFFFFF", "#1F6FB5", "#FFFFFF", "#1F6FB5"] },
+  BG: { stripes: ["#FFFFFF", "#00966E", "#D62612"] },
+  DE: { stripes: ["#111111", "#DD0000", "#FFCE00"] },
+  ES: { stripes: ["#AA151B", "#F1BF00", "#F1BF00", "#AA151B"] },
+};
+
 export const ORIGIN_LABELS: Record<string, string> = {
   IT: "Италия",
   GR: "Гърция",

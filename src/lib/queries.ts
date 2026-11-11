@@ -126,15 +126,30 @@ export async function getHomeData() {
   cacheTag(CATALOG_TAG);
 
   const active = sellable;
-  const [promo, fresh, bulk, italy, greece, brandList] = await Promise.all([
+  const [promo, fresh, bulk, origins, brandList] = await Promise.all([
     cards().where(and(active, sql`${effectiveOldPrice} is not null`)).orderBy(desc(products.isFeatured), asc(products.id)).limit(12),
     cards().where(and(active, eq(products.isNew, true))).orderBy(desc(products.createdAt)).limit(10),
     cards().where(and(active, isNotNull(products.bulkPrice))).orderBy(desc(products.isFeatured), asc(products.id)).limit(4),
-    cards().where(and(active, eq(products.origin, "IT"), eq(products.isFeatured, true))).orderBy(asc(products.id)).limit(10),
-    cards().where(and(active, eq(products.origin, "GR"))).orderBy(desc(products.isFeatured), asc(products.id)).limit(10),
+    // The countries the shop actually sells most products from, for the "by origin" tabs.
+    db
+      .select({ origin: products.origin, n: sql<number>`count(*)` })
+      .from(products)
+      .where(and(active, isNotNull(products.origin)))
+      .groupBy(products.origin)
+      .orderBy(desc(sql`count(*)`))
+      .limit(4),
     db.select().from(brands).orderBy(asc(brands.name)),
   ]);
-  return { promo, fresh, bulk, italy, greece, brands: brandList };
+  const byOrigin = await Promise.all(
+    origins
+      .filter((o) => o.origin)
+      .map(async (o) => ({
+        origin: o.origin!,
+        count: o.n,
+        products: await cards().where(and(active, eq(products.origin, o.origin!))).orderBy(desc(products.isFeatured), asc(products.id)).limit(10),
+      })),
+  );
+  return { promo, fresh, bulk, byOrigin, brands: brandList };
 }
 
 export async function getCategoryPath(slugs: string[]) {
