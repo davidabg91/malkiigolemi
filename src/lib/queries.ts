@@ -174,6 +174,8 @@ export type ListingScope = {
 };
 
 export type ListingFilters = {
+  /** Root category slugs; each one includes its subcategories. */
+  categories?: string[];
   brands?: string[];
   origins?: string[];
   min?: number;
@@ -201,9 +203,11 @@ export async function listProducts(scope: ListingScope, f: ListingFilters) {
   cacheTag(CATALOG_TAG);
 
   const base = scopeWhere(scope);
+  // A category page is already one category; elsewhere (new, promo, search) the shopper can narrow by it.
+  const tree = scope.categoryIds?.length ? [] : await getCategoryTree();
 
   // Facets are computed on the scope only, so picking one brand does not hide the others.
-  const [brandFacet, originFacet, [range]] = await Promise.all([
+  const [brandFacet, originFacet, [range], perCategory] = await Promise.all([
     db
       .select({ slug: brands.slug, name: brands.name, n: sql<number>`count(*)` })
       .from(products)
@@ -220,9 +224,26 @@ export async function listProducts(scope: ListingScope, f: ListingFilters) {
       .select({ min: sql<number>`coalesce(min(${effectivePrice}), 0)`, max: sql<number>`coalesce(max(${effectivePrice}), 0)` })
       .from(products)
       .where(and(...base)),
+    tree.length
+      ? db
+          .select({ categoryId: products.categoryId, n: sql<number>`count(*)` })
+          .from(products)
+          .where(and(...base))
+          .groupBy(products.categoryId)
+      : Promise.resolve([]),
   ]);
 
+  // Subcategories roll up into their main category, in menu order.
+  const countOf = new Map(perCategory.map((c) => [c.categoryId, c.n]));
+  const categoryFacet = tree
+    .map((root) => ({ slug: root.slug, name: root.name, n: [root, ...root.children].reduce((sum, c) => sum + (countOf.get(c.id) ?? 0), 0) }))
+    .filter((c) => c.n > 0);
+
   const where = [...base];
+  if (f.categories?.length && tree.length) {
+    const ids = tree.filter((r) => f.categories!.includes(r.slug)).flatMap((r) => [r.id, ...r.children.map((c) => c.id)]);
+    where.push(inArray(products.categoryId, ids.length ? ids : [-1]));
+  }
   if (f.brands?.length) {
     const ids = await db.select({ id: brands.id }).from(brands).where(inArray(brands.slug, f.brands));
     where.push(inArray(products.brandId, ids.length ? ids.map((b) => b.id) : [-1]));
@@ -255,7 +276,7 @@ export async function listProducts(scope: ListingScope, f: ListingFilters) {
     total,
     page,
     pages: Math.max(1, Math.ceil(total / PER_PAGE)),
-    facets: { brands: brandFacet, origins: originFacet, priceMin: range.min, priceMax: range.max },
+    facets: { categories: categoryFacet, brands: brandFacet, origins: originFacet, priceMin: range.min, priceMax: range.max },
   };
 }
 

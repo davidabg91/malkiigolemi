@@ -9,6 +9,8 @@ import { SORTS, type SortKey } from "@/lib/listing";
 import { ORIGIN_LABELS } from "@/lib/site";
 
 export type Facets = {
+  /** Main categories; empty on a category page. */
+  categories: { slug: string; name: string; n: number }[];
   brands: { slug: string; name: string; n: number }[];
   origins: { origin: string | null; n: number }[];
   /** Whole euros. */
@@ -17,6 +19,7 @@ export type Facets = {
 };
 
 export type Current = {
+  categories: string[];
   brands: string[];
   origins: string[];
   min: number | null;
@@ -117,6 +120,7 @@ export function ListingShell({
   const go = (next: Partial<Current>) => {
     const c = { ...current, ...next };
     const qs = new URLSearchParams(preserve);
+    if (c.categories.length) qs.set("cat", c.categories.join(","));
     if (c.brands.length) qs.set("brand", c.brands.join(","));
     if (c.origins.length) qs.set("origin", c.origins.join(","));
     if (c.min != null && c.min > facets.priceMin) qs.set("min", String(c.min));
@@ -127,12 +131,26 @@ export function ListingShell({
   };
 
   const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
-  const activeCount = current.brands.length + current.origins.length + (current.min != null || current.max != null ? 1 : 0);
+  const activeCount = current.categories.length + current.brands.length + current.origins.length + (current.min != null || current.max != null ? 1 : 0);
   const hasPrice = facets.priceMax > facets.priceMin;
 
   const filters = (
     <div className="space-y-7">
       {nav}
+      {(facets.categories.length > 1 || current.categories.length > 0) && (
+        <fieldset>
+          <legend className="mb-2 text-sm font-semibold uppercase tracking-[0.14em]">Категория</legend>
+          {facets.categories.map((c) => (
+            <CheckRow
+              key={c.slug}
+              label={c.name}
+              count={c.n}
+              checked={current.categories.includes(c.slug)}
+              onChange={() => go({ categories: toggle(current.categories, c.slug) })}
+            />
+          ))}
+        </fieldset>
+      )}
       {hasPrice && (
         <fieldset>
           <legend className="mb-3 text-sm font-semibold uppercase tracking-[0.14em]">Цена</legend>
@@ -181,7 +199,7 @@ export function ListingShell({
         </fieldset>
       )}
       {activeCount > 0 && (
-        <button type="button" onClick={() => go({ brands: [], origins: [], min: null, max: null })} className={`${btn.sm} w-full`}>
+        <button type="button" onClick={() => go({ categories: [], brands: [], origins: [], min: null, max: null })} className={`${btn.sm} w-full`}>
           <X className="h-4 w-4" />
           Изчисти филтрите
         </button>
