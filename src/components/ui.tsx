@@ -100,110 +100,123 @@ export function Logo({ className = "", light = false }: { className?: string; li
       aria-label={`${site.name} — начало`}
       className={`group/logo inline-flex items-center transition-transform duration-300 hover:scale-[1.02] ${className}`}
     >
-      <svg
-        viewBox="0 0 264 56"
-        className="h-8 w-auto min-[400px]:h-10 sm:h-11"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        aria-hidden
-      >
-        <defs>
-          <linearGradient id={light ? "logoCyanGradLight" : "logoCyanGrad"} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#06B6D4" />
-            <stop offset="100%" stopColor="#0284C7" />
-          </linearGradient>
-          <linearGradient id="awningLight" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#FFFFFF" />
-            <stop offset="100%" stopColor="#E0F2FE" />
-          </linearGradient>
-          <filter id={light ? "logoGlowLight" : "logoGlow"} x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#0284c7" floodOpacity={light ? "0.4" : "0.25"} />
-          </filter>
-        </defs>
-
-        {/* Unified Brand Symbol (Stylized Boutique Bag & Awning Fusion) */}
-        <g transform="translate(6, 5)">
-          <path
-            d="M14 15 C14 8 19 3 25 3 C31 3 36 8 36 15"
-            stroke={light ? "#38BDF8" : "url(#logoCyanGrad)"}
-            strokeWidth="3"
-            strokeLinecap="round"
-            fill="none"
-          />
-          <rect
-            x="5"
-            y="13"
-            width="40"
-            height="32"
-            rx="8"
-            fill={light ? "url(#logoCyanGradLight)" : "url(#logoCyanGrad)"}
-            filter={light ? "url(#logoGlowLight)" : "url(#logoGlow)"}
-          />
-          <path
-            d="M5 23 C9 26 13 26 17 23 C21 26 25 26 29 23 C33 26 37 26 41 23 C43 24.5 45 23 45 23 L45 13 L5 13 Z"
-            fill="url(#awningLight)"
-          />
-          <line x1="11" y1="13" x2="11" y2="24" stroke="#0284C7" strokeWidth="1.8" strokeLinecap="round" />
-          <line x1="23" y1="13" x2="23" y2="25" stroke="#0284C7" strokeWidth="1.8" strokeLinecap="round" />
-          <line x1="35" y1="13" x2="35" y2="24" stroke="#0284C7" strokeWidth="1.8" strokeLinecap="round" />
-
-          {/* Smiling package arc */}
-          <path d="M17 33 C20 37 30 37 33 33" stroke="#FFFFFF" strokeWidth="2.4" strokeLinecap="round" fill="none" />
-          <circle cx="20" cy="30" r="1.5" fill="#FFFFFF" />
-          <circle cx="30" cy="30" r="1.5" fill="#FFFFFF" />
-        </g>
-
-        {/* Integrated Brand Typography Panel (Centered, Clean, Professional) */}
-        <g transform="translate(62, 5)">
-          {/* Main Word: ПОРЪЧКИ — Perfectly centered in this panel */}
-          <text
-            x="95"
-            y="21"
-            textAnchor="middle"
-            fontFamily="'Unbounded', var(--font-unbounded), -apple-system, system-ui, sans-serif"
-            fontWeight="900"
-            fontSize="20.5"
-            fill={light ? "#FBF8F1" : "#0F172A"}
-            letterSpacing="0.04em"
-          >
-            ПОРЪЧКИ
-          </text>
-
-          {/* Subtitle Panel Capsule — Symmetrically enlarged and centered */}
-          <g transform="translate(-1, 26)">
-            <rect
-              x="0"
-              y="0"
-              width="192"
-              height="22"
-              rx="11"
-              fill={light ? "#FFFFFF" : "#0284C7"}
-              fillOpacity={light ? "0.15" : "0.08"}
-              stroke={light ? "#38BDF8" : "#0284C7"}
-              strokeWidth="1.3"
-              strokeOpacity={light ? "0.45" : "0.25"}
-            />
-            <text
-              x="96"
-              y="14.8"
-              textAnchor="middle"
-              fontFamily="'Onest', var(--font-onest), -apple-system, system-ui, sans-serif"
-              fontWeight="800"
-              fontSize="10"
-              letterSpacing="1.2"
-            >
-              <tspan fill={light ? "#E2E8F0" : "#475569"}>ЗА </tspan>
-              <tspan fill="#FF4D6D" fontWeight="900">М</tspan>
-              <tspan fill="#F59E0B" fontWeight="900">А</tspan>
-              <tspan fill="#10B981" fontWeight="900">Л</tspan>
-              <tspan fill="#06B6D4" fontWeight="900">К</tspan>
-              <tspan fill="#8B5CF6" fontWeight="900">И</tspan>
-              <tspan fill={light ? "#E2E8F0" : "#334155"}> И ГОЛЕМИ</tspan>
-            </text>
-          </g>
-        </g>
-      </svg>
+      <LogoArt light={light} className="h-8 w-auto min-[400px]:h-10 sm:h-11" />
     </Link>
+  );
+}
+
+/**
+ * The logo drawing itself. `idPrefix` keeps the gradient ids apart when it is drawn many times on a page
+ * (the product photo stamps), so each copy points at its own, always-rendered definitions.
+ */
+export function LogoArt({ className = "", light = false, idPrefix = "" }: { className?: string; light?: boolean; idPrefix?: string }) {
+  const cyan = `${idPrefix}${light ? "logoCyanGradLight" : "logoCyanGrad"}`;
+  const glow = `${idPrefix}${light ? "logoGlowLight" : "logoGlow"}`;
+  const awning = `${idPrefix}awningLight`;
+  return (
+    <svg
+      viewBox="0 0 264 56"
+      className={className}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden
+    >
+      <defs>
+        <linearGradient id={cyan} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#06B6D4" />
+          <stop offset="100%" stopColor="#0284C7" />
+        </linearGradient>
+        <linearGradient id={awning} x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#FFFFFF" />
+          <stop offset="100%" stopColor="#E0F2FE" />
+        </linearGradient>
+        <filter id={glow} x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#0284c7" floodOpacity={light ? "0.4" : "0.25"} />
+        </filter>
+      </defs>
+
+      {/* Unified Brand Symbol (Stylized Boutique Bag & Awning Fusion) */}
+      <g transform="translate(6, 5)">
+        <path
+          d="M14 15 C14 8 19 3 25 3 C31 3 36 8 36 15"
+          stroke={light ? "#38BDF8" : `url(#${cyan})`}
+          strokeWidth="3"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <rect
+          x="5"
+          y="13"
+          width="40"
+          height="32"
+          rx="8"
+          fill={`url(#${cyan})`}
+          filter={`url(#${glow})`}
+        />
+        <path
+          d="M5 23 C9 26 13 26 17 23 C21 26 25 26 29 23 C33 26 37 26 41 23 C43 24.5 45 23 45 23 L45 13 L5 13 Z"
+          fill={`url(#${awning})`}
+        />
+        <line x1="11" y1="13" x2="11" y2="24" stroke="#0284C7" strokeWidth="1.8" strokeLinecap="round" />
+        <line x1="23" y1="13" x2="23" y2="25" stroke="#0284C7" strokeWidth="1.8" strokeLinecap="round" />
+        <line x1="35" y1="13" x2="35" y2="24" stroke="#0284C7" strokeWidth="1.8" strokeLinecap="round" />
+
+        {/* Smiling package arc */}
+        <path d="M17 33 C20 37 30 37 33 33" stroke="#FFFFFF" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+        <circle cx="20" cy="30" r="1.5" fill="#FFFFFF" />
+        <circle cx="30" cy="30" r="1.5" fill="#FFFFFF" />
+      </g>
+
+      {/* Integrated Brand Typography Panel (Centered, Clean, Professional) */}
+      <g transform="translate(62, 5)">
+        {/* Main Word: ПОРЪЧКИ — Perfectly centered in this panel */}
+        <text
+          x="95"
+          y="21"
+          textAnchor="middle"
+          fontFamily="'Unbounded', var(--font-unbounded), -apple-system, system-ui, sans-serif"
+          fontWeight="900"
+          fontSize="20.5"
+          fill={light ? "#FBF8F1" : "#0F172A"}
+          letterSpacing="0.04em"
+        >
+          ПОРЪЧКИ
+        </text>
+
+        {/* Subtitle Panel Capsule — Symmetrically enlarged and centered */}
+        <g transform="translate(-1, 26)">
+          <rect
+            x="0"
+            y="0"
+            width="192"
+            height="22"
+            rx="11"
+            fill={light ? "#FFFFFF" : "#0284C7"}
+            fillOpacity={light ? "0.15" : "0.08"}
+            stroke={light ? "#38BDF8" : "#0284C7"}
+            strokeWidth="1.3"
+            strokeOpacity={light ? "0.45" : "0.25"}
+          />
+          <text
+            x="96"
+            y="14.8"
+            textAnchor="middle"
+            fontFamily="'Onest', var(--font-onest), -apple-system, system-ui, sans-serif"
+            fontWeight="800"
+            fontSize="10"
+            letterSpacing="1.2"
+          >
+            <tspan fill={light ? "#E2E8F0" : "#475569"}>ЗА </tspan>
+            <tspan fill="#FF4D6D" fontWeight="900">М</tspan>
+            <tspan fill="#F59E0B" fontWeight="900">А</tspan>
+            <tspan fill="#10B981" fontWeight="900">Л</tspan>
+            <tspan fill="#06B6D4" fontWeight="900">К</tspan>
+            <tspan fill="#8B5CF6" fontWeight="900">И</tspan>
+            <tspan fill={light ? "#E2E8F0" : "#334155"}> И ГОЛЕМИ</tspan>
+          </text>
+        </g>
+      </g>
+    </svg>
   );
 }
 

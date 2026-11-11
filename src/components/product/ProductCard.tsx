@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LogoArt } from "@/components/ui";
 import { discountPercent, formatPrice } from "@/lib/format";
 import type { ProductCardData } from "@/lib/queries";
 import { CardAddButton, WishlistButton } from "./AddToCart";
@@ -24,6 +25,18 @@ export function Badges({ product }: { product: ProductCardData }) {
   );
 }
 
+/**
+ * The shop's badge in the bottom-right corner of a product photo, like a big chain's stamp. It sits on the
+ * photo frame rather than in the file, so every photo gets it, uploads included, and small thumbnails stay clean.
+ */
+export function ProductStamp({ className = "" }: { className?: string }) {
+  return (
+    <span className={`pointer-events-none absolute z-[1] rounded-full bg-white/90 shadow-[0_2px_8px_rgb(15_23_42/0.12)] ring-1 ring-black/5 backdrop-blur-sm ${className}`}>
+      <LogoArt idPrefix="stamp-" className="h-full w-auto" />
+    </span>
+  );
+}
+
 export function ProductCard({ product }: { product: ProductCardData }) {
   const href = `/produkt/${product.slug}`;
   return (
@@ -39,6 +52,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
           product={product}
           className="absolute inset-0 m-auto h-[88%] w-[88%] transition-transform duration-500 ease-out-soft group-hover:-rotate-3 group-hover:scale-[1.07]"
         />
+        <ProductStamp className="bottom-1.5 right-1.5 h-4 px-1 py-0.5 sm:h-[1.1rem]" />
       </Link>
       <div className="absolute left-4 top-4 z-10 sm:left-5 sm:top-5">
         <Badges product={product} />

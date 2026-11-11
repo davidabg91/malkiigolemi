@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { BuyBox } from "@/components/product/AddToCart";
 import { Carousel } from "@/components/product/Carousel";
 import { ProductVisual } from "@/components/product/PackShot";
-import { Badges, ProductCard } from "@/components/product/ProductCard";
+import { Badges, ProductCard, ProductStamp } from "@/components/product/ProductCard";
 import { RecentlyViewed } from "@/components/product/Recent";
 import { Reviews } from "@/components/product/Reviews";
 import { ratingLabel, Stars } from "@/components/product/Stars";
@@ -82,6 +82,7 @@ async function Content({ params }: Pick<Props, "params">) {
             <div className="absolute left-5 top-5 scale-110 origin-top-left">
               <Badges product={cardData} />
             </div>
+            <ProductStamp className="bottom-3 right-3 h-6 px-1.5 py-1 sm:bottom-4 sm:right-4 sm:h-7" />
           </div>
 
           <div className="lg:py-4">
