@@ -51,7 +51,8 @@ const optionalInt = z
 
 const productSchema = z.object({
   name: z.string().trim().min(2, "Въведи име на продукта.").max(160),
-  sku: z.string().trim().min(1, "Въведи артикулен номер.").max(40),
+  // Empty = the shop numbers it (see nextSku); editing with it empty keeps the current number.
+  sku: z.string().trim().max(40),
   unit: z.string().trim().max(60),
   description: z.string().trim().max(4000),
   categoryId: z.coerce.number().int().positive("Избери категория."),
@@ -66,6 +67,18 @@ const productSchema = z.object({
   pack: z.string().refine((v) => v in PACKS, "Невалидна опаковка."),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Невалиден цвят."),
 });
+
+/** The next free article number: one above the highest all-digit one, starting at 1001 like the catalogue. */
+async function nextSku() {
+  const [row] = await db
+    .select({ max: sql<number | null>`max(cast(${products.sku} as integer))` })
+    .from(products)
+    .where(sql`${products.sku} != '' and ${products.sku} not glob '*[^0-9]*'`);
+  let n = Math.max(1000, Number(row?.max ?? 0)) + 1;
+  // Step past a number that is somehow already taken (e.g. typed by hand as "01002").
+  while ((await db.select({ id: products.id }).from(products).where(eq(products.sku, String(n))).limit(1)).length) n++;
+  return String(n);
+}
 
 export async function saveProduct(id: number | null, _prev: AdminFormState, formData: FormData): Promise<AdminFormState> {
   await assertAdmin();
@@ -91,6 +104,11 @@ export async function saveProduct(id: number | null, _prev: AdminFormState, form
 
   const [category] = await db.select({ id: categories.id }).from(categories).where(eq(categories.id, d.categoryId)).limit(1);
   if (!category) return { error: "Категорията не съществува.", fieldErrors: { categoryId: "Избери категория." } };
+
+  if (!d.sku) {
+    const [own] = id ? await db.select({ sku: products.sku }).from(products).where(eq(products.id, id)).limit(1) : [];
+    d.sku = own?.sku || (await nextSku());
+  }
 
   const [skuTaken] = await db
     .select({ id: products.id })

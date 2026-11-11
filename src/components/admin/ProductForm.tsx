@@ -78,7 +78,10 @@ export function ProductForm({
       <div className="space-y-6">
         <Group title="Основни данни">
           {input("name", "Име на продукта", { required: true, defaultValue: product?.name, maxLength: 160 }, true)}
-          {input("sku", "Артикулен №", { required: true, defaultValue: product?.sku, maxLength: 40 })}
+          <div>
+            {input("sku", "Артикулен №", { defaultValue: product?.sku, maxLength: 40, placeholder: "Автоматично" })}
+            {!errors.sku && <p className="mt-1.5 text-xs text-ink-soft">Остави празно и сайтът ще даде следващия свободен номер.</p>}
+          </div>
           {input("unit", "Разфасовка", { defaultValue: product?.unit, placeholder: "напр. 500 г, 1 л, 10 бр" })}
           <div>
             <label htmlFor="categoryId" className="mb-1.5 block text-sm font-medium">
