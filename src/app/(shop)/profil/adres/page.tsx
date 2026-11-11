@@ -6,6 +6,7 @@ import { DeliveryPrefsForm } from "@/components/account/AccountForms";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { getSession } from "@/lib/auth";
+import { savedOffice } from "@/lib/courier-offices";
 
 export const metadata: Metadata = { title: "Адрес за доставка", robots: { index: false } };
 
@@ -21,8 +22,7 @@ async function Form() {
         city: u.city ?? "",
         address: u.address ?? "",
         courier: u.preferredCourier ?? null,
-        officeCode: u.preferredOfficeCode ?? null,
-        officeName: u.preferredOfficeName ?? null,
+        office: savedOffice(u.preferredDelivery, u.preferredCourier, u.preferredOfficeCode),
       }}
     />
   );

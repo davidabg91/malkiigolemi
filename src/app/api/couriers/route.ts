@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
-import {
-  getAvailableCities,
-  getOffices,
-  type CourierId,
-} from "@/lib/couriers";
+import { getAvailableCities, getOffices } from "@/lib/courier-offices";
+import type { CourierId } from "@/lib/couriers";
 import { getActiveCouriersConfig } from "@/lib/couriers-server";
 
 export async function GET(request: Request) {
@@ -25,6 +22,7 @@ export async function GET(request: Request) {
   }
 
   const activeConfig = await getActiveCouriersConfig();
-  const offices = getOffices({ city, courier, type, query });
+  // Offices are always looked up for one settlement; without it the answer would be the whole 500 KB list.
+  const offices = city ? getOffices({ city, courier, type, query }) : [];
   return NextResponse.json({ offices, activeCouriers: activeConfig });
 }

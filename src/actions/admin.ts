@@ -191,6 +191,14 @@ export async function setOrderStatus(id: number, formData: FormData) {
   await db.transaction(async (tx) => {
     const [order] = await tx.select().from(orders).where(eq(orders.id, id)).limit(1);
     if (!order || order.status === status) return;
+    // Change the status only if nobody changed it meanwhile (the customer can cancel from their profile),
+    // so the stock below is never moved twice for one cancellation.
+    const changed = await tx
+      .update(orders)
+      .set({ status })
+      .where(and(eq(orders.id, id), eq(orders.status, order.status)))
+      .returning({ id: orders.id });
+    if (changed.length === 0) return;
     // Cancelling returns the goods to stock; re-opening a cancelled order takes them again.
     const sign = status === "cancelled" ? 1 : order.status === "cancelled" ? -1 : 0;
     if (sign !== 0) {
@@ -203,7 +211,6 @@ export async function setOrderStatus(id: number, formData: FormData) {
           .where(eq(products.id, i.productId));
       }
     }
-    await tx.update(orders).set({ status }).where(eq(orders.id, id));
   });
 
   updateTag(CATALOG_TAG);
@@ -298,7 +305,7 @@ export async function updateCourierSettings(formData: FormData) {
     econt: formData.get("econt") === "on",
     speedy: formData.get("speedy") === "on",
     boxnow: formData.get("boxnow") === "on",
-    penguin: formData.get("penguin") === "on",
+    pigeon: formData.get("pigeon") === "on",
   };
   await setActiveCouriersConfig(config);
   refresh();

@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from "react";
+import { optimizedImage } from "@/lib/optimized-image";
 
 /**
  * Illustrated product packaging. Used whenever a product has no uploaded photo,
@@ -281,14 +282,17 @@ export function PackShot({
 export function ProductVisual({
   product,
   className,
+  size = 256,
 }: {
   product: { image: string | null; pack: string; color: string; brand: string | null; name: string };
   className?: string;
+  /** Roughly how wide the photo is drawn, in CSS pixels. Picks which resized copy is downloaded. */
+  size?: number;
 }) {
   if (product.image) {
     // Multiply blends a studio photo's white backdrop into the tinted card behind it.
-    // eslint-disable-next-line @next/next/no-img-element -- admin uploads are served as-is
-    return <img src={product.image} alt={product.name} loading="lazy" className={`${className ?? ""} object-contain mix-blend-multiply`} />;
+    // eslint-disable-next-line @next/next/no-img-element -- sized by the caller's classes; the file itself is resized by optimizedImage
+    return <img {...optimizedImage(product.image, size)} alt={product.name} loading="lazy" decoding="async" className={`${className ?? ""} object-contain mix-blend-multiply`} />;
   }
   return <PackShot pack={product.pack} color={product.color} label={product.brand} className={className} title={product.name} />;
 }

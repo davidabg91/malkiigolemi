@@ -51,6 +51,18 @@ export type CategoryNode = Category & { children: Category[]; count: number };
 const cards = () => db.select(card).from(products).leftJoin(brands, eq(products.brandId, brands.id));
 const isPromo = or(isNotNull(products.oldPrice), isNotNull(products.bulkPrice))!;
 
+/**
+ * What the shop may show and sell: an active product whose category, and that category's parent,
+ * are both switched on. Switching a category off in the admin hides its products everywhere, not just the menu.
+ */
+export const sellable = and(
+  eq(products.active, true),
+  sql`${products.categoryId} not in (
+    select c.id from categories c left join categories p on p.id = c.parent_id
+    where c.active = 0 or coalesce(p.active, 1) = 0
+  )`,
+)!;
+
 export async function getCategoryTree(): Promise<CategoryNode[]> {
   "use cache";
   cacheLife("hours");
@@ -64,7 +76,7 @@ export async function getCategoryTree(): Promise<CategoryNode[]> {
   const counts = await db
     .select({ categoryId: products.categoryId, n: sql<number>`count(*)` })
     .from(products)
-    .where(eq(products.active, true))
+    .where(sellable)
     .groupBy(products.categoryId);
   const countOf = new Map(counts.map((c) => [c.categoryId, c.n]));
 
@@ -88,7 +100,7 @@ export async function getCategoryShowcase() {
   for (const root of tree) {
     const ids = [root.id, ...root.children.map((c) => c.id)];
     const rows = await cards()
-      .where(and(eq(products.active, true), inArray(products.categoryId, ids)))
+      .where(and(sellable, inArray(products.categoryId, ids)))
       .orderBy(desc(products.isFeatured), asc(products.id))
       .limit(12);
     // Prefer visually different packs so the tile does not show three identical boxes.
@@ -109,7 +121,7 @@ export async function getHomeData() {
   cacheLife("hours");
   cacheTag(CATALOG_TAG);
 
-  const active = eq(products.active, true);
+  const active = sellable;
   const [promo, fresh, bulk, italy, greece, brandList] = await Promise.all([
     cards().where(and(active, isNotNull(products.oldPrice))).orderBy(desc(products.isFeatured), asc(products.id)).limit(12),
     cards().where(and(active, eq(products.isNew, true))).orderBy(desc(products.createdAt)).limit(10),
@@ -152,7 +164,7 @@ export type ListingFilters = {
 };
 
 function scopeWhere(scope: ListingScope) {
-  const where: SQL[] = [eq(products.active, true)];
+  const where: SQL[] = [sellable];
   if (scope.categoryIds?.length) where.push(inArray(products.categoryId, scope.categoryIds));
   if (scope.promo) where.push(isPromo);
   if (scope.isNew) where.push(eq(products.isNew, true));
@@ -245,9 +257,11 @@ export async function getProduct(slug: string) {
   const parent = category?.parentId
     ? (await db.select().from(categories).where(eq(categories.id, category.parentId)).limit(1))[0]
     : null;
+  // A product in a switched-off category is not on sale, even through a saved link.
+  if (category?.active === false || parent?.active === false) return null;
 
   const related = await cards()
-    .where(and(eq(products.active, true), eq(products.categoryId, row.categoryId), sql`${products.id} != ${row.id}`))
+    .where(and(sellable, eq(products.categoryId, row.categoryId), sql`${products.id} != ${row.id}`))
     .orderBy(desc(products.isFeatured), asc(products.id))
     .limit(10);
 
@@ -269,5 +283,5 @@ export async function searchSuggestions(q: string) {
 /** Current card data for specific products, read fresh (no cache) because it decides what can be re-ordered. */
 export async function getLiveCards(ids: number[]) {
   if (ids.length === 0) return [];
-  return cards().where(and(inArray(products.id, ids), eq(products.active, true)));
+  return cards().where(and(inArray(products.id, ids), sellable));
 }

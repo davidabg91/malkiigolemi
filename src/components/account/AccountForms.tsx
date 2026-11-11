@@ -87,8 +87,8 @@ export function DeliveryPrefsForm({
     city: string;
     address: string;
     courier?: string | null;
-    officeCode?: string | null;
-    officeName?: string | null;
+    /** The saved office, already looked up on the server. */
+    office?: CourierOffice | null;
   };
 }) {
   const [state, action, pending] = useActionState(saveDeliveryPrefs, undefined);
@@ -99,20 +99,9 @@ export function DeliveryPrefsForm({
     (initial.courier as CourierId) || "speedy"
   );
   const [city, setCity] = useState<string>(initial.city || "Плевен");
-  const [address, setAddress] = useState<string>(initial.address || "");
-  const [selectedOffice, setSelectedOffice] = useState<CourierOffice | null>(
-    initial.officeCode
-      ? {
-          id: `${initial.courier || "speedy"}-${initial.officeCode}`,
-          code: initial.officeCode,
-          name: initial.officeName || "",
-          address: initial.address || "",
-          city: initial.city || "Плевен",
-          courier: (initial.courier as CourierId) || "speedy",
-          type: initial.delivery === "box" ? "box" : "office",
-        }
-      : null
-  );
+  // With an office or locker saved, the stored address is the office's own, not a street address to deliver to.
+  const [address, setAddress] = useState<string>(initial.delivery === "office" || initial.delivery === "box" ? "" : initial.address);
+  const [selectedOffice, setSelectedOffice] = useState<CourierOffice | null>(initial.office ?? null);
 
   const pickup = delivery === "store";
   const errors = state?.fieldErrors ?? {};

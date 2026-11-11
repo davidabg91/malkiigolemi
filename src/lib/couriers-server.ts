@@ -27,7 +27,7 @@ export async function getActiveCouriersConfig(): Promise<Record<CourierId, boole
       econt: parsed.econt !== false,
       speedy: parsed.speedy !== false,
       boxnow: parsed.boxnow !== false,
-      penguin: parsed.penguin !== false,
+      pigeon: parsed.pigeon !== false,
     };
   } catch (err) {
     console.error("Failed to load active couriers config:", err);

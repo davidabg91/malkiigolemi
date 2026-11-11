@@ -53,7 +53,7 @@ export default async function HomePage() {
               {home.bulk.map((p) => (
                 <li key={p.id}>
                   <Link href={`/produkt/${p.slug}`} className="group flex h-full flex-col rounded-3xl bg-cream/[0.07] p-4 ring-1 ring-cream/10 backdrop-blur transition hover:bg-cream/[0.12]">
-                    <ProductVisual product={p} className="mx-auto h-32 w-28 transition-transform duration-500 ease-out-soft group-hover:-rotate-3 group-hover:scale-105" />
+                    <ProductVisual product={p} size={128} className="mx-auto h-32 w-28 transition-transform duration-500 ease-out-soft group-hover:-rotate-3 group-hover:scale-105" />
                     <p className="mt-3 line-clamp-2 text-sm font-medium leading-snug">{p.name}</p>
                     <p className="mt-auto pt-3 text-xs text-cream/60">от {p.bulkMinQty} бр</p>
                     <p className="flex items-baseline gap-2">

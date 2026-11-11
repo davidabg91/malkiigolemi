@@ -8,7 +8,8 @@ import { db } from "@/db";
 import { orderItems, orders, products, users } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { unitPriceFor } from "@/lib/format";
-import { CATALOG_TAG } from "@/lib/queries";
+import { savedOffice } from "@/lib/courier-offices";
+import { CATALOG_TAG, sellable } from "@/lib/queries";
 import { DELIVERY_METHODS, shippingFor, STORE } from "@/lib/site";
 
 const input = z.object({
@@ -19,9 +20,8 @@ const input = z.object({
     .regex(/^\+?[0-9 ]{8,15}$/, "Въведи валиден телефон."),
   email: z.string().trim().toLowerCase().pipe(z.email("Въведи валиден имейл.")),
   delivery: z.enum(DELIVERY_METHODS.map((d) => d.id) as [string, ...string[]]),
-  courier: z.enum(["econt", "speedy", "boxnow", "penguin"]).optional(),
-  officeCode: z.string().trim().optional(),
-  officeName: z.string().trim().optional(),
+  courier: z.enum(["econt", "speedy", "boxnow", "pigeon"]).optional(),
+  officeCode: z.string().trim().max(40).optional(),
   city: z.string().trim().max(80).default(""),
   address: z.string().trim().max(200).default(""),
   note: z.string().trim().max(500).optional(),
@@ -40,7 +40,7 @@ const input = z.object({
     if (!d.courier) {
       ctx.addIssue({ code: "custom", path: ["courier"], message: "Избери куриер." });
     }
-    if (!d.officeCode && d.address.length < 3) {
+    if (!d.officeCode) {
       ctx.addIssue({ code: "custom", path: ["office"], message: d.delivery === "box" ? "Избери автомат." : "Избери офис на куриер." });
     }
   } else if (d.delivery === "address") {
@@ -78,8 +78,18 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
     return { ok: false, error: "Плащането с карта онлайн още не е активно. Избери плащане при получаване." };
   }
   const pickup = data.delivery === "store";
-  const city = pickup ? STORE.city : data.city;
-  const address = pickup ? STORE.address : data.address;
+  const toOffice = data.delivery === "office" || data.delivery === "box";
+  // The office's name and address come from our own list: the form only says which one was picked.
+  const office = savedOffice(data.delivery, data.courier ?? null, data.officeCode ?? null);
+  if (toOffice && !office) {
+    return {
+      ok: false,
+      error: "Моля, провери отбелязаните полета.",
+      fieldErrors: { office: data.delivery === "box" ? "Избери автомат от списъка." : "Избери офис от списъка." },
+    };
+  }
+  const city = pickup ? STORE.city : (office?.city ?? data.city);
+  const address = pickup ? STORE.address : (office?.address ?? data.address);
 
   // Merge duplicate lines, then price everything from the database — the client only tells us ids and quantities.
   const qtyById = new Map<number, number>();
@@ -88,7 +98,7 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
   const rows = await db
     .select()
     .from(products)
-    .where(and(inArray(products.id, [...qtyById.keys()]), eq(products.active, true)));
+    .where(and(inArray(products.id, [...qtyById.keys()]), sellable));
   if (rows.length !== qtyById.size) {
     return { ok: false, error: "Някои продукти вече не се предлагат. Обнови количката и опитай отново." };
   }
@@ -119,9 +129,9 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
           phone: data.phone,
           email: data.email,
           delivery: data.delivery,
-          courier: data.courier || null,
-          officeCode: data.officeCode || null,
-          officeName: data.officeName || null,
+          courier: pickup ? null : (data.courier ?? null),
+          officeCode: office?.code ?? null,
+          officeName: office?.name ?? null,
           city,
           address,
           note: data.note || null,
@@ -158,11 +168,16 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
       .set({
         phone: data.phone,
         preferredDelivery: data.delivery,
-        preferredCourier: data.courier || null,
-        preferredOfficeCode: data.officeCode || null,
-        preferredOfficeName: data.officeName || null,
-        // Pickup has no address of its own, so keep whatever address the customer had saved.
-        ...(pickup ? {} : { city: data.city, address: data.address }),
+        // Pickup has no courier or address of its own, so keep whatever the customer had saved.
+        ...(pickup
+          ? {}
+          : {
+              preferredCourier: data.courier ?? null,
+              preferredOfficeCode: office?.code ?? null,
+              preferredOfficeName: office?.name ?? null,
+              city,
+              address,
+            }),
       })
       .where(eq(users.id, session.uid))
       .catch(() => {});
