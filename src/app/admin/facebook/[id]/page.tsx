@@ -9,9 +9,11 @@ import { AdminSkeleton, Panel } from "@/components/admin/bits";
 import { ClaimOrderForm, type ClaimPrefill } from "@/components/admin/ClaimOrderForm";
 import { FlagBadge } from "@/components/admin/Flag";
 import { db } from "@/db";
-import { fbClaims, fbPosts, orders, products, users } from "@/db/schema";
+import { fbClaims, fbContacts, fbPosts, orders, products, users } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
+import { savedOffice } from "@/lib/courier-offices";
 import { isCourierId } from "@/lib/couriers";
+import { fbContactKey } from "@/lib/fb-contacts";
 import { findFlag, getFlagIndex } from "@/lib/flags";
 import { formatDate, formatPrice } from "@/lib/format";
 import { DELIVERY_METHODS, type DeliveryId } from "@/lib/site";
@@ -28,41 +30,82 @@ async function AdminFbPost({ params }: Pick<PageProps<"/admin/facebook/[id]">, "
   const [post] = await db.select().from(fbPosts).where(eq(fbPosts.id, id)).limit(1);
   if (!post) notFound();
 
-  const [claims, product, people, pastOrders, flags] = await Promise.all([
+  const [claims, product, people, pastOrders, flags, remembered] = await Promise.all([
     db.select().from(fbClaims).where(eq(fbClaims.postId, id)).orderBy(asc(fbClaims.id)),
     post.productId ? db.select().from(products).where(eq(products.id, post.productId)).limit(1).then((r) => r[0]) : undefined,
     db.select().from(users),
     // The newest order per name: Facebook names are matched to people who already ordered.
     db
-      .select({ name: orders.name, phone: orders.phone, email: orders.email, delivery: orders.delivery, courier: orders.courier, city: orders.city, address: orders.address, userId: orders.userId })
+      .select({
+        name: orders.name,
+        phone: orders.phone,
+        email: orders.email,
+        delivery: orders.delivery,
+        courier: orders.courier,
+        officeCode: orders.officeCode,
+        city: orders.city,
+        address: orders.address,
+        userId: orders.userId,
+      })
       .from(orders)
       .where(sql`${orders.status} != 'cancelled'`)
       .orderBy(desc(orders.createdAt))
       .limit(5000),
     getFlagIndex(),
+    db.select().from(fbContacts),
   ]);
+  const rememberedByKey = new Map(remembered.map((r) => [r.key, r]));
 
   const userByName = new Map<string, (typeof people)[number]>();
   for (const u of people) if (!userByName.has(key(u.name))) userByName.set(key(u.name), u);
   const orderByName = new Map<string, (typeof pastOrders)[number]>();
   for (const o of pastOrders) if (!orderByName.has(key(o.name))) orderByName.set(key(o.name), o);
 
+  /**
+   * Fills the order form for a commenter: first with what was used for this Facebook name last time,
+   * then from their account or last order in the shop. With nothing known it starts as store pickup.
+   */
   const prefillFor = (name: string): { prefill: ClaimPrefill; known: "user" | "order" | null; userId: number | null } => {
+    const fb = rememberedByKey.get(fbContactKey(name));
     const u = userByName.get(key(name));
     const o = orderByName.get(key(name));
     const known = u ? "user" : o ? "order" : null;
+    const userId = u?.id ?? o?.userId ?? null;
+
+    if (fb) {
+      const delivery = isDelivery(fb.delivery) ? fb.delivery : "store";
+      return {
+        known,
+        userId,
+        prefill: {
+          name: fb.name,
+          phone: fb.phone,
+          email: fb.email,
+          delivery,
+          courier: isCourierId(fb.courier) ? fb.courier : "",
+          office: savedOffice(delivery, fb.courier, fb.officeCode),
+          city: fb.city,
+          address: fb.address,
+          from: "facebook",
+        },
+      };
+    }
+    const delivery: DeliveryId = isDelivery(o?.delivery) ? o.delivery : isDelivery(u?.preferredDelivery) ? u.preferredDelivery : "store";
     const courier = o?.courier ?? u?.preferredCourier ?? "";
+    const officeCode = o ? o.officeCode : (u?.preferredOfficeCode ?? null);
     return {
       known,
-      userId: u?.id ?? o?.userId ?? null,
+      userId,
       prefill: {
         name: u?.name ?? o?.name ?? name,
         phone: o?.phone ?? u?.phone ?? "",
         email: u?.email ?? o?.email ?? "",
-        delivery: isDelivery(o?.delivery) ? o.delivery : isDelivery(u?.preferredDelivery) ? u.preferredDelivery : "office",
+        delivery,
         courier: isCourierId(courier) ? courier : "",
+        office: savedOffice(delivery, courier || null, officeCode),
         city: o?.city ?? u?.city ?? "",
         address: o?.address ?? u?.address ?? "",
+        from: o ? "order" : u ? "user" : null,
       },
     };
   };
@@ -75,7 +118,11 @@ async function AdminFbPost({ params }: Pick<PageProps<"/admin/facebook/[id]">, "
     { label: "Заявки", value: `${active.length}`, hint: `${wanted} бр общо` },
     { label: "Превърнати в поръчки", value: `${done} от ${active.length}` },
     { label: "Чакат", value: `${pendingUnits} бр`, warn: product ? pendingUnits > product.stock : false },
-    { label: "Наличност", value: product ? `${product.stock} бр` : "—", hint: product ? formatPrice(product.price) : "Продуктът е изтрит" },
+    product
+      ? { label: "Наличност", value: `${product.stock} бр`, hint: formatPrice(product.price) }
+      : post.productId
+        ? { label: "Наличност", value: "—", hint: "Продуктът е изтрит от сайта" }
+        : { label: "Ръчно въведен продукт", value: post.price != null ? formatPrice(post.price) : "—", hint: "Цена за брой · без наличност" },
   ];
 
   return (

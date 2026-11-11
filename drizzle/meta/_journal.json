@@ -64,6 +64,13 @@
       "when": 1794389808893,
       "tag": "0008_promotions_loyalty_reviews_alerts",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1794402208651,
+      "tag": "0009_facebook_contacts",
+      "breakpoints": true
     }
   ]
 }

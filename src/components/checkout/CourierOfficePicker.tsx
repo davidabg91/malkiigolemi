@@ -24,6 +24,8 @@ interface Props {
   address: string;
   onAddressChange: (a: string) => void;
   errors: Record<string, string>;
+  /** Prefix for element ids, so several pickers can sit on one page (the admin's Facebook orders). */
+  idPrefix?: string;
 }
 
 export function CourierOfficePicker({
@@ -37,6 +39,7 @@ export function CourierOfficePicker({
   address,
   onAddressChange,
   errors,
+  idPrefix = "",
 }: Props) {
   const [cities, setCities] = useState<string[]>([]);
   const [offices, setOffices] = useState<CourierOffice[]>([]);
@@ -188,12 +191,12 @@ export function CourierOfficePicker({
 
       {/* 2. Населено място (Град / Село) */}
       <div className="relative">
-        <label htmlFor="city" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink-soft">
+        <label htmlFor={`${idPrefix}city`} className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink-soft">
           2. Населено място (град / село) <span className="text-tomato">*</span>
         </label>
         <div className="relative">
           <input
-            id="city"
+            id={`${idPrefix}city`}
             name="city"
             ref={cityInputRef}
             type="text"
@@ -362,11 +365,11 @@ export function CourierOfficePicker({
       ) : (
         /* До адрес */
         <div>
-          <label htmlFor="address" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink-soft">
+          <label htmlFor={`${idPrefix}address`} className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink-soft">
             3. Точен адрес за доставка (улица, №, блок, вход, ет., ап.) <span className="text-tomato">*</span>
           </label>
           <input
-            id="address"
+            id={`${idPrefix}address`}
             name="address"
             type="text"
             required
