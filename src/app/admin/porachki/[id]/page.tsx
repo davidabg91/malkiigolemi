@@ -5,13 +5,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { setOrderStatus } from "@/actions/admin";
+import { flagOrderContact, removeFlag } from "@/actions/customers";
 import { AdminSkeleton, Panel, td, th } from "@/components/admin/bits";
+import { FlagBanner, FlagPanel } from "@/components/admin/Flag";
 import { StatusPill } from "@/components/StatusPill";
 import { btn } from "@/components/ui";
 import { db } from "@/db";
 import { ORDER_STATUSES, orders } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { courierName } from "@/lib/couriers";
+import { findFlag, getFlagIndex } from "@/lib/flags";
 import { formatDate, formatPrice } from "@/lib/format";
 import { DELIVERY_METHODS, ORDER_STATUS_LABELS } from "@/lib/site";
 
@@ -23,6 +26,7 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
   if (!Number.isInteger(id)) notFound();
   const order = await db.query.orders.findFirst({ where: eq(orders.id, id), with: { items: true } });
   if (!order) notFound();
+  const flag = findFlag(await getFlagIndex(), { userId: order.userId, email: order.email, phone: order.phone });
 
   return (
     <>
@@ -30,6 +34,12 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
         <ArrowLeft className="h-4 w-4" />
         Всички поръчки
       </Link>
+
+      {flag && (
+        <FlagBanner flag={flag}>
+          <p className="mt-1 text-ink-soft">Имейлът или телефонът на тази поръчка съвпада с отбелязан клиент. Обади се за потвърждение, преди да изпратиш.</p>
+        </FlagBanner>
+      )}
 
       {order.status === "cancelled" && (
         <div className="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-900 shadow-xs">
@@ -184,6 +194,13 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
           <Panel className="p-5">
             <h2 className="font-display text-lg font-semibold">Клиент</h2>
             <p className="mt-3 font-semibold">{order.name}</p>
+            {order.userId ? (
+              <Link href={`/admin/potrebiteli/${order.userId}`} className="text-sm font-semibold text-forest hover:underline">
+                Профил и всички поръчки
+              </Link>
+            ) : (
+              <p className="text-sm text-ink-soft">Поръчка без регистрация</p>
+            )}
             <ul className="mt-3 space-y-2.5 text-[0.95rem]">
               <li className="flex gap-3">
                 <Phone className="mt-0.5 h-4 w-4 shrink-0 text-forest" aria-hidden />
@@ -210,6 +227,10 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
                 </li>
               )}
             </ul>
+          </Panel>
+
+          <Panel className="p-5">
+            <FlagPanel flag={flag} mark={flagOrderContact.bind(null, order.id)} clear={flag ? removeFlag.bind(null, flag.id) : undefined} />
           </Panel>
         </div>
       </div>

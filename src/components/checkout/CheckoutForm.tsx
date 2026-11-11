@@ -3,7 +3,7 @@
 import { Banknote, CreditCard, Info, Loader2, Lock } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type FormEvent } from "react";
+import { useLayoutEffect, useState, useTransition, type FormEvent } from "react";
 import { placeOrder } from "@/actions/checkout";
 import { ProductVisual } from "@/components/product/PackShot";
 import { StoreLocation } from "@/components/StoreLocation";
@@ -106,6 +106,18 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
   const [formError, setFormError] = useState("");
   const [pending, start] = useTransition();
   const [placed, setPlaced] = useState(false);
+
+  // Next keeps this page mounted but hidden after we leave it. Without the reset, coming back for a
+  // second order would find the button still stuck on "Изпращаме поръчката…".
+  useLayoutEffect(
+    () => () => {
+      setPlaced(false);
+      setErrors({});
+      setFormError("");
+      setPayment("cod");
+    },
+    [],
+  );
 
   const { subtotal } = cartTotals(items);
   const shipping = shippingFor(delivery, subtotal);
