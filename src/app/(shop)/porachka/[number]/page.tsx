@@ -53,6 +53,12 @@ async function Confirmation({ params }: Pick<Props, "params">) {
             <dt className="text-ink-soft">Доставка · {delivery?.label.toLowerCase() ?? order.delivery}</dt>
             <dd className="font-medium tabular-nums">{order.shipping === 0 ? "Безплатно" : formatPrice(order.shipping)}</dd>
           </div>
+          {order.discount > 0 && (
+            <div className="flex justify-between text-forest">
+              <dt>Отстъпка с {order.pointsUsed} точки</dt>
+              <dd className="font-semibold tabular-nums">−{formatPrice(order.discount)}</dd>
+            </div>
+          )}
           <div className="flex justify-between text-lg">
             <dt className="font-semibold">{pickup ? "Общо (плащане в магазина)" : "Общо (наложен платеж)"}</dt>
             <dd className="font-bold tabular-nums">{formatPrice(order.total)}</dd>

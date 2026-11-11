@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import type { ProductCardData } from "@/lib/queries";
 import { useCart, useHydrated, useWishlist } from "@/lib/store";
+import { NotifyMe } from "./NotifyMe";
 
 export function QtyStepper({
   qty,
@@ -102,9 +103,7 @@ export function BuyBox({ product }: { product: ProductCardData }) {
   const add = useCart((s) => s.add);
   const openCart = useCart((s) => s.setOpen);
 
-  if (product.stock <= 0) {
-    return <p className="rounded-2xl bg-sand px-5 py-4 font-medium text-ink-soft">В момента продуктът е изчерпан.</p>;
-  }
+  if (product.stock <= 0) return <NotifyMe productId={product.id} />;
   return (
     <div className="flex flex-wrap items-center gap-3">
       <QtyStepper qty={qty} min={1} onChange={setQty} label={product.name} />

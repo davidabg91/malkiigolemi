@@ -4,6 +4,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/db";
 import { brands, categories, products, type Category } from "@/db/schema";
 import { PER_PAGE, type SortKey } from "./listing";
+import { catalogCacheLife, effectiveOldPrice, effectivePrice, pricedColumns, promoPercent } from "./pricing";
 
 /** Every catalogue read is tagged so admin edits can invalidate it in one call. */
 export const CATALOG_TAG = "catalog";
@@ -14,10 +15,8 @@ const card = {
   sku: products.sku,
   name: products.name,
   unit: products.unit,
-  price: products.price,
-  oldPrice: products.oldPrice,
-  bulkMinQty: products.bulkMinQty,
-  bulkPrice: products.bulkPrice,
+  // Prices as the customer pays them right now, live promotions included.
+  ...pricedColumns,
   image: products.image,
   pack: products.pack,
   color: products.color,
@@ -25,6 +24,8 @@ const card = {
   isNew: products.isNew,
   stock: products.stock,
   brand: brands.name,
+  rating: sql<number | null>`(select round(avg(r.rating), 1) from reviews r where r.product_id = ${products.id} and r.hidden = 0)`,
+  reviewCount: sql<number>`(select count(*) from reviews r where r.product_id = ${products.id} and r.hidden = 0)`,
 };
 
 export type ProductCardData = {
@@ -44,12 +45,15 @@ export type ProductCardData = {
   isNew: boolean;
   stock: number;
   brand: string | null;
+  /** Average of published reviews, one decimal; null without reviews. */
+  rating?: number | null;
+  reviewCount?: number;
 };
 
 export type CategoryNode = Category & { children: Category[]; count: number };
 
 const cards = () => db.select(card).from(products).leftJoin(brands, eq(products.brandId, brands.id));
-const isPromo = or(isNotNull(products.oldPrice), isNotNull(products.bulkPrice))!;
+const isPromo = or(isNotNull(products.oldPrice), isNotNull(products.bulkPrice), sql`${promoPercent} is not null`)!;
 
 /**
  * What the shop may show and sell: an active product whose category, and that category's parent,
@@ -92,7 +96,7 @@ export async function getCategoryTree(): Promise<CategoryNode[]> {
 /** A few hero products per root category, used to illustrate the category tiles. */
 export async function getCategoryShowcase() {
   "use cache";
-  cacheLife("hours");
+  await catalogCacheLife();
   cacheTag(CATALOG_TAG);
 
   const tree = await getCategoryTree();
@@ -118,12 +122,12 @@ export async function getCategoryShowcase() {
 
 export async function getHomeData() {
   "use cache";
-  cacheLife("hours");
+  await catalogCacheLife();
   cacheTag(CATALOG_TAG);
 
   const active = sellable;
   const [promo, fresh, bulk, italy, greece, brandList] = await Promise.all([
-    cards().where(and(active, isNotNull(products.oldPrice))).orderBy(desc(products.isFeatured), asc(products.id)).limit(12),
+    cards().where(and(active, sql`${effectiveOldPrice} is not null`)).orderBy(desc(products.isFeatured), asc(products.id)).limit(12),
     cards().where(and(active, eq(products.isNew, true))).orderBy(desc(products.createdAt)).limit(10),
     cards().where(and(active, isNotNull(products.bulkPrice))).orderBy(desc(products.isFeatured), asc(products.id)).limit(4),
     cards().where(and(active, eq(products.origin, "IT"), eq(products.isFeatured, true))).orderBy(asc(products.id)).limit(10),
@@ -178,7 +182,7 @@ function scopeWhere(scope: ListingScope) {
 
 export async function listProducts(scope: ListingScope, f: ListingFilters) {
   "use cache";
-  cacheLife("hours");
+  await catalogCacheLife();
   cacheTag(CATALOG_TAG);
 
   const base = scopeWhere(scope);
@@ -198,7 +202,7 @@ export async function listProducts(scope: ListingScope, f: ListingFilters) {
       .where(and(...base, isNotNull(products.origin)))
       .groupBy(products.origin),
     db
-      .select({ min: sql<number>`coalesce(min(${products.price}), 0)`, max: sql<number>`coalesce(max(${products.price}), 0)` })
+      .select({ min: sql<number>`coalesce(min(${effectivePrice}), 0)`, max: sql<number>`coalesce(max(${effectivePrice}), 0)` })
       .from(products)
       .where(and(...base)),
   ]);
@@ -209,15 +213,15 @@ export async function listProducts(scope: ListingScope, f: ListingFilters) {
     where.push(inArray(products.brandId, ids.length ? ids.map((b) => b.id) : [-1]));
   }
   if (f.origins?.length) where.push(inArray(products.origin, f.origins));
-  if (f.min != null) where.push(gte(products.price, f.min));
-  if (f.max != null) where.push(lte(products.price, f.max));
+  if (f.min != null) where.push(gte(effectivePrice, f.min));
+  if (f.max != null) where.push(lte(effectivePrice, f.max));
 
   const order = {
     popular: [desc(products.isFeatured), asc(products.id)],
-    "price-asc": [asc(products.price)],
-    "price-desc": [desc(products.price)],
+    "price-asc": [asc(effectivePrice)],
+    "price-desc": [desc(effectivePrice)],
     new: [desc(products.createdAt)],
-    discount: [sql`(case when ${products.oldPrice} is null then 0 else 1.0 - 1.0 * ${products.price} / ${products.oldPrice} end) desc`],
+    discount: [sql`(case when ${effectiveOldPrice} is null then 0 else 1.0 - 1.0 * ${effectivePrice} / ${effectiveOldPrice} end) desc`],
     name: [asc(products.name)],
   }[f.sort ?? "popular"];
 
@@ -242,7 +246,7 @@ export async function listProducts(scope: ListingScope, f: ListingFilters) {
 
 export async function getProduct(slug: string) {
   "use cache";
-  cacheLife("hours");
+  await catalogCacheLife();
   cacheTag(CATALOG_TAG);
 
   const [row] = await db

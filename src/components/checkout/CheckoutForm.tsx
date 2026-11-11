@@ -13,8 +13,10 @@ import { PaymentBrands } from "./PaymentBrands";
 import { btn } from "@/components/ui";
 import { formatPrice, unitPriceFor } from "@/lib/format";
 import { DELIVERY_METHODS, shippingFor, STORE, type DeliveryId } from "@/lib/site";
-import { cartTotals, useCart, useHydrated } from "@/lib/store";
+import { liveCartData } from "@/actions/cart";
+import { cartTotals, useCart, useFreshCartPrices, useHydrated } from "@/lib/store";
 import type { CourierId, CourierOffice } from "@/lib/couriers";
+import { pointsForGoods, redeemable, type LoyaltySettings } from "@/lib/loyalty-math";
 
 export type CheckoutDefaults = {
   name: string;
@@ -27,6 +29,8 @@ export type CheckoutDefaults = {
   /** The saved office, already looked up on the server. */
   office?: CourierOffice | null;
   signedIn: boolean;
+  /** The customer's points and the shop's rules; null for guests or when the programme is off. */
+  loyalty?: { balance: number; settings: LoyaltySettings } | null;
 };
 
 type Payment = "cod" | "card";
@@ -89,6 +93,7 @@ function PaymentOption({
 
 export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
   const router = useRouter();
+  useFreshCartPrices(liveCartData);
   const hydrated = useHydrated();
   const items = useCart((s) => s.items);
   const clear = useCart((s) => s.clear);
@@ -102,6 +107,7 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
   // Offer to remember the details by default only when nothing is saved yet.
   const [saveAsDefault, setSaveAsDefault] = useState(defaults.signedIn && !defaults.delivery);
   const [payment, setPayment] = useState<Payment>("cod");
+  const [usePoints, setUsePoints] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState("");
   const [pending, start] = useTransition();
@@ -120,6 +126,10 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
   );
 
   const { subtotal } = cartTotals(items);
+  const loyalty = defaults.loyalty;
+  const redeem = loyalty ? redeemable(loyalty.balance, subtotal, loyalty.settings) : { points: 0, discount: 0 };
+  const discount = usePoints ? redeem.discount : 0;
+  const willEarn = loyalty ? pointsForGoods(subtotal - discount, loyalty.settings) : 0;
   const shipping = shippingFor(delivery, subtotal);
   const method = DELIVERY_METHODS.find((d) => d.id === delivery)!;
   const pickup = delivery === "store";
@@ -162,6 +172,7 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
         address: finalAddress,
         note: text("note"),
         saveAsDefault: defaults.signedIn && saveAsDefault,
+        usePoints: Boolean(defaults.loyalty) && usePoints,
         payment,
         items: items.map((i) => ({ id: i.id, qty: i.qty })),
       });
@@ -315,10 +326,35 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
             <dt className="text-ink-soft">Доставка · {method.label.toLowerCase()}</dt>
             <dd className="font-medium tabular-nums">{shipping === 0 ? "Безплатно" : formatPrice(shipping)}</dd>
           </div>
+          {discount > 0 && (
+            <div className="flex justify-between text-forest">
+              <dt>Отстъпка с {redeem.points} точки</dt>
+              <dd className="font-semibold tabular-nums">−{formatPrice(discount)}</dd>
+            </div>
+          )}
         </dl>
+        {loyalty && (
+          <div className="mt-4 rounded-2xl bg-lime/25 px-4 py-3 text-sm">
+            {redeem.points > 0 ? (
+              <label className="flex cursor-pointer items-start gap-3">
+                <input type="checkbox" checked={usePoints} onChange={(e) => setUsePoints(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-[#1f5c3f]" />
+                <span>
+                  Използвай <strong>{redeem.points} точки</strong> за <strong>−{formatPrice(redeem.discount)}</strong>
+                  <span className="block text-ink-soft">Имаш {loyalty.balance} точки.</span>
+                </span>
+              </label>
+            ) : (
+              <p>
+                Имаш <strong>{loyalty.balance} точки</strong>.{" "}
+                <span className="text-ink-soft">Можеш да ги използваш от {loyalty.settings.minRedeem} точки нагоре.</span>
+              </p>
+            )}
+            {willEarn > 0 && <p className="mt-1.5 text-ink-soft">С тази поръчка ще събереш още {willEarn} точки, когато я получиш.</p>}
+          </div>
+        )}
         <div className="mt-4 flex items-baseline justify-between border-t border-line pt-4">
           <span className="font-semibold">Общо</span>
-          <span className="text-3xl font-bold tabular-nums">{formatPrice(subtotal + shipping)}</span>
+          <span className="text-3xl font-bold tabular-nums">{formatPrice(subtotal + shipping - discount)}</span>
         </div>
         {formError && (
           <p role="alert" className="mt-4 rounded-2xl bg-tomato/10 px-4 py-3 text-sm font-medium text-tomato">

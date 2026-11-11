@@ -2,6 +2,8 @@
 export const site = {
   name: "Поръчки за малки и големи",
   tagline: "онлайн магазин",
+  /** Public address used in e-mails. Set SITE_URL when the shop moves to its own domain. */
+  url: (process.env.SITE_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "https://malkiigolemi.vercel.app")).replace(/\/$/, ""),
   title: "Поръчки за малки и големи — Онлайн магазин за цялото семейство",
   description:
     "Официален онлайн магазин на Facebook общността „Поръчки за малки и големи“. Разнообразие от качествени стоки, дрехи, козметика, хранителни продукти и всичко за дома с бърза и сигурна доставка.",

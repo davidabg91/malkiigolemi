@@ -71,6 +71,7 @@ export async function getStats(periodId: PeriodId) {
         courier: orders.courier,
         city: orders.city,
         note: orders.note,
+        source: orders.source,
       })
       .from(orders)
       .where(period.days ? gte(orders.createdAt, new Date(prevFrom)) : undefined),
@@ -263,7 +264,8 @@ export async function getStats(periodId: PeriodId) {
       registered: customers.length,
       buyers: byCustomer.size,
       returning,
-      guestOrders: kept.filter((o) => o.userId == null).length,
+      guestOrders: kept.filter((o) => o.userId == null && o.source !== "facebook").length,
+      facebookOrders: kept.filter((o) => o.source === "facebook").length,
       keptOrders: kept.length,
       flagged: flags.count,
       top: topCustomers,

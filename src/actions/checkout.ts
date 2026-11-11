@@ -1,13 +1,15 @@
 "use server";
 
-import { and, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, eq, getTableColumns, gte, inArray, sql } from "drizzle-orm";
 import { updateTag } from "next/cache";
-import { randomInt } from "node:crypto";
 import { z } from "zod";
 import { db } from "@/db";
 import { orderItems, orders, products, users } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { unitPriceFor } from "@/lib/format";
+import { orderNumber } from "@/lib/orders";
+import { getLoyaltySettings, pointsBalance, redeemable, syncOrderPoints } from "@/lib/loyalty";
+import { pricedColumns } from "@/lib/pricing";
 import { savedOffice } from "@/lib/courier-offices";
 import { CATALOG_TAG, sellable } from "@/lib/queries";
 import { DELIVERY_METHODS, shippingFor, STORE } from "@/lib/site";
@@ -28,6 +30,8 @@ const input = z.object({
   /** Signed-in customers can keep these delivery details as their default. */
   saveAsDefault: z.boolean().optional(),
   payment: z.enum(["cod", "card"]).default("cod"),
+  /** Signed-in customers can pay part of the goods with loyalty points. */
+  usePoints: z.boolean().optional(),
   items: z
     .array(z.object({ id: z.number().int().positive(), qty: z.number().int().min(1).max(99) }))
     .min(1, "Количката е празна.")
@@ -54,13 +58,6 @@ export type CheckoutInput = z.input<typeof input>;
 export type CheckoutResult =
   | { ok: true; number: string }
   | { ok: false; error: string; fieldErrors?: Record<string, string> };
-
-const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-function orderNumber() {
-  let out = "LM-";
-  for (let i = 0; i < 8; i++) out += ALPHABET[randomInt(ALPHABET.length)];
-  return out;
-}
 
 export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
   const parsed = input.safeParse(raw);
@@ -95,8 +92,9 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
   const qtyById = new Map<number, number>();
   for (const i of data.items) qtyById.set(i.id, Math.min(99, (qtyById.get(i.id) ?? 0) + i.qty));
 
+  // Priced now, with any live promotion, whatever the cart remembered.
   const rows = await db
-    .select()
+    .select({ ...getTableColumns(products), ...pricedColumns })
     .from(products)
     .where(and(inArray(products.id, [...qtyById.keys()]), sellable));
   if (rows.length !== qtyById.size) {
@@ -120,6 +118,13 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
   let soldOut = false;
   try {
     await db.transaction(async (tx) => {
+      // Points are counted inside the transaction, so two orders at once cannot spend the same points.
+      let discount = 0;
+      let pointsUsed = 0;
+      if (session && data.usePoints) {
+        const loyalty = await getLoyaltySettings(tx);
+        ({ points: pointsUsed, discount } = redeemable(await pointsBalance(session.uid, tx), subtotal, loyalty));
+      }
       const [order] = await tx
         .insert(orders)
         .values({
@@ -138,10 +143,14 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
           payment: data.payment,
           subtotal,
           shipping,
-          total: subtotal + shipping,
+          discount,
+          pointsUsed,
+          total: subtotal + shipping - discount,
         })
         .returning({ id: orders.id });
       await tx.insert(orderItems).values(lines.map((l) => ({ ...l, orderId: order.id })));
+      // Writes the "used points" line in the customer's history.
+      if (pointsUsed > 0) await syncOrderPoints(tx, order.id);
       for (const l of lines) {
         // The stock guard in WHERE makes two simultaneous orders unable to oversell.
         const updated = await tx

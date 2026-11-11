@@ -3,6 +3,7 @@ import { discountPercent, formatPrice } from "@/lib/format";
 import type { ProductCardData } from "@/lib/queries";
 import { CardAddButton, WishlistButton } from "./AddToCart";
 import { ProductVisual } from "./PackShot";
+import { ratingLabel, Stars } from "./Stars";
 
 export function Badges({ product }: { product: ProductCardData }) {
   const off = discountPercent(product.price, product.oldPrice);
@@ -54,6 +55,14 @@ export function ProductCard({ product }: { product: ProductCardData }) {
           </Link>
         </h3>
         <p className="mt-0.5 text-sm text-ink-soft">{product.unit}</p>
+        {product.reviewCount ? (
+          <p className="mt-1 flex items-center gap-1.5 text-xs text-ink-soft">
+            <Stars value={product.rating ?? 0} className="h-3.5 w-3.5" />
+            <span className="tabular-nums">
+              {ratingLabel(product.rating ?? 0)} ({product.reviewCount})
+            </span>
+          </p>
+        ) : null}
         <div className="relative z-10 mt-auto flex items-end justify-between gap-2 pt-3">
           <div className="leading-tight">
             {product.oldPrice && product.oldPrice > product.price && (

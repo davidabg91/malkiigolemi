@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { unitPriceFor } from "./format";
@@ -16,6 +16,8 @@ type CartState = {
   setQty: (id: number, qty: number) => void;
   remove: (id: number) => void;
   clear: () => void;
+  /** Replaces the remembered price and stock of items with fresh data; quantities stay. */
+  refresh: (fresh: ProductCardData[]) => void;
 };
 
 const MAX_QTY = 99;
@@ -47,6 +49,13 @@ export const useCart = create<CartState>()(
         })),
       remove: (id) => set((s) => ({ items: s.items.filter((i) => i.id !== id) })),
       clear: () => set({ items: [] }),
+      refresh: (fresh) =>
+        set((s) => ({
+          items: s.items.map((i) => {
+            const f = fresh.find((p) => p.id === i.id);
+            return f ? { ...i, ...f, qty: i.qty } : i;
+          }),
+        })),
     }),
     { name: "limona-cart", partialize: (s) => ({ items: s.items }) },
   ),
@@ -105,6 +114,28 @@ if (typeof window !== "undefined") {
     if (e.key === "limona-cart") void useCart.persist.rehydrate();
     if (e.key === "limona-wishlist") void useWishlist.persist.rehydrate();
   });
+}
+
+/**
+ * Brings cart prices up to date once per page: a promotion may have started or ended since the items
+ * were added. The order itself is always priced on the server; this only keeps the totals honest.
+ */
+export function useFreshCartPrices(load: (ids: number[]) => Promise<ProductCardData[]>) {
+  const hydrated = useHydrated();
+  useEffect(() => {
+    if (!hydrated) return;
+    const ids = useCart.getState().items.map((i) => i.id);
+    if (ids.length === 0) return;
+    let live = true;
+    load(ids)
+      .then((fresh) => {
+        if (live) useCart.getState().refresh(fresh);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [hydrated, load]);
 }
 
 const noop = () => () => {};

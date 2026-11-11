@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { AdminSkeleton, PageTitle, Panel, td, th } from "@/components/admin/bits";
+import { BULK_FORM, BulkStatusBar, SelectAllOrders } from "@/components/admin/BulkStatus";
 import { FlagBadge } from "@/components/admin/Flag";
 import { StatusPill } from "@/components/StatusPill";
 import { db } from "@/db";
@@ -53,6 +54,7 @@ async function AdminOrders({ searchParams }: Pick<PageProps<"/admin/porachki">, 
         ))}
       </ul>
 
+      {list.length > 0 && <BulkStatusBar />}
       <Panel>
         {list.length === 0 ? (
           <p className="px-5 py-14 text-center text-ink-soft">Няма поръчки с този статус.</p>
@@ -61,6 +63,9 @@ async function AdminOrders({ searchParams }: Pick<PageProps<"/admin/porachki">, 
             <table className="w-full min-w-[46rem] text-[0.95rem]">
               <thead>
                 <tr>
+                  <th className={`${th} w-10`}>
+                    <SelectAllOrders />
+                  </th>
                   <th className={th}>Номер</th>
                   <th className={th}>Клиент</th>
                   <th className={th}>Доставка</th>
@@ -72,10 +77,16 @@ async function AdminOrders({ searchParams }: Pick<PageProps<"/admin/porachki">, 
                 {list.map((o) => (
                   <tr key={o.id} className="transition hover:bg-sand/60">
                     <td className={td}>
+                      <input type="checkbox" form={BULK_FORM} name="ids" value={o.id} aria-label={`Избери ${o.number}`} className="h-5 w-5 accent-[#1f5c3f]" />
+                    </td>
+                    <td className={td}>
                       <Link href={`/admin/porachki/${o.id}`} className="font-semibold hover:text-forest">
                         {o.number}
                       </Link>
-                      <p className="text-xs text-ink-soft">{formatDate(o.createdAt)}</p>
+                      <p className="text-xs text-ink-soft">
+                        {formatDate(o.createdAt)}
+                        {o.source === "facebook" && <span className="ml-1.5 rounded bg-[#e2ecfb] px-1.5 py-0.5 text-[0.65rem] font-bold text-[#1b3f7a]">Facebook</span>}
+                      </p>
                     </td>
                     <td className={td}>
                       {o.name}
