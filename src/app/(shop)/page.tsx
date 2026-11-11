@@ -10,6 +10,7 @@ import { ProductCard } from "@/components/product/ProductCard";
 import { btn, SectionHeading } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
 import { getCategoryShowcase, getCategoryTree, getHomeData } from "@/lib/queries";
+import { ORIGIN_FLAGS, ORIGIN_LABELS } from "@/lib/site";
 
 const BENEFITS = [
   { icon: Truck, title: "Доставка за 24 часа", text: "Изпращаме в деня на поръчката до офис, адрес или автомат." },
@@ -89,22 +90,13 @@ export default async function HomePage() {
       )}
 
       <OriginTabs
-        tabs={[
-          {
-            id: "IT",
-            label: "Италия",
-            flag: ["#1B8A4B", "#FFFFFF", "#D63A1F"],
-            blurb: "Еспресо, паста, просеко — класиките на италианската трапеза.",
-            products: home.italy,
-          },
-          {
-            id: "GR",
-            label: "Гърция",
-            flag: ["#1F6FB5", "#FFFFFF", "#1F6FB5", "#FFFFFF", "#1F6FB5"],
-            blurb: "Зехтин, маслини, мед и билки от слънчевите гръцки острови.",
-            products: home.greece,
-          },
-        ].filter((t) => t.products.length > 0)}
+        tabs={home.byOrigin.map((o) => ({
+          id: o.origin,
+          label: ORIGIN_LABELS[o.origin] ?? o.origin,
+          flag: ORIGIN_FLAGS[o.origin] ?? null,
+          blurb: `${o.count} ${o.count === 1 ? "продукт" : "продукта"} с произход ${ORIGIN_LABELS[o.origin] ?? o.origin}.`,
+          products: o.products,
+        }))}
       />
 
       <FacebookSection />
