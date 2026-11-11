@@ -1,4 +1,4 @@
-import { asc, desc, eq, lt, ne, sql } from "drizzle-orm";
+import { asc, desc, eq, isNull, lt, ne, sql } from "drizzle-orm";
 import { AlertTriangle, Euro, Package, ReceiptText } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -6,7 +6,8 @@ import { AdminSkeleton, PageTitle, Panel, td, th } from "@/components/admin/bits
 import { FlagBadge } from "@/components/admin/Flag";
 import { StatusPill } from "@/components/StatusPill";
 import { db } from "@/db";
-import { orders, products } from "@/db/schema";
+import { orders, products, stockAlerts } from "@/db/schema";
+import { mailConfigured } from "@/lib/mail";
 import { requireAdmin } from "@/lib/auth";
 import { findFlag, getFlagIndex } from "@/lib/flags";
 import { formatDate, formatPrice } from "@/lib/format";
@@ -16,7 +17,7 @@ const LOW_STOCK = 10;
 async function AdminDashboard() {
   await requireAdmin();
 
-  const [[stats], [catalog], recent, low, flags] = await Promise.all([
+  const [[stats], [catalog], recent, low, flags, awaited] = await Promise.all([
     db
       .select({
         fresh: sql<number>`coalesce(sum(case when ${orders.status} = 'new' then 1 else 0 end), 0)`,
@@ -35,6 +36,15 @@ async function AdminDashboard() {
     db.select().from(orders).orderBy(desc(orders.createdAt)).limit(8),
     db.select().from(products).where(lt(products.stock, LOW_STOCK)).orderBy(asc(products.stock)).limit(6),
     getFlagIndex(),
+    // Products people asked to be told about, most wanted first: what to restock next.
+    db
+      .select({ id: products.id, name: products.name, stock: products.stock, n: sql<number>`count(*)` })
+      .from(stockAlerts)
+      .innerJoin(products, eq(products.id, stockAlerts.productId))
+      .where(isNull(stockAlerts.notifiedAt))
+      .groupBy(products.id)
+      .orderBy(desc(sql`count(*)`))
+      .limit(6),
   ]);
 
   const cards = [
@@ -108,6 +118,28 @@ async function AdminDashboard() {
           )}
         </Panel>
 
+        <div className="space-y-6">
+        {awaited.length > 0 && (
+          <Panel className="p-5">
+            <h2 className="font-display text-lg font-semibold">Клиенти чакат наличност</h2>
+            <p className="mt-1 text-sm text-ink-soft">
+              {mailConfigured() ? "При зареждане получават имейл автоматично." : "Имейлите не са настроени: регистрираните клиенти виждат наличността в профила си."}
+            </p>
+            <ul className="mt-3 divide-y divide-line">
+              {awaited.map((p) => (
+                <li key={p.id} className="flex items-center justify-between gap-3 py-3">
+                  <Link href={`/admin/produkti/${p.id}`} className="min-w-0 truncate text-[0.95rem] font-medium hover:text-forest">
+                    {p.name}
+                  </Link>
+                  <span className="shrink-0 rounded-full bg-lime px-2.5 py-1 text-xs font-bold tabular-nums">
+                    {p.n} {p.n === 1 ? "човек" : "души"}
+                    {p.stock > 0 ? " · зареден" : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        )}
         <Panel className="p-5">
           <h2 className="font-display text-lg font-semibold">Ниска наличност</h2>
           {low.length === 0 ? (
@@ -127,6 +159,7 @@ async function AdminDashboard() {
             </ul>
           )}
         </Panel>
+        </div>
       </div>
     </>
   );

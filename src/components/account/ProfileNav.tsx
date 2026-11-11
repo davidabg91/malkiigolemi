@@ -1,11 +1,12 @@
 "use client";
 
-import { Heart, MapPin, Package, UserRound } from "lucide-react";
+import { Gift, Heart, MapPin, Package, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
   { href: "/profil", label: "Поръчки", icon: Package },
+  { href: "/profil/tochki", label: "Точки", icon: Gift },
   { href: "/profil/adres", label: "Адрес за доставка", icon: MapPin },
   { href: "/profil/danni", label: "Лични данни", icon: UserRound },
   { href: "/lyubimi", label: "Любими", icon: Heart },

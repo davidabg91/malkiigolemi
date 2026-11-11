@@ -1,12 +1,13 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { refresh, updateTag } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
-import { orderItems, orders, products, users } from "@/db/schema";
+import { orderItems, orders, users } from "@/db/schema";
 import { createSession, getSession, tooManyAttempts } from "@/lib/auth";
+import { changeOrderStatus } from "@/lib/order-status";
 import { savedOffice } from "@/lib/courier-offices";
 import { isCourierId } from "@/lib/couriers";
 import { CATALOG_TAG, getLiveCards, type ProductCardData } from "@/lib/queries";
@@ -215,30 +216,10 @@ export async function cancelOrder(orderId: number): Promise<CancelOrderResult> {
   }).format(new Date());
 
   const cancellationNote = `[Отказана от клиента на ${cancelDateStr}]`;
-  const updatedNote = order.note ? `${order.note}\n${cancellationNote}` : cancellationNote;
 
-  let cancelled = false;
-  await db.transaction(async (tx) => {
-    // Flip the status first, and only if it is still open. Two requests at once (a double click, a second tab,
-    // or the shop cancelling at the same moment) then cannot both return the goods to stock.
-    const flipped = await tx
-      .update(orders)
-      .set({ status: "cancelled", note: updatedNote })
-      .where(and(eq(orders.id, order.id), inArray(orders.status, ["new", "confirmed"])))
-      .returning({ id: orders.id });
-    if (flipped.length === 0) return;
-    cancelled = true;
-
-    const items = await tx.select().from(orderItems).where(eq(orderItems.orderId, order.id));
-    for (const item of items) {
-      if (item.productId == null) continue;
-      await tx
-        .update(products)
-        .set({ stock: sql`max(0, ${products.stock} + ${item.qty})` })
-        .where(eq(products.id, item.productId));
-    }
-  });
-  if (!cancelled) return { ok: false, error: "Статусът на поръчката току-що се промени. Обнови страницата." };
+  // Only while still open: the shop may be changing it at the same moment. Stock and used points come back.
+  const result = await changeOrderStatus(order.id, "cancelled", { allowedFrom: ["new", "confirmed"], note: cancellationNote });
+  if (result !== "changed") return { ok: false, error: "Статусът на поръчката току-що се промени. Обнови страницата." };
 
   updateTag(CATALOG_TAG);
   refresh();

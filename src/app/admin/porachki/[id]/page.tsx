@@ -97,6 +97,12 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
               <dt className="text-ink-soft">Доставка</dt>
               <dd className="tabular-nums">{order.shipping === 0 ? "Безплатно" : formatPrice(order.shipping)}</dd>
             </div>
+            {order.discount > 0 && (
+              <div className="flex justify-between text-forest">
+                <dt>Отстъпка с {order.pointsUsed} точки</dt>
+                <dd className="font-semibold tabular-nums">−{formatPrice(order.discount)}</dd>
+              </div>
+            )}
             <div className="flex justify-between text-lg font-bold">
               <dt>Общо (наложен платеж)</dt>
               <dd className="tabular-nums">{formatPrice(order.total)}</dd>

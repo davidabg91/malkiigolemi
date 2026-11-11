@@ -50,6 +50,20 @@
       "when": 1794386040807,
       "tag": "0006_flagged_contacts",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1794389182706,
+      "tag": "0007_facebook_claims",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1794389808893,
+      "tag": "0008_promotions_loyalty_reviews_alerts",
+      "breakpoints": true
     }
   ]
 }

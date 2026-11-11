@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { flagUser, removeFlag } from "@/actions/customers";
+import { adjustPoints } from "@/actions/loyalty";
 import { AdminSkeleton, Panel, td, th } from "@/components/admin/bits";
 import { FlagBanner, FlagPanel } from "@/components/admin/Flag";
 import { StatusPill } from "@/components/StatusPill";
@@ -14,6 +15,7 @@ import { requireAdmin } from "@/lib/auth";
 import { courierName } from "@/lib/couriers";
 import { findFlag, getFlagIndex } from "@/lib/flags";
 import { formatDate, formatPrice } from "@/lib/format";
+import { getLoyaltySettings, pointsBalance, pointsValue } from "@/lib/loyalty";
 import { DELIVERY_METHODS } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Потребител" };
@@ -64,7 +66,7 @@ async function AdminUser({ params }: Pick<PageProps<"/admin/potrebiteli/[id]">, 
   const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1);
   if (!user) notFound();
 
-  const [own, asGuest, flags] = await Promise.all([
+  const [own, asGuest, flags, points, loyalty] = await Promise.all([
     db.select().from(orders).where(eq(orders.userId, id)).orderBy(desc(orders.createdAt)),
     // Orders placed without signing in, but with this customer's e-mail.
     db
@@ -73,6 +75,8 @@ async function AdminUser({ params }: Pick<PageProps<"/admin/potrebiteli/[id]">, 
       .where(and(isNull(orders.userId), eq(sql`lower(${orders.email})`, user.email.toLowerCase())))
       .orderBy(desc(orders.createdAt)),
     getFlagIndex(),
+    pointsBalance(id),
+    getLoyaltySettings(),
   ]);
   const flag = findFlag(flags, { userId: user.id, email: user.email, phone: user.phone });
 
@@ -170,6 +174,26 @@ async function AdminUser({ params }: Pick<PageProps<"/admin/potrebiteli/[id]">, 
                 )}
               </li>
             </ul>
+          </Panel>
+
+          <Panel className="p-5">
+            <h2 className="font-display text-lg font-semibold">Точки</h2>
+            <p className="mt-2 text-2xl font-bold tabular-nums">
+              {points} <span className="text-base font-medium text-ink-soft">= {formatPrice(pointsValue(points, loyalty))}</span>
+            </p>
+            <form action={adjustPoints.bind(null, user.id)} className="mt-4 grid grid-cols-[6rem_1fr] gap-2">
+              <label htmlFor="adjust-points" className="sr-only">
+                Точки
+              </label>
+              <input id="adjust-points" name="points" type="number" required placeholder="+50 / −20" className="field h-10 text-sm tabular-nums" />
+              <label htmlFor="adjust-note" className="sr-only">
+                Причина
+              </label>
+              <input id="adjust-note" name="note" maxLength={200} placeholder="Причина (по желание)" className="field h-10 text-sm" />
+              <button type="submit" className="col-span-2 inline-flex h-10 items-center justify-center rounded-full border border-line bg-paper text-sm font-semibold transition hover:border-ink">
+                Добави или отнеми точки
+              </button>
+            </form>
           </Panel>
 
           {user.role !== "admin" && (

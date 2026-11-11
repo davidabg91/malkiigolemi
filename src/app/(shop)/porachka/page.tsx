@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { savedOffice } from "@/lib/courier-offices";
+import { getLoyaltySettings, pointsBalance } from "@/lib/loyalty";
 
 export const metadata: Metadata = { title: "Поръчка", robots: { index: false } };
 
@@ -27,7 +28,11 @@ async function Form() {
   const session = await getSession();
   let defaults = EMPTY;
   if (session) {
-    const [u] = await db.select().from(users).where(eq(users.id, session.uid)).limit(1);
+    const [[u], loyaltySettings, balance] = await Promise.all([
+      db.select().from(users).where(eq(users.id, session.uid)).limit(1),
+      getLoyaltySettings(),
+      pointsBalance(session.uid),
+    ]);
     if (u) {
       defaults = {
         name: u.name,
@@ -39,6 +44,7 @@ async function Form() {
         courier: (u.preferredCourier as CheckoutDefaults["courier"]) ?? null,
         office: savedOffice(u.preferredDelivery, u.preferredCourier, u.preferredOfficeCode),
         signedIn: true,
+        loyalty: loyaltySettings.enabled ? { balance, settings: loyaltySettings } : null,
       };
     }
   }

@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { db } from "@/db";
-import { brands, categories, ORDER_STATUSES, orderItems, orders, products, type OrderStatus } from "@/db/schema";
+import { brands, categories, ORDER_STATUSES, products, type OrderStatus } from "@/db/schema";
 import { assertAdmin } from "@/lib/auth";
 import { removeImage, saveImage } from "@/lib/images";
 import { PACKS } from "@/lib/listing";
@@ -15,6 +15,8 @@ import { ORIGIN_LABELS, TONES } from "@/lib/site";
 import { searchTextOf, slugify } from "@/lib/slug";
 import { CATEGORY_ICON_NAMES } from "@/lib/icons";
 import { setActiveCouriersConfig } from "@/lib/couriers-server";
+import { changeOrderStatus, changeOrdersStatus } from "@/lib/order-status";
+import { notifyRestocked } from "@/lib/stock-alerts";
 import type { CourierId } from "@/lib/couriers";
 
 export type AdminFormState = { error?: string; fieldErrors?: Record<string, string> } | undefined;
@@ -156,6 +158,8 @@ export async function saveProduct(id: number | null, _prev: AdminFormState, form
 
   if (id) {
     await db.update(products).set(values).where(eq(products.id, id));
+    // Back in stock: tell everyone who asked to be notified.
+    if (current && current.stock <= 0 && values.stock > 0 && values.active) await notifyRestocked([id]);
   } else {
     const slug = `${slugify(`${d.name} ${brandName ?? ""}`)}-${slugify(d.sku) || Date.now()}`;
     await db.insert(products).values({ ...values, slug });
@@ -188,33 +192,24 @@ export async function setOrderStatus(id: number, formData: FormData) {
   const status = String(formData.get("status")) as OrderStatus;
   if (!ORDER_STATUSES.includes(status)) throw new Error("Невалиден статус.");
 
-  await db.transaction(async (tx) => {
-    const [order] = await tx.select().from(orders).where(eq(orders.id, id)).limit(1);
-    if (!order || order.status === status) return;
-    // Change the status only if nobody changed it meanwhile (the customer can cancel from their profile),
-    // so the stock below is never moved twice for one cancellation.
-    const changed = await tx
-      .update(orders)
-      .set({ status })
-      .where(and(eq(orders.id, id), eq(orders.status, order.status)))
-      .returning({ id: orders.id });
-    if (changed.length === 0) return;
-    // Cancelling returns the goods to stock; re-opening a cancelled order takes them again.
-    const sign = status === "cancelled" ? 1 : order.status === "cancelled" ? -1 : 0;
-    if (sign !== 0) {
-      const items = await tx.select().from(orderItems).where(eq(orderItems.orderId, id));
-      for (const i of items) {
-        if (i.productId == null) continue;
-        await tx
-          .update(products)
-          .set({ stock: sql`max(0, ${products.stock} + ${sign * i.qty})` })
-          .where(eq(products.id, i.productId));
-      }
-    }
-  });
-
+  await changeOrderStatus(id, status);
   updateTag(CATALOG_TAG);
   refresh();
+}
+
+export type BulkStatusState = { ok?: boolean; changed?: number; error?: string } | undefined;
+
+/** "Отбележи избраните като изпратени": the same rules as one order at a time, applied to each. */
+export async function setOrdersStatus(_prev: BulkStatusState, formData: FormData): Promise<BulkStatusState> {
+  await assertAdmin();
+  const status = String(formData.get("status")) as OrderStatus;
+  if (!ORDER_STATUSES.includes(status)) return { error: "Избери статус." };
+  const ids = [...new Set(formData.getAll("ids").map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 500);
+  if (ids.length === 0) return { error: "Не са избрани поръчки." };
+  const changed = await changeOrdersStatus(ids, status);
+  updateTag(CATALOG_TAG);
+  refresh();
+  return { ok: true, changed };
 }
 
 const categorySchema = z.object({

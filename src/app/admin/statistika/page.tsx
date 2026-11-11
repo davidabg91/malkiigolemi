@@ -170,7 +170,7 @@ async function AdminStats({ searchParams }: Pick<PageProps<"/admin/statistika">,
         </div>
 
         <Section title="Клиенти">
-          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
             <li className="rounded-2xl bg-sand/60 p-4">
               <p className="text-sm text-ink-soft">Поръчали в периода</p>
               <p className="mt-1 text-2xl font-bold tabular-nums">{customers.buyers}</p>
@@ -180,6 +180,11 @@ async function AdminStats({ searchParams }: Pick<PageProps<"/admin/statistika">,
               <p className="text-sm text-ink-soft">Връщащи се клиенти</p>
               <p className="mt-1 text-2xl font-bold tabular-nums">{percent(customers.returning, customers.buyers)}</p>
               <p className="mt-1 text-xs text-ink-soft">{customers.returning} с две или повече поръчки досега</p>
+            </li>
+            <li className="rounded-2xl bg-sand/60 p-4">
+              <p className="text-sm text-ink-soft">Поръчки от Facebook</p>
+              <p className="mt-1 text-2xl font-bold tabular-nums">{percent(customers.facebookOrders, customers.keptOrders)}</p>
+              <p className="mt-1 text-xs text-ink-soft">{customers.facebookOrders} от {customers.keptOrders} поръчки</p>
             </li>
             <li className="rounded-2xl bg-sand/60 p-4">
               <p className="text-sm text-ink-soft">Поръчки без регистрация</p>

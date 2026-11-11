@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 const createdAt = () =>
   integer("created_at", { mode: "timestamp" })
@@ -108,9 +108,14 @@ export const orders = sqliteTable(
     subtotal: integer("subtotal").notNull(),
     shipping: integer("shipping").notNull(),
     total: integer("total").notNull(),
+    /** Cents taken off with loyalty points; total = subtotal + shipping - discount. */
+    discount: integer("discount").notNull().default(0),
+    pointsUsed: integer("points_used").notNull().default(0),
     status: text("status", { enum: ORDER_STATUSES }).notNull().default("new"),
     trackingNumber: text("tracking_number"),
     waybillUrl: text("waybill_url"),
+    /** "site" for checkout orders, "facebook" for orders made in the admin from a Facebook comment. */
+    source: text("source").notNull().default("site"),
     createdAt: createdAt(),
   },
   (t) => [index("orders_user_idx").on(t.userId)],
@@ -179,6 +184,120 @@ export const flaggedContacts = sqliteTable(
   (t) => [index("flagged_contacts_email_idx").on(t.email), index("flagged_contacts_phone_idx").on(t.phone)],
 );
 
+/** One Facebook group post with the product it offers. Its comments become fbClaims. */
+export const fbPosts = sqliteTable("fb_posts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  productId: integer("product_id").references(() => products.id, { onDelete: "set null" }),
+  /** Product name at import time, so the post still reads right if the product is later deleted. */
+  productName: text("product_name").notNull(),
+  url: text("url"),
+  createdAt: createdAt(),
+});
+
+export const FB_CLAIM_STATUSES = ["pending", "ordered", "rejected"] as const;
+export type FbClaimStatus = (typeof FB_CLAIM_STATUSES)[number];
+
+/** "1 бр за мен" under a post: who asked and how many, until it is turned into an order or dropped. */
+export const fbClaims = sqliteTable(
+  "fb_claims",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    postId: integer("post_id")
+      .notNull()
+      .references(() => fbPosts.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    qty: integer("qty").notNull(),
+    comment: text("comment").notNull(),
+    status: text("status", { enum: FB_CLAIM_STATUSES }).notNull().default("pending"),
+    orderId: integer("order_id").references(() => orders.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("fb_claims_post_idx").on(t.postId)],
+);
+
+/**
+ * A timed discount. It is live while enabled and startsAt <= now < endsAt, so it switches itself on and off.
+ * It covers the products listed in promotionProducts, or a whole category (with its subcategories) when categoryId is set.
+ */
+export const promotions = sqliteTable("promotions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  /** Whole percent off the regular price, 1–90. */
+  percent: integer("percent").notNull(),
+  startsAt: integer("starts_at", { mode: "timestamp" }).notNull(),
+  endsAt: integer("ends_at", { mode: "timestamp" }).notNull(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  categoryId: integer("category_id").references(() => categories.id, { onDelete: "cascade" }),
+  createdAt: createdAt(),
+});
+
+export const promotionProducts = sqliteTable(
+  "promotion_products",
+  {
+    promotionId: integer("promotion_id")
+      .notNull()
+      .references(() => promotions.id, { onDelete: "cascade" }),
+    productId: integer("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.promotionId, t.productId] }), index("promotion_products_product_idx").on(t.productId)],
+);
+
+export const LOYALTY_KINDS = ["earn", "reverse", "redeem", "refund", "adjust"] as const;
+
+/** Every change to a customer's points; the balance is the sum. */
+export const loyaltyLedger = sqliteTable(
+  "loyalty_ledger",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    orderId: integer("order_id").references(() => orders.id, { onDelete: "set null" }),
+    points: integer("points").notNull(),
+    kind: text("kind", { enum: LOYALTY_KINDS }).notNull(),
+    note: text("note"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("loyalty_user_idx").on(t.userId), index("loyalty_order_idx").on(t.orderId)],
+);
+
+export const reviews = sqliteTable(
+  "reviews",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    productId: integer("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    rating: integer("rating").notNull(),
+    body: text("body").notNull().default(""),
+    hidden: integer("hidden", { mode: "boolean" }).notNull().default(false),
+    createdAt: createdAt(),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  },
+  (t) => [uniqueIndex("reviews_product_user_idx").on(t.productId, t.userId)],
+);
+
+/** "Уведоми ме, когато е наличен". notifiedAt is set once the e-mail has gone out. */
+export const stockAlerts = sqliteTable(
+  "stock_alerts",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    productId: integer("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+    notifiedAt: integer("notified_at", { mode: "timestamp" }),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("stock_alerts_product_email_idx").on(t.productId, t.email)],
+);
+
 export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
@@ -193,3 +312,7 @@ export type Order = typeof orders.$inferSelect;
 export type OrderItem = typeof orderItems.$inferSelect;
 export type Setting = typeof settings.$inferSelect;
 export type FlaggedContact = typeof flaggedContacts.$inferSelect;
+export type FbPost = typeof fbPosts.$inferSelect;
+export type FbClaim = typeof fbClaims.$inferSelect;
+export type Promotion = typeof promotions.$inferSelect;
+export type Review = typeof reviews.$inferSelect;

@@ -7,6 +7,8 @@ import { Carousel } from "@/components/product/Carousel";
 import { ProductVisual } from "@/components/product/PackShot";
 import { Badges, ProductCard } from "@/components/product/ProductCard";
 import { RecentlyViewed } from "@/components/product/Recent";
+import { Reviews } from "@/components/product/Reviews";
+import { ratingLabel, Stars } from "@/components/product/Stars";
 import { Breadcrumbs, SectionHeading } from "@/components/ui";
 import { discountPercent, formatPrice } from "@/lib/format";
 import { getProduct } from "@/lib/queries";
@@ -61,6 +63,9 @@ async function Content({ params }: Pick<Props, "params">) {
       availability: product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
       seller: { "@type": "Organization", name: `${site.name} Market` },
     },
+    aggregateRating: product.reviewCount
+      ? { "@type": "AggregateRating", ratingValue: product.rating, reviewCount: product.reviewCount, bestRating: 5, worstRating: 1 }
+      : undefined,
   };
 
   return (
@@ -85,6 +90,13 @@ async function Content({ params }: Pick<Props, "params">) {
             )}
             <h1 className="mt-2 font-display text-3xl font-semibold leading-[1.12] tracking-tight sm:text-[2.4rem]">{product.name}</h1>
             <p className="mt-3 text-lg text-ink-soft">{product.unit}</p>
+            {product.reviewCount ? (
+              <a href="#otzivi" className="mt-2 inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink">
+                <Stars value={product.rating ?? 0} />
+                <span className="font-semibold text-ink tabular-nums">{ratingLabel(product.rating ?? 0)}</span>
+                <span className="underline underline-offset-2">{product.reviewCount === 1 ? "1 отзив" : `${product.reviewCount} отзива`}</span>
+              </a>
+            ) : null}
 
             <div className="mt-7 flex flex-wrap items-end gap-x-4 gap-y-1">
               <p className={`text-4xl font-bold tabular-nums ${off ? "text-tomato" : ""}`}>{formatPrice(product.price)}</p>
@@ -141,6 +153,10 @@ async function Content({ params }: Pick<Props, "params">) {
           </div>
         </div>
       </div>
+
+      <Suspense fallback={<div className="h-64 animate-pulse rounded-tile bg-sand" aria-hidden />}>
+        <Reviews productId={product.id} slug={product.slug} />
+      </Suspense>
 
       {related.length > 0 && (
         <section aria-labelledby="related-heading">

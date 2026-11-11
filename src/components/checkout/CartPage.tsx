@@ -6,7 +6,8 @@ import { CartLine, ShippingMeter } from "@/components/layout/CartDrawer";
 import { ProductGrid } from "@/components/product/ProductCard";
 import { btn } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
-import { cartTotals, useCart, useHydrated, useWishlist } from "@/lib/store";
+import { liveCartData } from "@/actions/cart";
+import { cartTotals, useCart, useFreshCartPrices, useHydrated, useWishlist } from "@/lib/store";
 
 function Empty({ icon: Icon, title, text }: { icon: typeof Heart; title: string; text: string }) {
   return (
@@ -28,6 +29,7 @@ function Loading() {
 }
 
 export function CartPage() {
+  useFreshCartPrices(liveCartData);
   const hydrated = useHydrated();
   const items = useCart((s) => s.items);
   const clear = useCart((s) => s.clear);
