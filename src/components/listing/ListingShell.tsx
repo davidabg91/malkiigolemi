@@ -185,7 +185,7 @@ export function ListingShell({
       {facets.brands.length > 1 && (
         <fieldset>
           <legend className="mb-2 text-sm font-semibold uppercase tracking-[0.14em]">Марка</legend>
-          <div className="-mr-2 max-h-72 overflow-y-auto pr-2">
+          <div>
             {facets.brands.map((b) => (
               <CheckRow
                 key={b.slug}
@@ -210,7 +210,8 @@ export function ListingShell({
   return (
     <div className="grid gap-8 lg:grid-cols-[16.5rem_1fr]">
       <aside className="hidden lg:block" aria-label="Филтри">
-        <div className="sticky top-36 rounded-card bg-paper p-5 shadow-soft">{filters}</div>
+        {/* Taller than the screen once categories, origins and brands add up: it scrolls on its own then. */}
+        <div className="sticky top-36 max-h-[calc(100dvh-10rem)] overflow-y-auto overscroll-contain rounded-card bg-paper p-5 shadow-soft">{filters}</div>
       </aside>
 
       <div>
