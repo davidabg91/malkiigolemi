@@ -24,6 +24,7 @@ const euros = (v: string | string[] | undefined) => {
 export function parseFilters(sp: SearchParams): Current & { page: number } {
   const sort = one(sp.sort);
   return {
+    categories: list(sp.cat),
     brands: list(sp.brand),
     origins: list(sp.origin).map((o) => o.toUpperCase()),
     min: euros(sp.min),
@@ -94,6 +95,7 @@ export async function Listing({
 }) {
   const f = parseFilters(searchParams);
   const result = await listProducts(scope, {
+    categories: f.categories,
     brands: f.brands,
     origins: f.origins,
     min: f.min != null ? f.min * 100 : undefined,
@@ -104,7 +106,7 @@ export async function Listing({
 
   const hrefFor = (p: number) => {
     const qs = new URLSearchParams(preserve);
-    for (const key of ["brand", "origin", "min", "max", "sort"] as const) {
+    for (const key of ["cat", "brand", "origin", "min", "max", "sort"] as const) {
       const v = one(searchParams[key]);
       if (v) qs.set(key, v);
     }
@@ -118,8 +120,9 @@ export async function Listing({
       basePath={basePath}
       preserve={preserve}
       total={result.total}
-      current={{ brands: f.brands, origins: f.origins, min: f.min, max: f.max, sort: f.sort }}
+      current={{ categories: f.categories, brands: f.brands, origins: f.origins, min: f.min, max: f.max, sort: f.sort }}
       facets={{
+        categories: result.facets.categories,
         brands: result.facets.brands,
         origins: result.facets.origins,
         priceMin: Math.floor(result.facets.priceMin / 100),

@@ -213,7 +213,8 @@ function CategoryTile({
         <h2 className="max-w-[11ch] font-display text-lg font-semibold leading-[1.15] tracking-tight sm:text-xl xl:text-[1.4rem]">
           {category.name}
         </h2>
-        <p className="mt-1.5 text-sm font-medium opacity-70">
+        {/* No room for the count on a phone-sized tile. */}
+        <p className="mt-1.5 hidden text-sm font-medium opacity-70 sm:block">
           {category.count} {plural(category.count)}
         </p>
         <span
