@@ -4,6 +4,7 @@ import { ChevronDown, Heart, LayoutGrid, Menu, Phone, ShoppingBag, User, X } fro
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { CategoryIcon, FacebookIcon, Logo } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
 import { site, TONES } from "@/lib/site";
@@ -190,97 +191,102 @@ export function HeaderClient({ tree }: { tree: MenuCategory[] }) {
         )}
       </AnimatePresence>
 
-      {/* Mobile drawer */}
-      <AnimatePresence>
-        {drawer && (
-          <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Меню">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-ink/50"
-              onClick={() => setDrawer(false)}
-            />
-            <motion.div
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%", transition: { duration: 0.2 } }}
-              transition={{ type: "spring", stiffness: 360, damping: 36 }}
-              className="absolute inset-y-0 left-0 flex w-[88%] max-w-sm flex-col bg-cream"
-            >
-              <div className="flex h-[4.5rem] items-center justify-between border-b border-line px-5">
-                <Logo />
-                <button type="button" className={iconBtn} onClick={() => setDrawer(false)} aria-label="Затвори менюто">
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto px-3 py-4">
-                <div className="mb-3 grid grid-cols-2 gap-2 px-2">
-                  <Link href="/promo" onClick={() => setDrawer(false)} className="rounded-2xl bg-tomato px-4 py-3 text-sm font-semibold text-white">
-                    Промоции
-                  </Link>
-                  <Link href="/novi" onClick={() => setDrawer(false)} className="rounded-2xl bg-lime px-4 py-3 text-sm font-semibold text-ink">
-                    Нови продукти
-                  </Link>
-                </div>
-                <ul>
-                  {tree.map((c) => {
-                    const tone = TONES[c.tone] ?? TONES.cream;
-                    const isOpen = expanded === c.id;
-                    return (
-                      <li key={c.id} className="border-b border-line/70 last:border-0">
-                        <div className="flex items-center">
-                          <Link href={`/kategoria/${c.slug}`} onClick={() => setDrawer(false)} className="flex min-h-14 flex-1 items-center gap-3 px-2 font-medium">
-                            <span className="grid h-10 w-10 place-items-center rounded-xl" style={{ background: tone.bg, color: tone.ink }}>
-                              <CategoryIcon name={c.icon} className="h-5 w-5" />
-                            </span>
-                            {c.name}
-                          </Link>
-                          <button
-                            type="button"
-                            className={iconBtn}
-                            aria-expanded={isOpen}
-                            aria-label={`Подкатегории на ${c.name}`}
-                            onClick={() => setExpanded(isOpen ? null : c.id)}
-                          >
-                            <ChevronDown className={`h-5 w-5 transition-transform ${isOpen ? "rotate-180" : ""}`} />
-                          </button>
-                        </div>
-                        {isOpen && (
-                          <ul className="pb-3 pl-[3.75rem]">
-                            {c.children.map((s) => (
-                              <li key={s.slug}>
-                                <Link href={`/kategoria/${c.slug}/${s.slug}`} onClick={() => setDrawer(false)} className="flex min-h-11 items-center text-ink-soft">
-                                  {s.name}
-                                </Link>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-              <div className="border-t border-line p-4 space-y-2">
-                <a
-                  href={site.facebookUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2.5 rounded-2xl bg-[#1877F2] py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#166fe5]"
+      {/* Mobile drawer. Rendered into <body>: the header's backdrop blur would otherwise make "fixed"
+          mean "inside the header", squeezing the drawer to the header's height. */}
+      {hydrated &&
+        createPortal(
+          <AnimatePresence>
+            {drawer && (
+              <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Меню">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-ink/50"
+                  onClick={() => setDrawer(false)}
+                />
+                <motion.div
+                  initial={{ x: "-100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "-100%", transition: { duration: 0.2 } }}
+                  transition={{ type: "spring", stiffness: 360, damping: 36 }}
+                  className="absolute inset-y-0 left-0 flex w-[88%] max-w-sm flex-col bg-cream"
                 >
-                  <FacebookIcon className="h-4 w-4" />
-                  <span>Facebook общност ({site.facebookGroupName})</span>
-                </a>
-                <a href={site.phoneHref} className="flex items-center justify-center gap-2.5 rounded-2xl bg-sand py-2.5 text-sm font-semibold text-ink">
-                  <Phone className="h-4 w-4 text-forest" aria-hidden />
-                  {site.phone}
-                </a>
+                  <div className="flex h-[4.5rem] items-center justify-between border-b border-line px-5">
+                    <Logo />
+                    <button type="button" className={iconBtn} onClick={() => setDrawer(false)} aria-label="Затвори менюто">
+                      <X className="h-6 w-6" />
+                    </button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto px-3 py-4">
+                    <div className="mb-3 grid grid-cols-2 gap-2 px-2">
+                      <Link href="/promo" onClick={() => setDrawer(false)} className="rounded-2xl bg-tomato px-4 py-3 text-sm font-semibold text-white">
+                        Промоции
+                      </Link>
+                      <Link href="/novi" onClick={() => setDrawer(false)} className="rounded-2xl bg-lime px-4 py-3 text-sm font-semibold text-ink">
+                        Нови продукти
+                      </Link>
+                    </div>
+                    <ul>
+                      {tree.map((c) => {
+                        const tone = TONES[c.tone] ?? TONES.cream;
+                        const isOpen = expanded === c.id;
+                        return (
+                          <li key={c.id} className="border-b border-line/70 last:border-0">
+                            <div className="flex items-center">
+                              <Link href={`/kategoria/${c.slug}`} onClick={() => setDrawer(false)} className="flex min-h-14 flex-1 items-center gap-3 px-2 font-medium">
+                                <span className="grid h-10 w-10 place-items-center rounded-xl" style={{ background: tone.bg, color: tone.ink }}>
+                                  <CategoryIcon name={c.icon} className="h-5 w-5" />
+                                </span>
+                                {c.name}
+                              </Link>
+                              <button
+                                type="button"
+                                className={iconBtn}
+                                aria-expanded={isOpen}
+                                aria-label={`Подкатегории на ${c.name}`}
+                                onClick={() => setExpanded(isOpen ? null : c.id)}
+                              >
+                                <ChevronDown className={`h-5 w-5 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                              </button>
+                            </div>
+                            {isOpen && (
+                              <ul className="pb-3 pl-[3.75rem]">
+                                {c.children.map((s) => (
+                                  <li key={s.slug}>
+                                    <Link href={`/kategoria/${c.slug}/${s.slug}`} onClick={() => setDrawer(false)} className="flex min-h-11 items-center text-ink-soft">
+                                      {s.name}
+                                    </Link>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                  <div className="border-t border-line p-4 space-y-2">
+                    <a
+                      href={site.facebookUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2.5 rounded-2xl bg-[#1877F2] px-4 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-[#166fe5]"
+                    >
+                      <FacebookIcon className="h-4 w-4" />
+                      <span>Facebook общност ({site.facebookGroupName})</span>
+                    </a>
+                    <a href={site.phoneHref} className="flex items-center justify-center gap-2.5 rounded-2xl bg-sand py-2.5 text-sm font-semibold text-ink">
+                      <Phone className="h-4 w-4 text-forest" aria-hidden />
+                      {site.phone}
+                    </a>
+                  </div>
+                </motion.div>
               </div>
-            </motion.div>
-          </div>
+            )}
+          </AnimatePresence>,
+          document.body,
         )}
-      </AnimatePresence>
     </header>
   );
 }
