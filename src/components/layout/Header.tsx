@@ -6,6 +6,7 @@ import { HeaderClient } from "./HeaderClient";
 
 export async function Header() {
   const tree = await getCategoryTree();
+
   return (
     <>
       <div className="bg-forest-deep text-cream">

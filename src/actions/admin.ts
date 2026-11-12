@@ -7,7 +7,7 @@ import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { db } from "@/db";
 import { brands, categories, ORDER_STATUSES, products, type OrderStatus } from "@/db/schema";
-import { assertAdmin } from "@/lib/auth";
+import { assertAdmin, getSession } from "@/lib/auth";
 import { removeImage, saveImage } from "@/lib/images";
 import { PACKS } from "@/lib/listing";
 import { CATALOG_TAG } from "@/lib/queries";
@@ -183,8 +183,9 @@ export async function saveProduct(id: number | null, _prev: AdminFormState, form
     await db.insert(products).values({ ...values, slug });
   }
 
+  const returnUrl = String(formData.get("returnUrl") ?? "");
   updateTag(CATALOG_TAG);
-  redirect("/admin/produkti");
+  redirect(returnUrl && returnUrl.startsWith("/") ? returnUrl : "/admin/produkti");
 }
 
 export async function deleteProduct(id: number) {
@@ -308,6 +309,20 @@ export async function deleteCategory(id: number): Promise<void> {
   // The UI only offers delete for empty categories; this guards against a forged call.
   if (child || product) throw new Error("Категорията не е празна.");
   await db.delete(categories).where(eq(categories.id, id));
+  updateTag(CATALOG_TAG);
+  refresh();
+}
+
+export async function checkIsAdmin(): Promise<boolean> {
+  const session = await getSession();
+  return session?.role === "admin";
+}
+
+export async function reorderCategories(orderedIds: number[]): Promise<void> {
+  await assertAdmin();
+  for (let i = 0; i < orderedIds.length; i++) {
+    await db.update(categories).set({ sort: i }).where(eq(categories.id, orderedIds[i]));
+  }
   updateTag(CATALOG_TAG);
   refresh();
 }

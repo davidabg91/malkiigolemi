@@ -1,7 +1,9 @@
-import { PackageCheck, ShieldCheck, Truck } from "lucide-react";
+import { Edit3, PackageCheck, ShieldCheck, Truck } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { AdminProductBar } from "@/components/admin/AdminProductBar";
 import { BuyBox } from "@/components/product/AddToCart";
 import { Carousel } from "@/components/product/Carousel";
 import { ProductVisual } from "@/components/product/PackShot";
@@ -11,6 +13,7 @@ import { RecentlyViewed } from "@/components/product/Recent";
 import { Reviews } from "@/components/product/Reviews";
 import { ratingLabel, Stars } from "@/components/product/Stars";
 import { Breadcrumbs, SectionHeading } from "@/components/ui";
+import { getSession } from "@/lib/auth";
 import { discountPercent, formatPrice } from "@/lib/format";
 import { getProduct } from "@/lib/queries";
 import { FREE_SHIPPING_FROM, ORIGIN_LABELS, site } from "@/lib/site";
@@ -30,8 +33,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 async function Content({ params }: Pick<Props, "params">) {
   const { slug } = await params;
-  const data = await getProduct(slug);
+  const [data, session] = await Promise.all([getProduct(slug), getSession()]);
   if (!data) notFound();
+  const isAdmin = session?.role === "admin";
   const { product, category, parent, related } = data;
   const { description, ...cardData } = product;
   const off = discountPercent(product.price, product.oldPrice);
@@ -74,8 +78,20 @@ async function Content({ params }: Pick<Props, "params">) {
   return (
     <div className="space-y-16 sm:space-y-20">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
+      {isAdmin && <AdminProductBar product={product} />}
       <div>
-        <Breadcrumbs items={crumbs} />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Breadcrumbs items={crumbs} />
+          {isAdmin && (
+            <Link
+              href={`/admin/produkti/${product.id}?returnUrl=${encodeURIComponent(`/produkt/${product.slug}`)}`}
+              className="inline-flex items-center gap-1.5 rounded-full border border-forest/20 bg-forest/5 px-3 py-1 text-xs font-semibold text-forest transition hover:bg-forest hover:text-sand"
+            >
+              <Edit3 className="h-3.5 w-3.5" />
+              <span>Редактирай артикула</span>
+            </Link>
+          )}
+        </div>
         <div className="mt-6 grid gap-8 lg:grid-cols-2 lg:gap-14">
           <div
             className="relative isolate grid aspect-square place-items-center overflow-hidden rounded-tile lg:sticky lg:top-36 lg:aspect-[1/0.95]"

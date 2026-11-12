@@ -29,6 +29,25 @@
   --animate-marquee: marquee 38s linear infinite;
   --animate-pop: pop 0.3s var(--ease-out-soft);
   --animate-float: float 6.5s ease-in-out infinite;
+  --animate-ios-jiggle: ios-jiggle 0.28s ease-in-out infinite alternate;
+  --animate-ios-jiggle-alt: ios-jiggle-alt 0.31s ease-in-out infinite alternate;
+
+  @keyframes ios-jiggle {
+    0% {
+      transform: rotate(-1.6deg) scale(1.02);
+    }
+    100% {
+      transform: rotate(1.6deg) scale(1.02);
+    }
+  }
+  @keyframes ios-jiggle-alt {
+    0% {
+      transform: rotate(1.6deg) scale(1.02);
+    }
+    100% {
+      transform: rotate(-1.6deg) scale(1.02);
+    }
+  }
 
   @keyframes rise {
     from {

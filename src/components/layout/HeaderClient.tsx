@@ -9,6 +9,7 @@ import { CategoryIcon, FacebookIcon, Logo } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
 import { site, TONES } from "@/lib/site";
 import { cartTotals, useCart, useHydrated, useWishlist } from "@/lib/store";
+import { CategoryNav } from "./CategoryNav";
 import { SearchBox } from "./SearchBox";
 
 export type MenuCategory = {
@@ -126,20 +127,7 @@ export function HeaderClient({ tree }: { tree: MenuCategory[] }) {
 
         <SearchBox className="pb-3 md:hidden" />
 
-        <nav aria-label="Категории" className="no-scrollbar -mx-2 hidden gap-1 overflow-x-auto pb-2.5 lg:flex">
-          {tree.map((c) => (
-            <Link key={c.id} href={`/kategoria/${c.slug}`} className="whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium text-ink-soft transition hover:bg-sand hover:text-ink">
-              {c.name}
-            </Link>
-          ))}
-          <span className="mx-1 my-1.5 w-px bg-line" aria-hidden />
-          <Link href="/promo" className="whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-semibold text-tomato transition hover:bg-tomato/10">
-            Промоции
-          </Link>
-          <Link href="/novi" className="whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-semibold text-forest transition hover:bg-forest/10">
-            Нови продукти
-          </Link>
-        </nav>
+        <CategoryNav tree={tree} />
       </div>
 
       {/* Desktop mega menu */}
