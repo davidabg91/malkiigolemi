@@ -14,27 +14,64 @@ import { requireAdmin } from "@/lib/auth";
 import { findFlag, getFlagIndex } from "@/lib/flags";
 import { formatDate, formatPrice } from "@/lib/format";
 import { DELIVERY_METHODS, ORDER_STATUS_LABELS } from "@/lib/site";
+import { searchVariants } from "@/lib/translit";
 
 export const metadata: Metadata = { title: "Поръчки" };
 
-const capitalize = (s: string) => s.replace(/(^|\s)(\S)/g, (_, gap: string, c: string) => gap + c.toUpperCase());
-
 /**
  * Orders matching a free-text search: number, name, email, city or phone.
- * SQLite's LIKE ignores case only for Latin letters, so a Cyrillic name is tried as typed, lower case,
- * upper case and Capitalised. Phones are compared by digits, and "0888…" also finds "+359888…".
+ * Bidirectionally transliterates between Cyrillic and Latin (e.g. "венета" matches "veneta" and vice-versa)
+ * and generates case variants to support SQLite's case matching on Cyrillic text.
  */
 function searchWhere(q: string): SQL | undefined {
   const text = q.trim().replace(/[%_]/g, "");
   if (!text) return undefined;
-  const forms = [...new Set([text, text.toLowerCase(), text.toUpperCase(), capitalize(text.toLowerCase())])];
-  const conds: SQL[] = forms.flatMap((f) => [like(orders.number, `%${f}%`), like(orders.name, `%${f}%`), like(orders.email, `%${f}%`), like(orders.city, `%${f}%`)]);
+
+  const forms = searchVariants(text);
+  const conds: SQL[] = forms.flatMap((f) => [
+    like(orders.number, `%${f}%`),
+    like(orders.name, `%${f}%`),
+    like(orders.email, `%${f}%`),
+    like(orders.city, `%${f}%`),
+  ]);
+
+  const words = text.split(/\s+/).filter(Boolean);
+  if (words.length > 1) {
+    const wordGroups: (SQL | undefined)[] = words.map((w) => {
+      const wForms = searchVariants(w);
+      const wConds = wForms.flatMap((f) => [
+        like(orders.number, `%${f}%`),
+        like(orders.name, `%${f}%`),
+        like(orders.email, `%${f}%`),
+        like(orders.city, `%${f}%`),
+      ]);
+      return or(...wConds);
+    });
+    const validGroups = wordGroups.filter(Boolean) as SQL[];
+    if (validGroups.length > 0) {
+      conds.push(and(...validGroups)!);
+    }
+  }
+
+  // Also match linked registered user profile (name or email) in case recipient name differed
+  const userForms = forms.slice(0, 12);
+  const userChecks = userForms.flatMap((f) => [
+    sql`users.name like ${`%${f}%`}`,
+    sql`users.email like ${`%${f}%`}`,
+  ]);
+  if (userChecks.length > 0) {
+    conds.push(
+      sql`exists (select 1 from users where users.id = ${orders.userId} and (${sql.join(userChecks, sql` or `)}))`
+    );
+  }
+
   const digits = text.replace(/\D/g, "");
   if (digits.length >= 3) {
     const phone = sql`replace(replace(replace(replace(${orders.phone}, ' ', ''), '-', ''), '+', ''), '/', '')`;
     conds.push(sql`${phone} like ${`%${digits}%`}`);
     if (digits.startsWith("0")) conds.push(sql`${phone} like ${`%${digits.slice(1)}%`}`);
   }
+
   return or(...conds);
 }
 

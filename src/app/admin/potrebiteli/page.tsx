@@ -11,6 +11,7 @@ import { orders, users } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { findFlag, getFlagIndex } from "@/lib/flags";
 import { formatDate, formatPrice } from "@/lib/format";
+import { matchesSearch } from "@/lib/translit";
 
 export const metadata: Metadata = { title: "Потребители" };
 
@@ -39,11 +40,11 @@ async function AdminUsers({ searchParams }: Pick<PageProps<"/admin/potrebiteli">
 
   const rows = all.map((u) => ({ user: u, stats: statsOf.get(u.id), flag: findFlag(flags, { userId: u.id, email: u.email, phone: u.phone }) }));
   const flaggedCount = rows.filter((r) => r.flag).length;
-  // Filtered here rather than in SQL: SQLite's LIKE ignores case only for Latin letters, not for Cyrillic names.
+  // Filtered with bilingual transliteration so "венета" matches "veneta" and vice-versa
   const list = rows.filter(
     (r) =>
       (!onlyFlagged || r.flag) &&
-      (!q || [r.user.name, r.user.email, r.user.phone ?? ""].some((v) => v.toLowerCase().includes(q))),
+      (!q || matchesSearch([r.user.name, r.user.email, r.user.phone], q)),
   );
 
   const tab = (active: boolean) =>
