@@ -164,7 +164,7 @@ export function CategoryNav({ tree, isAdmin: initialIsAdmin = false }: CategoryN
             <span className="grid h-6 w-6 place-items-center rounded-lg bg-lime text-ink">
               <Sparkles className="h-3.5 w-3.5" />
             </span>
-            <span className="font-semibold text-lime">iOS Режим на подреждане:</span>
+            <span className="font-semibold text-lime">Режим на подреждане:</span>
             <span className="text-cream/80">
               Хвани и премести с мишката или използвай стрелките ‹ ›.
             </span>
@@ -307,7 +307,7 @@ export function CategoryNav({ tree, isAdmin: initialIsAdmin = false }: CategoryN
           <button
             type="button"
             onClick={() => setIsEditing(true)}
-            title="Задръж с мишката/пръста или натисни тук за пренареждане на категориите (iOS Wiggle Mode)"
+            title="Задръж с мишката/пръста или натисни тук за пренареждане на категориите"
             className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full border border-dashed border-forest/40 bg-forest/5 px-2.5 py-1 text-xs font-semibold text-forest transition hover:bg-forest hover:text-white"
           >
             <SlidersHorizontal className="h-3 w-3" />
