@@ -24,8 +24,8 @@ export const DELIVERY_METHODS = [
   {
     id: "box",
     label: "До автомат",
-    hint: "Вземаш пратката по всяко време",
-    price: 190,
+    hint: "Безплатно с BoxNow · 24/7",
+    price: 0,
     addressLabel: "Автомат (име или адрес)",
   },
   {
@@ -62,7 +62,9 @@ export const STORE = {
 
 export type DeliveryId = (typeof DELIVERY_METHODS)[number]["id"];
 
-export function shippingFor(delivery: string, subtotal: number) {
+export function shippingFor(delivery: string, subtotal: number, courier?: string | null) {
+  if (delivery === "store") return 0;
+  if (delivery === "box" && (!courier || courier === "boxnow")) return 0;
   if (subtotal >= FREE_SHIPPING_FROM) return 0;
   return DELIVERY_METHODS.find((d) => d.id === delivery)?.price ?? DELIVERY_METHODS[1].price;
 }
