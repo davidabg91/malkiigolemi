@@ -291,6 +291,8 @@ export function ProductVisual({
 }) {
   if (product.image) {
     const isFullPhoto = /\.(jpe?g|webp)$/i.test(product.image);
+    const hasObjectFit = className && /object-(contain|cover|fill|none|scale-down)/.test(className);
+    const fitClass = hasObjectFit ? "" : isFullPhoto ? "object-cover" : "object-contain mix-blend-multiply";
     // Multiply blends a studio photo's white backdrop into the tinted card behind it.
     // Full lifestyle photos (JPG) cover the panel with their own natural background without multiply.
     // eslint-disable-next-line @next/next/no-img-element -- sized by the caller's classes; the file itself is resized by optimizedImage
@@ -300,7 +302,7 @@ export function ProductVisual({
         alt={product.name}
         loading="lazy"
         decoding="async"
-        className={`${className ?? ""} ${isFullPhoto ? "object-cover" : "object-contain mix-blend-multiply"}`}
+        className={`${className ?? ""} ${fitClass}`.trim()}
       />
     );
   }
