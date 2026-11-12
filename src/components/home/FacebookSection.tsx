@@ -82,13 +82,13 @@ export function FacebookSection() {
             {/* Profile Bar */}
             <div className="p-5">
               <div className="flex items-start gap-3.5">
-                <div className="relative -mt-10 grid h-16 w-16 shrink-0 place-items-center rounded-2xl border-2 border-white bg-gradient-to-br from-cyan-400 to-sky-600 shadow-md">
+                <div className="relative -mt-10 grid h-16 w-16 shrink-0 place-items-center rounded-2xl border-2 border-white bg-white shadow-md">
                   <Image
-                    src="/logo-badge.svg"
+                    src="/logo-badge.png"
                     alt="Лого Поръчки за малки и големи"
                     width={56}
                     height={56}
-                    className="rounded-xl"
+                    className="rounded-xl object-contain p-1"
                   />
                 </div>
                 <div>

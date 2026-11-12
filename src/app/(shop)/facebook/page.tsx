@@ -31,11 +31,11 @@ export default function FacebookPage() {
             <div className="flex items-center gap-4">
               <div className="relative grid h-16 w-16 shrink-0 place-items-center rounded-2xl border-2 border-white bg-white shadow-md sm:h-20 sm:w-20">
                 <Image
-                  src="/logo-badge.svg"
+                  src="/logo-badge.png"
                   alt="Лого на групата"
                   width={72}
                   height={72}
-                  className="rounded-xl"
+                  className="rounded-xl object-contain p-1"
                 />
               </div>
               <div>

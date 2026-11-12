@@ -44,41 +44,16 @@ export function CategoryIcon({ name, className }: { name: string; className?: st
 
 import { site } from "@/lib/site";
 
-/** Modern storefront mark inspired by the Facebook group's original shop icon */
-export function ShopMark({ className }: { className?: string }) {
+/** Official storefront emblem from the logo */
+export function ShopMark({ className = "" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 40 40" className={className} fill="none" aria-hidden xmlns="http://www.w3.org/2000/svg">
-      {/* Roof sign */}
-      <rect x="13" y="4" width="14" height="6.5" rx="1.5" fill="currentColor" />
-      <text x="20" y="8.8" textAnchor="middle" fill="#ffffff" fontSize="3.3" fontWeight="900" fontFamily="sans-serif" letterSpacing="0.3">SHOP</text>
-      <line x1="16" y1="10.5" x2="16" y2="12.5" stroke="currentColor" strokeWidth="1.2" />
-      <line x1="24" y1="10.5" x2="24" y2="12.5" stroke="currentColor" strokeWidth="1.2" />
-      {/* Storefront building */}
-      <rect x="7" y="16" width="26" height="19" rx="2" fill="currentColor" fillOpacity="0.1" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-      {/* Window */}
-      <rect x="9.5" y="20" width="12" height="11" rx="1.5" fill="currentColor" fillOpacity="0.2" stroke="currentColor" strokeWidth="1" />
-      <circle cx="13.5" cy="27" r="1.5" fill="currentColor" opacity="0.8" />
-      <rect x="17" y="25" width="3" height="4" rx="0.5" fill="currentColor" opacity="0.6" />
-      {/* Door */}
-      <rect x="23.5" y="20" width="7" height="15" rx="1" stroke="currentColor" strokeWidth="1" />
-      <circle cx="25" cy="28" r="0.7" fill="currentColor" />
-      {/* Canopy / Awning */}
-      <path
-        d="M5 12.5 H35 L33.5 17.5 C33.5 18.5 32 19 31 18 C30 19 28.5 19 27.5 18 C26.5 19 25 19 24 18 C23 19 21.5 19 20.5 18 C19.5 19 18 19 17 18 C16 19 14.5 19 13.5 18 C12.5 19 11 19 10 18 C9 19 7.5 18.5 7.5 17.5 Z"
-        fill="currentColor"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        strokeLinejoin="round"
-      />
-      {/* Awning stripes accent */}
-      <line x1="11" y1="13" x2="11.5" y2="17.5" stroke="#ffffff" strokeWidth="0.9" opacity="0.85" />
-      <line x1="15" y1="13" x2="15" y2="17.5" stroke="#ffffff" strokeWidth="0.9" opacity="0.85" />
-      <line x1="19" y1="13" x2="19" y2="17.5" stroke="#ffffff" strokeWidth="0.9" opacity="0.85" />
-      <line x1="23" y1="13" x2="23" y2="17.5" stroke="#ffffff" strokeWidth="0.9" opacity="0.85" />
-      <line x1="27" y1="13" x2="27" y2="17.5" stroke="#ffffff" strokeWidth="0.9" opacity="0.85" />
-      {/* Ground line */}
-      <rect x="4" y="35" width="32" height="1.8" rx="0.9" fill="currentColor" />
-    </svg>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/logo-emblem.png"
+      alt="Поръчки за малки и големи"
+      className={`inline-block select-none object-contain ${className}`}
+      aria-hidden
+    />
   );
 }
 
@@ -100,123 +75,35 @@ export function Logo({ className = "", light = false }: { className?: string; li
       aria-label={`${site.name} — начало`}
       className={`group/logo inline-flex items-center transition-transform duration-300 hover:scale-[1.02] ${className}`}
     >
-      <LogoArt light={light} className="h-8 w-auto min-[400px]:h-10 sm:h-11" />
+      <LogoArt light={light} className="h-9 w-auto min-[400px]:h-10 sm:h-11" />
     </Link>
   );
 }
 
 /**
- * The logo drawing itself. `idPrefix` keeps the gradient ids apart when it is drawn many times on a page
- * (the product photo stamps), so each copy points at its own, always-rendered definitions.
+ * The official store logo.
+ * Supports light mode for dark backgrounds (e.g. Footer).
  */
-export function LogoArt({ className = "", light = false, idPrefix = "" }: { className?: string; light?: boolean; idPrefix?: string }) {
-  const cyan = `${idPrefix}${light ? "logoCyanGradLight" : "logoCyanGrad"}`;
-  const glow = `${idPrefix}${light ? "logoGlowLight" : "logoGlow"}`;
-  const awning = `${idPrefix}awningLight`;
+export function LogoArt({
+  className = "",
+  light = false,
+  idPrefix = "",
+}: {
+  className?: string;
+  light?: boolean;
+  idPrefix?: string;
+}) {
   return (
-    <svg
-      viewBox="0 0 264 56"
-      className={className}
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden
-    >
-      <defs>
-        <linearGradient id={cyan} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#06B6D4" />
-          <stop offset="100%" stopColor="#0284C7" />
-        </linearGradient>
-        <linearGradient id={awning} x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#FFFFFF" />
-          <stop offset="100%" stopColor="#E0F2FE" />
-        </linearGradient>
-        <filter id={glow} x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#0284c7" floodOpacity={light ? "0.4" : "0.25"} />
-        </filter>
-      </defs>
-
-      {/* Unified Brand Symbol (Stylized Boutique Bag & Awning Fusion) */}
-      <g transform="translate(6, 5)">
-        <path
-          d="M14 15 C14 8 19 3 25 3 C31 3 36 8 36 15"
-          stroke={light ? "#38BDF8" : `url(#${cyan})`}
-          strokeWidth="3"
-          strokeLinecap="round"
-          fill="none"
-        />
-        <rect
-          x="5"
-          y="13"
-          width="40"
-          height="32"
-          rx="8"
-          fill={`url(#${cyan})`}
-          filter={`url(#${glow})`}
-        />
-        <path
-          d="M5 23 C9 26 13 26 17 23 C21 26 25 26 29 23 C33 26 37 26 41 23 C43 24.5 45 23 45 23 L45 13 L5 13 Z"
-          fill={`url(#${awning})`}
-        />
-        <line x1="11" y1="13" x2="11" y2="24" stroke="#0284C7" strokeWidth="1.8" strokeLinecap="round" />
-        <line x1="23" y1="13" x2="23" y2="25" stroke="#0284C7" strokeWidth="1.8" strokeLinecap="round" />
-        <line x1="35" y1="13" x2="35" y2="24" stroke="#0284C7" strokeWidth="1.8" strokeLinecap="round" />
-
-        {/* Smiling package arc */}
-        <path d="M17 33 C20 37 30 37 33 33" stroke="#FFFFFF" strokeWidth="2.4" strokeLinecap="round" fill="none" />
-        <circle cx="20" cy="30" r="1.5" fill="#FFFFFF" />
-        <circle cx="30" cy="30" r="1.5" fill="#FFFFFF" />
-      </g>
-
-      {/* Integrated Brand Typography Panel (Centered, Clean, Professional) */}
-      <g transform="translate(62, 5)">
-        {/* Main Word: ПОРЪЧКИ — Perfectly centered in this panel */}
-        <text
-          x="95"
-          y="21"
-          textAnchor="middle"
-          fontFamily="'Unbounded', var(--font-unbounded), -apple-system, system-ui, sans-serif"
-          fontWeight="900"
-          fontSize="20.5"
-          fill={light ? "#FBF8F1" : "#0F172A"}
-          letterSpacing="0.04em"
-        >
-          ПОРЪЧКИ
-        </text>
-
-        {/* Subtitle Panel Capsule — Symmetrically enlarged and centered */}
-        <g transform="translate(-1, 26)">
-          <rect
-            x="0"
-            y="0"
-            width="192"
-            height="22"
-            rx="11"
-            fill={light ? "#FFFFFF" : "#0284C7"}
-            fillOpacity={light ? "0.15" : "0.08"}
-            stroke={light ? "#38BDF8" : "#0284C7"}
-            strokeWidth="1.3"
-            strokeOpacity={light ? "0.45" : "0.25"}
-          />
-          <text
-            x="96"
-            y="14.8"
-            textAnchor="middle"
-            fontFamily="'Onest', var(--font-onest), -apple-system, system-ui, sans-serif"
-            fontWeight="800"
-            fontSize="10"
-            letterSpacing="1.2"
-          >
-            <tspan fill={light ? "#E2E8F0" : "#475569"}>ЗА </tspan>
-            <tspan fill="#FF4D6D" fontWeight="900">М</tspan>
-            <tspan fill="#F59E0B" fontWeight="900">А</tspan>
-            <tspan fill="#10B981" fontWeight="900">Л</tspan>
-            <tspan fill="#06B6D4" fontWeight="900">К</tspan>
-            <tspan fill="#8B5CF6" fontWeight="900">И</tspan>
-            <tspan fill={light ? "#E2E8F0" : "#334155"}> И ГОЛЕМИ</tspan>
-          </text>
-        </g>
-      </g>
-    </svg>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={light ? "/logo-light.png" : "/logo.png"}
+      alt="Поръчки за малки и големи"
+      width={1036}
+      height={291}
+      className={`select-none object-contain ${className}`}
+      loading="eager"
+      decoding="async"
+    />
   );
 }
 
