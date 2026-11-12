@@ -69,20 +69,31 @@ export function FacebookIcon({ className }: { className?: string }) {
 }
 
 export function Logo({ className = "", light = false }: { className?: string; light?: boolean }) {
+  if (light) {
+    return (
+      <Link
+        href="/"
+        aria-label={`${site.name} — начало`}
+        className={`group/logo inline-flex items-center rounded-2xl bg-white px-3.5 py-1.5 shadow-sm transition hover:bg-white/95 hover:scale-[1.02] ${className}`}
+      >
+        <LogoArt className="h-8 w-auto min-[400px]:h-9 sm:h-10" />
+      </Link>
+    );
+  }
+
   return (
     <Link
       href="/"
       aria-label={`${site.name} — начало`}
       className={`group/logo inline-flex items-center transition-transform duration-300 hover:scale-[1.02] ${className}`}
     >
-      <LogoArt light={light} className="h-9 w-auto min-[400px]:h-10 sm:h-11" />
+      <LogoArt className="h-9 w-auto min-[400px]:h-10 sm:h-11" />
     </Link>
   );
 }
 
 /**
  * The official store logo.
- * Supports light mode for dark backgrounds (e.g. Footer).
  */
 export function LogoArt({
   className = "",
@@ -96,7 +107,7 @@ export function LogoArt({
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={light ? "/logo-light.png" : "/logo.png"}
+      src="/logo.png"
       alt="Поръчки за малки и големи"
       width={1036}
       height={291}
