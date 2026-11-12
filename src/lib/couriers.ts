@@ -53,8 +53,8 @@ export const COURIERS: Record<CourierId, CourierMeta> = {
   boxnow: {
     id: "boxnow",
     name: "Box Now",
-    tagline: "Денонощни автомати (24/7 локъри)",
-    badge: "Box Now",
+    tagline: "Безплатна доставка · 24/7 соларни автомати",
+    badge: "Безплатна",
     color: "#15803d",
     bgLight: "#edfbf2",
     hasOffices: false,
@@ -90,7 +90,7 @@ export function getCouriersForDelivery(
   if (delivery === "office") {
     list = [COURIERS.econt, COURIERS.speedy, COURIERS.pigeon];
   } else if (delivery === "box") {
-    list = [COURIERS.speedy, COURIERS.econt, COURIERS.boxnow, COURIERS.pigeon];
+    list = [COURIERS.boxnow, COURIERS.speedy, COURIERS.econt, COURIERS.pigeon];
   } else if (delivery === "address") {
     list = [COURIERS.speedy, COURIERS.econt, COURIERS.pigeon];
   }

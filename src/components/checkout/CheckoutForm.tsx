@@ -3,7 +3,7 @@
 import { Banknote, CreditCard, Info, Loader2, Lock } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useId, useLayoutEffect, useState, useTransition, type FormEvent } from "react";
+import { useEffect, useId, useLayoutEffect, useState, useTransition, type FormEvent } from "react";
 import { placeOrder } from "@/actions/checkout";
 import { ProductVisual } from "@/components/product/PackShot";
 import { StoreLocation } from "@/components/StoreLocation";
@@ -62,6 +62,7 @@ function Field({
 
 function PaymentOption({
   active,
+  disabled = false,
   onSelect,
   value,
   icon,
@@ -70,6 +71,7 @@ function PaymentOption({
   children,
 }: {
   active: boolean;
+  disabled?: boolean;
   onSelect: () => void;
   value: Payment;
   icon: React.ReactNode;
@@ -79,16 +81,39 @@ function PaymentOption({
 }) {
   return (
     <label
-      className={`relative flex cursor-pointer gap-4 rounded-2xl border-2 p-4 transition ${active ? "border-forest bg-lime/25" : "border-line hover:border-ink/30"}`}
+      className={`relative flex gap-4 rounded-2xl border-2 p-4 transition ${
+        disabled
+          ? "cursor-not-allowed border-line/60 bg-sand/30 opacity-60"
+          : active
+          ? "cursor-pointer border-forest bg-lime/25"
+          : "cursor-pointer border-line hover:border-ink/30"
+      }`}
     >
-      <input type="radio" name="payment" value={value} checked={active} onChange={onSelect} className="peer sr-only" />
-      <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full ${active ? "bg-forest text-white" : "bg-sand text-ink"}`}>{icon}</span>
+      <input
+        type="radio"
+        name="payment"
+        value={value}
+        checked={active}
+        disabled={disabled}
+        onChange={disabled ? undefined : onSelect}
+        className="peer sr-only"
+      />
+      <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full ${disabled ? "bg-sand text-ink-soft" : active ? "bg-forest text-white" : "bg-sand text-ink"}`}>{icon}</span>
       <span className="min-w-0">
-        <span className="block font-semibold">{title}</span>
+        <span className="flex items-center gap-2 font-semibold">
+          {title}
+          {disabled && (
+            <span className="rounded bg-tomato/10 px-1.5 py-0.5 text-[0.65rem] font-bold text-tomato">
+              Недостъпно
+            </span>
+          )}
+        </span>
         <span className="mt-0.5 block text-sm text-ink-soft">{text}</span>
         {children}
       </span>
-      <span className="pointer-events-none absolute inset-0 rounded-2xl peer-focus-visible:ring-2 peer-focus-visible:ring-forest peer-focus-visible:ring-offset-2" />
+      {!disabled && (
+        <span className="pointer-events-none absolute inset-0 rounded-2xl peer-focus-visible:ring-2 peer-focus-visible:ring-forest peer-focus-visible:ring-offset-2" />
+      )}
     </label>
   );
 }
@@ -128,12 +153,23 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
     [],
   );
 
+  // When delivery is "До автомат" (box), enforce card payment only and default to BoxNow if not set
+  useEffect(() => {
+    if (delivery === "box") {
+      setPayment("card");
+      if (courier !== "boxnow" && !defaults.courier) {
+        setCourier("boxnow");
+      }
+    }
+  }, [delivery, courier, defaults.courier]);
+
+  const effectivePayment = delivery === "box" ? "card" : payment;
   const { subtotal } = cartTotals(items);
   const loyalty = defaults.loyalty;
   const redeem = loyalty ? redeemable(loyalty.balance, subtotal, loyalty.settings) : { points: 0, discount: 0 };
   const discount = usePoints ? redeem.discount : 0;
   const willEarn = loyalty ? pointsForGoods(subtotal - discount, loyalty.settings) : 0;
-  const shipping = shippingFor(delivery, subtotal);
+  const shipping = shippingFor(delivery, subtotal, courier);
   const method = DELIVERY_METHODS.find((d) => d.id === delivery)!;
   const pickup = delivery === "store";
 
@@ -177,7 +213,7 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
         note: text("note"),
         saveAsDefault: defaults.signedIn && saveAsDefault,
         usePoints: Boolean(defaults.loyalty) && usePoints,
-        payment,
+        payment: effectivePayment,
         items: items.map((i) => ({ id: i.id, qty: i.qty })),
       });
       if (result.ok) {
@@ -218,7 +254,7 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
                 setDelivery(d);
                 setSelectedOffice(null);
               }}
-              priceFor={(id) => shippingFor(id, subtotal)}
+              priceFor={(id) => shippingFor(id, subtotal, id === "box" ? courier : undefined)}
             />
           </div>
           {pickup ? (
@@ -272,37 +308,52 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
           <legend className="float-left mb-5 font-display text-lg font-semibold">3. Плащане</legend>
           <div className="clear-both grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Начин на плащане">
             <PaymentOption
-              active={payment === "cod"}
-              onSelect={() => setPayment("cod")}
+              active={effectivePayment === "cod"}
+              disabled={delivery === "box"}
+              onSelect={() => {
+                if (delivery !== "box") setPayment("cod");
+              }}
               value="cod"
               icon={<Banknote className="h-5 w-5" aria-hidden />}
               title={pickup ? "Плащане в магазина" : "Наложен платеж"}
               text={
-                pickup
+                delivery === "box"
+                  ? "Не се поддържа при доставка до автомат (автоматите не приемат пари в брой)."
+                  : pickup
                   ? "Плащаш в брой или с карта, когато вземеш поръчката."
                   : "Плащаш на куриера в брой или с карта, след като прегледаш пратката."
               }
             />
             <PaymentOption
-              active={payment === "card"}
+              active={effectivePayment === "card"}
               onSelect={() => setPayment("card")}
               value="card"
               icon={<CreditCard className="h-5 w-5" aria-hidden />}
               title="С карта онлайн"
-              text="Плащаш сигурно с дебитна или кредитна карта."
+              text={
+                delivery === "box"
+                  ? "Задължително за доставка до автомат. Плащаш сигурно с банкова карта."
+                  : "Плащаш сигурно с дебитна или кредитна карта."
+              }
             >
               <PaymentBrands className="mt-3" />
             </PaymentOption>
           </div>
-          {payment === "card" && (
+          {delivery === "box" ? (
+            <p role="status" className="mt-4 flex gap-2.5 rounded-2xl border border-lime/60 bg-lime/20 p-3.5 text-sm text-ink">
+              <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-forest" aria-hidden />
+              <span>
+                <strong>Задължително плащане с карта:</strong> Автоматите на BoxNow работят напълно автоматизирано и не приемат плащане в брой. Затова за доставка до автомат поръчката се заплаща сигурно с банкова карта.
+              </span>
+            </p>
+          ) : effectivePayment === "card" ? (
             <p role="status" className="mt-4 flex gap-2.5 rounded-2xl bg-sand px-4 py-3 text-sm">
               <Info className="mt-0.5 h-4 w-4 shrink-0 text-forest" aria-hidden />
               <span>
-                Онлайн плащането с карта ще бъде активно съвсем скоро. Дотогава избери „{pickup ? "Плащане в магазина" : "Наложен платеж"}“ — пак можеш да платиш с карта{" "}
-                {pickup ? "в магазина" : "на куриера"}.
+                Плащането се извършва сигурно с дебитна или кредитна карта през защитена банкова система.
               </span>
             </p>
-          )}
+          ) : null}
         </fieldset>
       </div>
 
@@ -367,18 +418,20 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
             {formError}
           </p>
         )}
-        {payment === "card" ? (
-          // Placeholder until a card provider is connected; the action refuses "card" as well.
-          <button type="button" disabled className={`${btn.lime} mt-5 w-full`}>
+        <button type="submit" disabled={pending || placed} className={`${btn.lime} mt-5 w-full`}>
+          {pending || placed ? (
+            <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+          ) : effectivePayment === "card" ? (
             <CreditCard className="h-[18px] w-[18px]" aria-hidden />
-            Плати с карта · скоро
-          </button>
-        ) : (
-          <button type="submit" disabled={pending || placed} className={`${btn.lime} mt-5 w-full`}>
-            {pending || placed ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <Lock className="h-[18px] w-[18px]" aria-hidden />}
-            {pending || placed ? "Изпращаме поръчката…" : "Потвърди поръчката"}
-          </button>
-        )}
+          ) : (
+            <Lock className="h-[18px] w-[18px]" aria-hidden />
+          )}
+          {pending || placed
+            ? "Изпращаме поръчката…"
+            : effectivePayment === "card"
+            ? "Потвърди поръчката с карта"
+            : "Потвърди поръчката"}
+        </button>
         <p className="mt-3 text-center text-xs leading-relaxed text-ink-soft">
           С натискането на бутона приемаш{" "}
           <Link href="/usloviya" className="underline underline-offset-2 hover:text-ink">

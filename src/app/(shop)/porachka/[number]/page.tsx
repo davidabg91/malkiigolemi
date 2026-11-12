@@ -60,7 +60,13 @@ async function Confirmation({ params }: Pick<Props, "params">) {
             </div>
           )}
           <div className="flex justify-between text-lg">
-            <dt className="font-semibold">{pickup ? "Общо (плащане в магазина)" : "Общо (наложен платеж)"}</dt>
+            <dt className="font-semibold">
+              {pickup
+                ? "Общо (плащане в магазина)"
+                : order.payment === "card"
+                ? "Общо (плащане с карта)"
+                : "Общо (наложен платеж)"}
+            </dt>
             <dd className="font-bold tabular-nums">{formatPrice(order.total)}</dd>
           </div>
         </dl>

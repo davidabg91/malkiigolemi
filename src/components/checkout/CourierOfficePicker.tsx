@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, MapPin, Package, Search, Store, X } from "lucide-react";
+import { Check, ChevronDown, CreditCard, MapPin, Package, Search, Store, X } from "lucide-react";
 import { CourierLogo } from "@/components/couriers/CourierLogos";
 import {
   COURIERS,
@@ -179,13 +179,28 @@ export function CourierOfficePicker({
                   )}
                 </div>
                 <div className="mt-2.5">
-                  <span className="block font-semibold text-sm text-ink">{c.name}</span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="block font-semibold text-sm text-ink">{c.name}</span>
+                    {c.id === "boxnow" && (
+                      <span className="inline-flex items-center rounded-full bg-lime px-2 py-0.5 text-[0.68rem] font-bold text-ink">
+                        Безплатна доставка
+                      </span>
+                    )}
+                  </div>
                   <span className="block text-[0.75rem] text-ink-soft leading-snug">{c.tagline}</span>
                 </div>
               </button>
             );
           })}
         </div>
+        {delivery === "box" && (
+          <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-lime/60 bg-lime/15 p-3.5 text-xs sm:text-sm text-ink leading-relaxed">
+            <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-forest" aria-hidden />
+            <div>
+              <strong className="font-bold text-forest">Безплатна доставка до автомат:</strong> Доставката с <strong>BoxNow</strong> до автомат е <strong>напълно безплатна (0.00 лв.)</strong>! За пратки до автомат е <strong>задължително плащане с карта</strong> — автоматите са денонощни/соларни и не поддържат наложен платеж в брой.
+            </div>
+          </div>
+        )}
         {errors.courier && (
           <p className="mt-1.5 text-sm font-medium text-tomato">{errors.courier}</p>
         )}

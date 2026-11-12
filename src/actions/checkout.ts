@@ -39,6 +39,9 @@ const input = z.object({
 }).superRefine((d, ctx) => {
   // Store pickup needs no address; every courier option does.
   if (d.delivery === "store") return;
+  if (d.delivery === "box" && d.payment !== "card") {
+    ctx.addIssue({ code: "custom", path: ["payment"], message: "Доставката до автомат изисква плащане с карта." });
+  }
   if (d.city.length < 2) ctx.addIssue({ code: "custom", path: ["city"], message: "Въведи населено място." });
   if (d.delivery === "office" || d.delivery === "box") {
     if (!d.courier) {
@@ -70,9 +73,8 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
     return { ok: false, error: "Моля, провери отбелязаните полета.", fieldErrors };
   }
   const data = parsed.data;
-  // The card option is on the page already, but there is no payment provider behind it yet.
-  if (data.payment === "card") {
-    return { ok: false, error: "Плащането с карта онлайн още не е активно. Избери плащане при получаване." };
+  if (data.delivery === "box" && data.payment !== "card") {
+    return { ok: false, error: "Доставката до автомат изисква плащане с карта." };
   }
   const pickup = data.delivery === "store";
   const toOffice = data.delivery === "office" || data.delivery === "box";
@@ -111,7 +113,7 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
     return { productId: p.id, name: `${p.name} ${p.unit}`.trim(), sku: p.sku, qty, price: unitPriceFor(p, qty) };
   });
   const subtotal = lines.reduce((sum, l) => sum + l.price * l.qty, 0);
-  const shipping = shippingFor(data.delivery, subtotal);
+  const shipping = shippingFor(data.delivery, subtotal, data.courier);
   const session = await getSession();
   const number = orderNumber();
 
