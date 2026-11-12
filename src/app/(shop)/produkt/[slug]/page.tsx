@@ -81,7 +81,7 @@ async function Content({ params }: Pick<Props, "params">) {
             className="relative isolate grid aspect-square place-items-center overflow-hidden rounded-tile lg:sticky lg:top-36 lg:aspect-[1/0.95]"
             style={{ background: isFull ? "#14261c" : `color-mix(in srgb, ${product.color} 14%, #f6f2e8)` }}
           >
-            <ProductZoom label={product.name} zoomed={<ProductVisual product={product} size={1200} className="h-full w-full" />}>
+            <ProductZoom label={product.name} zoomed={<ProductVisual product={product} size={1200} className="h-full w-full object-contain rounded-2xl" />}>
               <ProductVisual
                 product={product}
                 size={640}

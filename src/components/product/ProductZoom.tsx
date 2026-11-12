@@ -44,16 +44,26 @@ export function ProductZoom({ label, zoomed, children }: { label: string; zoomed
             aria-modal="true"
             aria-label={label}
             onClick={() => setOpen(false)}
-            className="fixed inset-0 z-[100] grid animate-pop cursor-zoom-out place-items-center bg-[#f6f2e8]/95 p-4 backdrop-blur-sm sm:p-10"
+            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 p-4 backdrop-blur-md transition-all duration-300 sm:p-8"
           >
-            <div className="grid h-full max-h-[min(92dvh,1100px)] w-full max-w-[min(92vw,1100px)] place-items-center [&>*]:max-h-full [&>*]:max-w-full">
-              {zoomed}
+            <div
+              className="relative flex aspect-square max-h-[82vh] max-w-[min(88vw,750px)] w-full items-center justify-center overflow-hidden rounded-3xl bg-neutral-900/60 p-2 shadow-2xl ring-1 ring-white/10 sm:p-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex h-full w-full items-center justify-center [&>*]:max-h-full [&>*]:max-w-full [&>*]:object-contain">
+                {zoomed}
+              </div>
             </div>
+
+            <p className="mt-3 text-center text-xs font-medium text-white/70">
+              {label} · <span className="text-white/40">Натиснете където и да е за затваряне</span>
+            </p>
+
             <button
               type="button"
               onClick={() => setOpen(false)}
               aria-label="Затвори"
-              className="absolute right-4 top-4 grid h-12 w-12 place-items-center rounded-full bg-ink text-cream shadow-lift transition hover:scale-105"
+              className="absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-white/15 text-white backdrop-blur transition hover:bg-white/25 hover:scale-105 sm:right-6 sm:top-6"
             >
               <X className="h-5 w-5" />
             </button>
