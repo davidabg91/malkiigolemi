@@ -1,4 +1,4 @@
-import { Clock, Mail, MapPin, Phone } from "lucide-react";
+import { ArrowUpRight, Clock, Mail, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
 import { FacebookIcon, Logo } from "@/components/ui";
 import { getCategoryTree } from "@/lib/queries";
@@ -96,9 +96,21 @@ export async function Footer() {
         </div>
       </div>
       <div className="border-t border-cream/10">
-        <p className="container-shop py-5 text-sm text-cream/50">
-          © 2026 {site.name}. Всички права запазени.
-        </p>
+        <div className="container-shop flex flex-col gap-1.5 py-5 text-sm text-cream/50 sm:flex-row sm:items-center sm:justify-between">
+          <p>© 2026 {site.name}. Всички права запазени.</p>
+          <p>
+            Изработка и поддръжка:{" "}
+            <a
+              href="https://davidax.org"
+              target="_blank"
+              rel="noopener"
+              className="inline-flex items-center gap-1 font-semibold text-cream/80 transition hover:text-cyan-300"
+            >
+              DavidaX
+              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+            </a>
+          </p>
+        </div>
       </div>
     </footer>
   );
