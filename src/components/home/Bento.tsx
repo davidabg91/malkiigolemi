@@ -1,7 +1,7 @@
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { ProductVisual } from "@/components/product/PackShot";
-import { btn, ShopMark } from "@/components/ui";
+import { btn } from "@/components/ui";
 import { optimizedImage } from "@/lib/optimized-image";
 import type { CategoryNode, ProductCardData } from "@/lib/queries";
 import { TONES } from "@/lib/site";
@@ -255,7 +255,6 @@ export function Bento({
     >
       <div className="relative isolate col-span-2 hidden animate-rise flex-col overflow-hidden rounded-tile bg-forest-deep p-7 text-cream sm:p-10 lg:flex lg:min-h-[24rem] lg:[grid-area:intro]">
         <div className="absolute -right-12 -top-12 -z-10 h-72 w-72 rounded-full bg-cyan-500/10 p-8 blur-2xl" />
-        <ShopMark className="absolute -right-10 -top-8 -z-10 h-64 w-64 text-cyan-400/20 sm:h-72 sm:w-72" />
         <span className="absolute -bottom-24 -left-20 -z-10 h-64 w-64 rounded-full bg-cyan-900/40" aria-hidden />
         <p className="inline-flex w-fit items-center gap-2 rounded-full bg-cyan-400/15 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300 backdrop-blur">
           Официален магазин на общността
