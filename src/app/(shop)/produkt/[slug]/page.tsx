@@ -69,6 +69,8 @@ async function Content({ params }: Pick<Props, "params">) {
       : undefined,
   };
 
+  const isFull = Boolean(product.image && /\.(jpe?g|webp)$/i.test(product.image));
+
   return (
     <div className="space-y-16 sm:space-y-20">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
@@ -77,10 +79,18 @@ async function Content({ params }: Pick<Props, "params">) {
         <div className="mt-6 grid gap-8 lg:grid-cols-2 lg:gap-14">
           <div
             className="relative isolate grid aspect-square place-items-center overflow-hidden rounded-tile lg:sticky lg:top-36 lg:aspect-[1/0.95]"
-            style={{ background: `color-mix(in srgb, ${product.color} 14%, #f6f2e8)` }}
+            style={{ background: isFull ? "#14261c" : `color-mix(in srgb, ${product.color} 14%, #f6f2e8)` }}
           >
             <ProductZoom label={product.name} zoomed={<ProductVisual product={product} size={1200} className="h-full w-full" />}>
-              <ProductVisual product={product} size={640} className="h-[82%] w-[82%] animate-rise drop-shadow-[0_24px_24px_rgb(20_38_28/0.18)]" />
+              <ProductVisual
+                product={product}
+                size={640}
+                className={
+                  isFull
+                    ? "h-full w-full object-cover transition-transform duration-500 hover:scale-105"
+                    : "h-[82%] w-[82%] animate-rise drop-shadow-[0_24px_24px_rgb(20_38_28/0.18)]"
+                }
+              />
             </ProductZoom>
             <div className="absolute left-5 top-5 scale-110 origin-top-left">
               <Badges product={cardData} />

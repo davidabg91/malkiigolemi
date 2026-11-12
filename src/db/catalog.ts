@@ -277,6 +277,7 @@ const P: Row[] = [
   ["konstruktori-i-lego", "LEGO", "Конструктор LEGO Classic Творчески кубчета", "1 бр", 3990, "box", "#D8402B", { feat: true, isNew: true, image: "/igrachki-lego.png", desc: "Класически цветен конструктор LEGO за стимулиране на детското въображение, креативност и пространствено мислене. Подходящ за деца над 4 години." }],
   ["plyusheni-igrachki", "Aurora World", "Плюшено мече Кристофър с панделка 35см", "1 бр", 2490, "box", "#C98B3E", { feat: true, isNew: true, image: "/igrachki-bear.png", desc: "Изключително меко и пухкаво плюшено мече от хипоалергенни материали. Перфектният гушкав приятел за сладки сънища и весели игри." }],
   ["kolichki-i-figurki", "Hot Wheels", "Спортна метална количка Die-Cast Speedster", "1 бр", 690, "box", "#C82D2D", { feat: true, isNew: true, image: "/igrachki-car.png", desc: "Детайлен метален модел на бърз спортен автомобил в ярко червен цвят с хромирани джанти и аеродинамичен спойлер." }],
+  ["kolichki-i-figurki", "Hape", "Ретро дървена количка Vintage", "1 бр", 2490, "box", "#2D5A43", { feat: true, isNew: true, image: "/darvena-kolichka-retro.jpg", desc: "Ръчно полирана ретро количка от естествено масивно дърво с нетоксични бои на водна основа в приятен пастелен нюанс. Гладки заоблени ръбове, въртящи се колела и удобен захват за малки детски ръчички." }],
   ["obrazovatelni-igri", "Hape", "Монтесори дървена пирамида за нанизване Дъга", "1 бр", 2190, "box", "#4FB3A2", { feat: true, isNew: true, image: "/igrachki-wood.png", desc: "Образователна играчка по метода Монтесори от естествено масивно дърво с безопасни бои на водна основа. Развива фината моторика и координацията." }],
 ];
 
@@ -520,6 +521,19 @@ export async function syncCategoriesAndToys(db: Db) {
         color: "#4FB3A2",
         desc: "Образователна играчка по метода Монтесори от естествено масивно дърво с безопасни бои на водна основа. Развива фината моторика и координацията.",
       },
+      {
+        sub: "kolichki-i-figurki",
+        brand: "Hape",
+        name: "Ретро дървена количка Vintage",
+        unit: "1 бр",
+        price: 2490,
+        oldPrice: 2990,
+        sku: "TOY-105",
+        image: "/darvena-kolichka-retro.jpg",
+        pack: "box",
+        color: "#2D5A43",
+        desc: "Ръчно полирана ретро количка от естествено масивно дърво с нетоксични бои на водна основа в приятен пастелен нюанс. Гладки заоблени ръбове, въртящи се колела и удобен захват за малки детски ръчички.",
+      },
     ];
 
     for (const p of TOY_PRODUCTS) {
@@ -555,7 +569,59 @@ export async function syncCategoriesAndToys(db: Db) {
     return { synced: true, message: "Added Играчки, deactivated Вода и напитки" };
   }
 
-  return { synced: false, message: "Играчки already exists" };
+  // Ensure any missing toy products are also added if Играчки already exists
+  const subcats = await db.select().from(schema.categories).where(eq(schema.categories.parentId, existingToys.id));
+  const subMap = new Map(subcats.map((c) => [c.slug, c.id]));
+  const allBrands = await db.select().from(schema.brands);
+  const brandMap = new Map(allBrands.map((b) => [b.name, b.id]));
+
+  const TOY_PRODUCTS_EXTRA = [
+    {
+      sub: "kolichki-i-figurki",
+      brand: "Hape",
+      name: "Ретро дървена количка Vintage",
+      unit: "1 бр",
+      price: 2490,
+      oldPrice: 2990,
+      sku: "TOY-105",
+      image: "/darvena-kolichka-retro.jpg",
+      pack: "box",
+      color: "#2D5A43",
+      desc: "Ръчно полирана ретро количка от естествено масивно дърво с нетоксични бои на водна основа в приятен пастелен нюанс. Гладки заоблени ръбове, въртящи се колела и удобен захват за малки детски ръчички.",
+    },
+  ];
+
+  for (const p of TOY_PRODUCTS_EXTRA) {
+    const brandId = brandMap.get(p.brand);
+    const categoryId = subMap.get(p.sub);
+    if (!brandId || !categoryId) continue;
+
+    const [existing] = await db.select().from(schema.products).where(eq(schema.products.sku, p.sku));
+    if (existing) continue;
+
+    const fullName = `${p.name} ${p.brand}`;
+    await db.insert(schema.products).values({
+      slug: `${slugify(fullName)}-${p.sku}`,
+      sku: p.sku,
+      name: p.name,
+      description: p.desc,
+      searchText: searchTextOf(p.name, p.brand, p.sku, p.unit),
+      categoryId,
+      brandId,
+      price: p.price,
+      oldPrice: p.oldPrice,
+      unit: p.unit,
+      image: p.image,
+      pack: p.pack,
+      color: p.color,
+      stock: 50,
+      isNew: true,
+      isFeatured: true,
+      active: true,
+    });
+  }
+
+  return { synced: true, message: "Играчки synced" };
 }
 
 /** Creates the admin account from ADMIN_EMAIL / ADMIN_PASSWORD, or resets its password to match them. */

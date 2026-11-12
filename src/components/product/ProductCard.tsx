@@ -39,6 +39,7 @@ export function ProductStamp({ className = "" }: { className?: string }) {
 
 export function ProductCard({ product }: { product: ProductCardData }) {
   const href = `/produkt/${product.slug}`;
+  const isFull = Boolean(product.image && /\.(jpe?g|webp)$/i.test(product.image));
   return (
     <article className="group relative flex h-full flex-col rounded-card bg-paper p-2.5 shadow-soft transition duration-300 hover:-translate-y-1 hover:shadow-lift sm:p-3">
       <Link
@@ -46,11 +47,15 @@ export function ProductCard({ product }: { product: ProductCardData }) {
         tabIndex={-1}
         aria-hidden
         className="relative block aspect-square overflow-hidden rounded-2xl"
-        style={{ background: `color-mix(in srgb, ${product.color} 11%, #f6f2e8)` }}
+        style={{ background: isFull ? "#14261c" : `color-mix(in srgb, ${product.color} 11%, #f6f2e8)` }}
       >
         <ProductVisual
           product={product}
-          className="absolute inset-0 m-auto h-[88%] w-[88%] transition-transform duration-500 ease-out-soft group-hover:-rotate-3 group-hover:scale-[1.07]"
+          className={`absolute inset-0 m-auto ${
+            isFull
+              ? "h-full w-full transition-transform duration-500 ease-out-soft group-hover:scale-105"
+              : "h-[88%] w-[88%] transition-transform duration-500 ease-out-soft group-hover:-rotate-3 group-hover:scale-[1.07]"
+          }`}
         />
         <ProductStamp className="bottom-1.5 right-1.5 h-4 px-1 py-0.5 sm:h-[1.1rem]" />
       </Link>

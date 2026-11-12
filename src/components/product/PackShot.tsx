@@ -290,9 +290,19 @@ export function ProductVisual({
   size?: number;
 }) {
   if (product.image) {
+    const isFullPhoto = /\.(jpe?g|webp)$/i.test(product.image);
     // Multiply blends a studio photo's white backdrop into the tinted card behind it.
+    // Full lifestyle photos (JPG) cover the panel with their own natural background without multiply.
     // eslint-disable-next-line @next/next/no-img-element -- sized by the caller's classes; the file itself is resized by optimizedImage
-    return <img {...optimizedImage(product.image, size)} alt={product.name} loading="lazy" decoding="async" className={`${className ?? ""} object-contain mix-blend-multiply`} />;
+    return (
+      <img
+        {...optimizedImage(product.image, size)}
+        alt={product.name}
+        loading="lazy"
+        decoding="async"
+        className={`${className ?? ""} ${isFullPhoto ? "object-cover" : "object-contain mix-blend-multiply"}`}
+      />
+    );
   }
   return <PackShot pack={product.pack} color={product.color} label={product.brand} className={className} title={product.name} />;
 }
