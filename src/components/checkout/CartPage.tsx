@@ -2,7 +2,7 @@
 
 import { ArrowRight, Heart, ShoppingBag } from "lucide-react";
 import Link from "next/link";
-import { CartLine, ShippingMeter } from "@/components/layout/CartDrawer";
+import { CartLine } from "@/components/layout/CartDrawer";
 import { ProductGrid } from "@/components/product/ProductCard";
 import { btn } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
@@ -57,7 +57,6 @@ export function CartPage() {
 
       <aside className="space-y-4 rounded-tile bg-paper p-6 shadow-soft lg:sticky lg:top-36" aria-label="Обобщение">
         <h2 className="font-display text-lg font-semibold">Обобщение</h2>
-        <ShippingMeter subtotal={subtotal} />
         <dl className="space-y-2 text-[0.95rem]">
           <div className="flex justify-between">
             <dt className="text-ink-soft">Продукти ({count})</dt>
