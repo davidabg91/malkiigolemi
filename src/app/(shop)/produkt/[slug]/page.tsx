@@ -1,8 +1,9 @@
-import { Edit3, PackageCheck, ShieldCheck, Truck } from "lucide-react";
+import { PackageCheck, ShieldCheck, Truck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { ProductAdminActions } from "@/components/admin/ProductAdminActions";
 import { BuyBox } from "@/components/product/AddToCart";
 import { Carousel } from "@/components/product/Carousel";
 import { ProductVisual } from "@/components/product/PackShot";
@@ -22,7 +23,7 @@ type Props = PageProps<"/produkt/[slug]">;
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const data = await getProduct(slug);
-  if (!data) return { title: "Продуктът не е намерен" };
+  if (!data || !data.product.active) return { title: "Продуктът не е намерен" };
   const { product } = data;
   return {
     title: `${product.name}${product.brand ? ` ${product.brand}` : ""} ${product.unit}`.trim(),
@@ -35,6 +36,9 @@ async function Content({ params }: Pick<Props, "params">) {
   const [data, session] = await Promise.all([getProduct(slug), getSession()]);
   if (!data) notFound();
   const isAdmin = session?.role === "admin";
+  if ((!data.product.active || data.category?.active === false || data.parent?.active === false) && !isAdmin) {
+    notFound();
+  }
   const { product, category, parent, related } = data;
   const { description, ...cardData } = product;
   const off = discountPercent(product.price, product.oldPrice);
@@ -80,15 +84,7 @@ async function Content({ params }: Pick<Props, "params">) {
       <div>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Breadcrumbs items={crumbs} />
-          {isAdmin && (
-            <Link
-              href={`/admin/produkti/${product.id}?returnUrl=${encodeURIComponent(`/produkt/${product.slug}`)}`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-forest/30 bg-forest/10 px-3.5 py-1.5 text-xs font-semibold text-forest shadow-soft transition hover:bg-forest hover:text-white"
-            >
-              <Edit3 className="h-3.5 w-3.5" />
-              <span>Редактирай артикула</span>
-            </Link>
-          )}
+          {isAdmin && <ProductAdminActions product={product} />}
         </div>
         <div className="mt-6 grid gap-8 lg:grid-cols-2 lg:gap-14">
           <div

@@ -311,14 +311,12 @@ export async function getProduct(slug: string) {
     .leftJoin(brands, eq(products.brandId, brands.id))
     .where(eq(products.slug, slug))
     .limit(1);
-  if (!row || !row.active) return null;
+  if (!row) return null;
 
   const [category] = await db.select().from(categories).where(eq(categories.id, row.categoryId)).limit(1);
   const parent = category?.parentId
     ? (await db.select().from(categories).where(eq(categories.id, category.parentId)).limit(1))[0]
     : null;
-  // A product in a switched-off category is not on sale, even through a saved link.
-  if (category?.active === false || parent?.active === false) return null;
 
   const related = await cards()
     .where(and(sellable, eq(products.categoryId, row.categoryId), sql`${products.id} != ${row.id}`))
