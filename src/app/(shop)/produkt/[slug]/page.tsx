@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { AdminProductBar } from "@/components/admin/AdminProductBar";
 import { BuyBox } from "@/components/product/AddToCart";
 import { Carousel } from "@/components/product/Carousel";
 import { ProductVisual } from "@/components/product/PackShot";
@@ -78,14 +77,13 @@ async function Content({ params }: Pick<Props, "params">) {
   return (
     <div className="space-y-16 sm:space-y-20">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
-      {isAdmin && <AdminProductBar product={product} />}
       <div>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Breadcrumbs items={crumbs} />
           {isAdmin && (
             <Link
               href={`/admin/produkti/${product.id}?returnUrl=${encodeURIComponent(`/produkt/${product.slug}`)}`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-forest/20 bg-forest/5 px-3 py-1 text-xs font-semibold text-forest transition hover:bg-forest hover:text-sand"
+              className="inline-flex items-center gap-1.5 rounded-full border border-forest/30 bg-forest/10 px-3.5 py-1.5 text-xs font-semibold text-forest shadow-soft transition hover:bg-forest hover:text-white"
             >
               <Edit3 className="h-3.5 w-3.5" />
               <span>Редактирай артикула</span>
