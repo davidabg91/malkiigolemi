@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronLeft, ChevronRight, GripHorizontal, Loader2, SlidersHorizontal, Sparkles } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, GripHorizontal, Loader2, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { checkIsAdmin, reorderCategories } from "@/actions/admin";
@@ -181,9 +181,6 @@ export function CategoryNav({
       {isEditing && (
         <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-forest-deep px-4 py-2.5 text-cream shadow-lift animate-rise">
           <div className="flex items-center gap-2 text-xs sm:text-sm">
-            <span className="grid h-6 w-6 place-items-center rounded-lg bg-lime text-ink">
-              <Sparkles className="h-3.5 w-3.5" />
-            </span>
             <span className="font-semibold text-lime">Режим на подреждане:</span>
             <span className="text-cream/80">
               Хвани и премести с мишката или използвай стрелките ‹ ›.

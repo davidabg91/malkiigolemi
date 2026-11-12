@@ -4,6 +4,7 @@ import { Bento } from "@/components/home/Bento";
 import { FacebookSection } from "@/components/home/FacebookSection";
 import { OriginTabs } from "@/components/home/OriginTabs";
 import { PromoRibbon } from "@/components/home/PromoRibbon";
+import { RegisterBanner } from "@/components/home/RegisterBanner";
 import { Carousel } from "@/components/product/Carousel";
 import { ProductVisual } from "@/components/product/PackShot";
 import { ProductCard } from "@/components/product/ProductCard";
@@ -24,7 +25,11 @@ const BENEFITS = [
 const seeAll = "inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-sm font-semibold text-forest hover:underline sm:gap-1.5 sm:text-base";
 
 export default async function HomePage() {
-  const [tree, showcase, home] = await Promise.all([getCategoryTree(), getCategoryShowcase(), getHomeData()]);
+  const [tree, showcase, home] = await Promise.all([
+    getCategoryTree(),
+    getCategoryShowcase(),
+    getHomeData(),
+  ]);
   const total = tree.reduce((sum, c) => sum + c.count, 0);
 
   return (
@@ -99,6 +104,8 @@ export default async function HomePage() {
           products: o.products,
         }))}
       />
+
+      <RegisterBanner />
 
       <FacebookSection />
 

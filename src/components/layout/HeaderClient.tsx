@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Heart, LayoutGrid, Loader2, Menu, Phone, ShoppingBag, Sparkles, User, X } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Heart, LayoutGrid, Loader2, Menu, Phone, ShoppingBag, User, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -282,7 +282,7 @@ export function HeaderClient({ tree }: { tree: MenuCategory[] }) {
             }`}
           >
             {megaReordering ? (
-              <Sparkles className="h-[18px] w-[18px] text-lime animate-pulse" />
+              <LayoutGrid className="h-[18px] w-[18px] text-lime animate-pulse" />
             ) : mega ? (
               <X className="h-[18px] w-[18px]" />
             ) : (
@@ -341,10 +341,7 @@ export function HeaderClient({ tree }: { tree: MenuCategory[] }) {
               {/* Admin reordering banner inside Mega Menu */}
               {megaReordering && (
                 <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-forest-deep px-5 py-3.5 text-cream shadow-lift animate-rise">
-                  <div className="flex items-center gap-2.5 text-sm">
-                    <span className="grid h-7 w-7 place-items-center rounded-xl bg-lime text-ink">
-                      <Sparkles className="h-4 w-4" />
-                    </span>
+                  <div className="flex items-center gap-2 text-sm">
                     <div>
                       <span className="font-bold text-lime">Режим на подреждане:</span>
                       <span className="ml-2 text-xs text-cream/80 sm:text-sm">
@@ -536,7 +533,6 @@ export function HeaderClient({ tree }: { tree: MenuCategory[] }) {
                     {mobileReordering && (
                       <div className="sticky top-0 z-20 mb-3 flex items-center justify-between rounded-2xl bg-forest-deep px-4 py-2.5 text-cream shadow-lift animate-rise">
                         <div className="flex items-center gap-2 text-xs">
-                          <Sparkles className="h-4 w-4 text-lime" />
                           <span className="font-bold text-lime">Подреждане на категории:</span>
                         </div>
                         <button
