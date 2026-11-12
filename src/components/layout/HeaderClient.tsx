@@ -1,15 +1,16 @@
 "use client";
 
-import { ChevronDown, Heart, LayoutGrid, Menu, Phone, ShoppingBag, User, X } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Heart, LayoutGrid, Loader2, Menu, Phone, ShoppingBag, Sparkles, User, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
+import { checkIsAdmin, reorderCategories } from "@/actions/admin";
 import { CategoryIcon, FacebookIcon, Logo } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
 import { site, TONES } from "@/lib/site";
 import { cartTotals, useCart, useHydrated, useWishlist } from "@/lib/store";
-import { CategoryNav } from "./CategoryNav";
+import { arrayMove, CategoryNav } from "./CategoryNav";
 import { SearchBox } from "./SearchBox";
 
 export type MenuCategory = {
@@ -43,6 +44,14 @@ function CountBadge({ n, className = "-right-0.5 -top-0.5" }: { n: number; class
 }
 
 export function HeaderClient({ tree }: { tree: MenuCategory[] }) {
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [catItems, setCatItems] = useState<MenuCategory[]>(tree);
+  const [isReordering, setIsReordering] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [savedToast, setSavedToast] = useState(false);
+  const [draggingId, setDraggingId] = useState<number | null>(null);
+  const [dragOverId, setDragOverId] = useState<number | null>(null);
+
   const [mega, setMega] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
@@ -54,6 +63,79 @@ export function HeaderClient({ tree }: { tree: MenuCategory[] }) {
   const { count, subtotal } = cartTotals(hydrated ? items : []);
 
   useLockScroll(drawer);
+
+  useEffect(() => {
+    checkIsAdmin().then((res) => {
+      if (res) setIsAdmin(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!isReordering) {
+      setCatItems(tree);
+    }
+  }, [tree, isReordering]);
+
+  const catLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const catStartPos = useRef<{ x: number; y: number } | null>(null);
+  const catHasLongPressed = useRef(false);
+
+  const handleCatPointerDown = (e: React.PointerEvent) => {
+    if (!isAdmin) return;
+    catHasLongPressed.current = false;
+    catStartPos.current = { x: e.clientX, y: e.clientY };
+    catLongPressTimer.current = setTimeout(() => {
+      catHasLongPressed.current = true;
+      if (typeof window !== "undefined" && "vibrate" in navigator) {
+        try {
+          navigator.vibrate([45, 30, 45]);
+        } catch {}
+      }
+      setMega(true);
+      setIsReordering(true);
+    }, 450);
+  };
+
+  const handleCatPointerMove = (e: React.PointerEvent) => {
+    if (!catStartPos.current || !catLongPressTimer.current) return;
+    const dx = Math.abs(e.clientX - catStartPos.current.x);
+    const dy = Math.abs(e.clientY - catStartPos.current.y);
+    if (dx > 8 || dy > 8) {
+      clearTimeout(catLongPressTimer.current);
+      catLongPressTimer.current = null;
+    }
+  };
+
+  const handleCatPointerUp = () => {
+    if (catLongPressTimer.current) {
+      clearTimeout(catLongPressTimer.current);
+      catLongPressTimer.current = null;
+    }
+  };
+
+  const handleCatClick = () => {
+    if (catHasLongPressed.current) {
+      catHasLongPressed.current = false;
+      return;
+    }
+    setMega((v) => !v);
+  };
+
+  const handleSaveAndExit = () => {
+    startTransition(async () => {
+      try {
+        await reorderCategories(catItems.map((c) => c.id));
+        setSavedToast(true);
+        setTimeout(() => setSavedToast(false), 3000);
+      } catch (err) {
+        console.error("Failed to reorder categories:", err);
+      } finally {
+        setIsReordering(false);
+        setDraggingId(null);
+        setDragOverId(null);
+      }
+    });
+  };
 
   useEffect(() => {
     if (!mega) return;
@@ -86,12 +168,28 @@ export function HeaderClient({ tree }: { tree: MenuCategory[] }) {
 
           <button
             type="button"
-            onClick={() => setMega((v) => !v)}
+            onClick={handleCatClick}
+            onPointerDown={handleCatPointerDown}
+            onPointerMove={handleCatPointerMove}
+            onPointerUp={handleCatPointerUp}
+            onPointerCancel={handleCatPointerUp}
             aria-expanded={mega}
             aria-controls="mega-menu"
-            className={`ml-2 hidden h-12 items-center gap-2 rounded-full px-5 font-semibold transition lg:inline-flex ${mega ? "bg-ink text-cream" : "bg-forest text-white hover:bg-forest-deep"}`}
+            className={`ml-2 hidden h-12 items-center gap-2 rounded-full px-5 font-semibold transition lg:inline-flex ${
+              isReordering
+                ? "bg-forest-deep ring-2 ring-lime text-lime shadow-lift"
+                : mega
+                ? "bg-ink text-cream"
+                : "bg-forest text-white hover:bg-forest-deep"
+            }`}
           >
-            {mega ? <X className="h-[18px] w-[18px]" /> : <LayoutGrid className="h-[18px] w-[18px]" />}
+            {isReordering ? (
+              <Sparkles className="h-[18px] w-[18px] text-lime animate-pulse" />
+            ) : mega ? (
+              <X className="h-[18px] w-[18px]" />
+            ) : (
+              <LayoutGrid className="h-[18px] w-[18px]" />
+            )}
             Категории
           </button>
 
@@ -127,7 +225,14 @@ export function HeaderClient({ tree }: { tree: MenuCategory[] }) {
 
         <SearchBox className="pb-3 md:hidden" />
 
-        <CategoryNav tree={tree} />
+        <CategoryNav
+          tree={tree}
+          items={catItems}
+          setItems={setCatItems}
+          isEditing={isReordering}
+          setIsEditing={setIsReordering}
+          isAdmin={isAdmin}
+        />
       </div>
 
       {/* Desktop mega menu */}
@@ -141,38 +246,153 @@ export function HeaderClient({ tree }: { tree: MenuCategory[] }) {
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             className="absolute inset-x-0 top-full hidden border-b border-line bg-paper shadow-lift lg:block"
           >
-            <div className="container-shop grid grid-cols-4 gap-x-8 gap-y-7 py-8">
-              {tree.map((c) => {
-                const tone = TONES[c.tone] ?? TONES.cream;
-                return (
-                  <div key={c.id}>
-                    <Link href={`/kategoria/${c.slug}`} onClick={() => setMega(false)} className="group flex items-center gap-3">
-                      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl transition group-hover:scale-105" style={{ background: tone.bg, color: tone.ink }}>
-                        <CategoryIcon name={c.icon} className="h-5 w-5" />
+            <div className="container-shop py-8">
+              {/* Admin reordering banner */}
+              {isReordering && (
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-forest-deep px-5 py-3.5 text-cream shadow-lift animate-rise">
+                  <div className="flex items-center gap-2.5 text-sm">
+                    <span className="grid h-7 w-7 place-items-center rounded-xl bg-lime text-ink">
+                      <Sparkles className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <span className="font-bold text-lime">Режим на подреждане:</span>
+                      <span className="ml-2 text-xs text-cream/80 sm:text-sm">
+                        Хвани и премести с мишката или използвай стрелките ‹ ›.
                       </span>
-                      <span className="font-semibold group-hover:text-forest">{c.name}</span>
-                    </Link>
-                    <ul className="mt-3 space-y-1.5 pl-14">
-                      {c.children.map((s) => (
-                        <li key={s.slug}>
-                          <Link href={`/kategoria/${c.slug}/${s.slug}`} onClick={() => setMega(false)} className="text-sm text-ink-soft hover:text-ink hover:underline">
-                            {s.name}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
+                    </div>
                   </div>
-                );
-              })}
-              <div className="flex flex-col gap-3">
-                <Link href="/promo" onClick={() => setMega(false)} className="rounded-2xl bg-tomato px-5 py-4 font-semibold text-white transition hover:brightness-95">
-                  Промоции
-                  <span className="mt-0.5 block text-sm font-normal text-white/85">Намаления и цени за количество</span>
-                </Link>
-                <Link href="/novi" onClick={() => setMega(false)} className="rounded-2xl bg-lime px-5 py-4 font-semibold text-ink transition hover:bg-lime-deep">
-                  Нови продукти
-                  <span className="mt-0.5 block text-sm font-normal text-ink/75">Току-що пристигнали</span>
-                </Link>
+                  <button
+                    type="button"
+                    onClick={handleSaveAndExit}
+                    disabled={isPending}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-lime px-5 py-2 text-xs font-bold text-ink shadow transition hover:bg-lime-deep hover:scale-105 active:scale-95 disabled:opacity-50"
+                  >
+                    {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                    <span>{isPending ? "Запазване..." : "Готово"}</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Saved toast */}
+              {savedToast && (
+                <div className="mb-4 flex items-center gap-2 rounded-xl bg-forest px-4 py-2 text-xs font-semibold text-white shadow-soft animate-rise">
+                  <Check className="h-4 w-4 text-lime" />
+                  <span>Новата подредба на категориите е запазена успешно и се показва на всички!</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-4 gap-x-8 gap-y-7">
+                {catItems.map((c, index) => {
+                  const tone = TONES[c.tone] ?? TONES.cream;
+                  const isOdd = index % 2 !== 0;
+                  const isCurrentDragging = draggingId === c.id;
+                  const isOver = dragOverId === c.id && draggingId !== c.id;
+                  const wiggleClass = isReordering
+                    ? isOdd
+                      ? "animate-[ios-jiggle_0.28s_ease-in-out_infinite_alternate]"
+                      : "animate-[ios-jiggle-alt_0.31s_ease-in-out_infinite_alternate]"
+                    : "";
+
+                  return (
+                    <div
+                      key={c.id}
+                      draggable={isReordering}
+                      onDragStart={(e) => {
+                        if (!isReordering) return;
+                        setDraggingId(c.id);
+                        e.dataTransfer.effectAllowed = "move";
+                        e.dataTransfer.setData("text/plain", String(c.id));
+                      }}
+                      onDragOver={(e) => {
+                        if (!isReordering || draggingId === null) return;
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "move";
+                        if (dragOverId !== c.id) setDragOverId(c.id);
+                      }}
+                      onDrop={(e) => {
+                        if (!isReordering || draggingId === null) return;
+                        e.preventDefault();
+                        const fromIndex = catItems.findIndex((x) => x.id === draggingId);
+                        const toIndex = catItems.findIndex((x) => x.id === c.id);
+                        if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
+                          setCatItems((prev) => arrayMove(prev, fromIndex, toIndex));
+                        }
+                        setDraggingId(null);
+                        setDragOverId(null);
+                      }}
+                      onDragEnd={() => {
+                        setDraggingId(null);
+                        setDragOverId(null);
+                      }}
+                      className={`relative rounded-2xl transition-all ${wiggleClass} ${
+                        isCurrentDragging ? "opacity-30 scale-95" : ""
+                      } ${isOver ? "ring-2 ring-lime ring-offset-4 bg-sand/40 p-2" : ""}`}
+                    >
+                      {isReordering ? (
+                        <div className="rounded-2xl border border-forest/20 bg-cream/70 p-3 shadow-soft">
+                          <div className="flex items-center justify-between gap-1 mb-2">
+                            <button
+                              type="button"
+                              onClick={() => setCatItems((prev) => arrayMove(prev, index, index - 1))}
+                              disabled={index === 0}
+                              className="grid h-6 w-6 place-items-center rounded-full bg-sand text-ink hover:bg-forest hover:text-white disabled:opacity-20"
+                              title="Премести наляво"
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                            </button>
+                            <span className="text-xs font-mono font-bold text-ink-soft">#{index + 1}</span>
+                            <button
+                              type="button"
+                              onClick={() => setCatItems((prev) => arrayMove(prev, index, index + 1))}
+                              disabled={index === catItems.length - 1}
+                              className="grid h-6 w-6 place-items-center rounded-full bg-sand text-ink hover:bg-forest hover:text-white disabled:opacity-20"
+                              title="Премести надясно"
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span
+                              className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl"
+                              style={{ background: tone.bg, color: tone.ink }}
+                            >
+                              <CategoryIcon name={c.icon} className="h-5 w-5" />
+                            </span>
+                            <span className="font-semibold text-ink">{c.name}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <Link href={`/kategoria/${c.slug}`} onClick={() => setMega(false)} className="group flex items-center gap-3">
+                            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl transition group-hover:scale-105" style={{ background: tone.bg, color: tone.ink }}>
+                              <CategoryIcon name={c.icon} className="h-5 w-5" />
+                            </span>
+                            <span className="font-semibold group-hover:text-forest">{c.name}</span>
+                          </Link>
+                          <ul className="mt-3 space-y-1.5 pl-14">
+                            {c.children.map((s) => (
+                              <li key={s.slug}>
+                                <Link href={`/kategoria/${c.slug}/${s.slug}`} onClick={() => setMega(false)} className="text-sm text-ink-soft hover:text-ink hover:underline">
+                                  {s.name}
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+                <div className="flex flex-col gap-3">
+                  <Link href="/promo" onClick={() => setMega(false)} className="rounded-2xl bg-tomato px-5 py-4 font-semibold text-white transition hover:brightness-95">
+                    Промоции
+                    <span className="mt-0.5 block text-sm font-normal text-white/85">Намаления и цени за количество</span>
+                  </Link>
+                  <Link href="/novi" onClick={() => setMega(false)} className="rounded-2xl bg-lime px-5 py-4 font-semibold text-ink transition hover:bg-lime-deep">
+                    Нови продукти
+                    <span className="mt-0.5 block text-sm font-normal text-ink/75">Току-що пристигнали</span>
+                  </Link>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -216,7 +436,7 @@ export function HeaderClient({ tree }: { tree: MenuCategory[] }) {
                       </Link>
                     </div>
                     <ul>
-                      {tree.map((c) => {
+                      {catItems.map((c) => {
                         const tone = TONES[c.tone] ?? TONES.cream;
                         const isOpen = expanded === c.id;
                         return (

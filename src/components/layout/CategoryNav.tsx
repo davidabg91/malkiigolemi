@@ -8,12 +8,16 @@ import { CategoryIcon } from "@/components/ui";
 import { TONES } from "@/lib/site";
 import type { MenuCategory } from "./HeaderClient";
 
-interface CategoryNavProps {
+export interface CategoryNavProps {
   tree: MenuCategory[];
+  items?: MenuCategory[];
+  setItems?: React.Dispatch<React.SetStateAction<MenuCategory[]>>;
+  isEditing?: boolean;
+  setIsEditing?: (val: boolean) => void;
   isAdmin?: boolean;
 }
 
-function arrayMove<T>(list: T[], fromIndex: number, toIndex: number): T[] {
+export function arrayMove<T>(list: T[], fromIndex: number, toIndex: number): T[] {
   if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= list.length || toIndex >= list.length) {
     return list;
   }
@@ -23,16 +27,32 @@ function arrayMove<T>(list: T[], fromIndex: number, toIndex: number): T[] {
   return result;
 }
 
-export function CategoryNav({ tree, isAdmin: initialIsAdmin = false }: CategoryNavProps) {
-  const [isAdmin, setIsAdmin] = useState(initialIsAdmin);
-  const [items, setItems] = useState<MenuCategory[]>(tree);
+export function CategoryNav({
+  tree,
+  items: controlledItems,
+  setItems: controlledSetItems,
+  isEditing: controlledIsEditing,
+  setIsEditing: controlledSetIsEditing,
+  isAdmin: controlledIsAdmin,
+}: CategoryNavProps) {
+  const [localIsAdmin, setLocalIsAdmin] = useState(false);
+  const [localItems, setLocalItems] = useState<MenuCategory[]>(tree);
+  const [localIsEditing, setLocalIsEditing] = useState(false);
+
+  const isAdmin = controlledIsAdmin !== undefined ? controlledIsAdmin : localIsAdmin;
+  const items = controlledItems ?? localItems;
+  const setItems = controlledSetItems ?? setLocalItems;
+  const isEditing = controlledIsEditing !== undefined ? controlledIsEditing : localIsEditing;
+  const setIsEditing = controlledSetIsEditing ?? setLocalIsEditing;
 
   useEffect(() => {
-    checkIsAdmin().then((admin) => {
-      if (admin) setIsAdmin(true);
-    });
-  }, []);
-  const [isEditing, setIsEditing] = useState(false);
+    if (controlledIsAdmin === undefined) {
+      checkIsAdmin().then((admin) => {
+        if (admin) setLocalIsAdmin(true);
+      });
+    }
+  }, [controlledIsAdmin]);
+
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const [dragOverId, setDragOverId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -44,10 +64,10 @@ export function CategoryNav({ tree, isAdmin: initialIsAdmin = false }: CategoryN
 
   // Sync state if tree prop updates
   useEffect(() => {
-    if (!isEditing) {
-      setItems(tree);
+    if (!isEditing && !controlledItems) {
+      setLocalItems(tree);
     }
-  }, [tree, isEditing]);
+  }, [tree, isEditing, controlledItems]);
 
   const triggerWiggle = () => {
     if (!isAdmin) return;
