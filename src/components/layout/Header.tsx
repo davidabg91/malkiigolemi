@@ -14,7 +14,7 @@ export async function Header() {
         <div className="container-shop flex h-9 items-center justify-center text-[0.8rem] font-medium sm:justify-between">
           <p className="flex items-center gap-2">
             <Truck className="h-4 w-4 text-cyan-400" aria-hidden />
-            <span className="whitespace-nowrap">Безплатна доставка за поръчки над 60 €</span>
+            <span className="whitespace-nowrap">Безплатна доставка с BoxNow</span>
           </p>
           <a
             href={site.facebookUrl}
