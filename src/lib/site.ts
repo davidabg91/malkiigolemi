@@ -17,9 +17,6 @@ export const site = {
   facebookGroupName: "Поръчки за малки и големи",
 } as const;
 
-/** Prices are in euro cents. */
-export const FREE_SHIPPING_FROM = 6000;
-
 export const DELIVERY_METHODS = [
   {
     id: "box",
@@ -65,7 +62,6 @@ export type DeliveryId = (typeof DELIVERY_METHODS)[number]["id"];
 export function shippingFor(delivery: string, subtotal: number, courier?: string | null) {
   if (delivery === "store") return 0;
   if (delivery === "box" && (!courier || courier === "boxnow")) return 0;
-  if (subtotal >= FREE_SHIPPING_FROM) return 0;
   return DELIVERY_METHODS.find((d) => d.id === delivery)?.price ?? DELIVERY_METHODS[1].price;
 }
 

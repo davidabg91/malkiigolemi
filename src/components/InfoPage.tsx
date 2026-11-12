@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { ComponentType, ReactNode } from "react";
 import { Breadcrumbs, btn, FacebookIcon, ShopMark } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
-import { DELIVERY_METHODS, FREE_SHIPPING_FROM, site, STORE } from "@/lib/site";
+import { DELIVERY_METHODS, site, STORE } from "@/lib/site";
 
 export function InfoPage({ title, lead, children }: { title: string; lead?: string; children: ReactNode }) {
   return (
@@ -54,12 +54,6 @@ export function DeliveryTable() {
               <td className="px-5 py-3.5 text-right font-semibold text-ink tabular-nums">{d.price === 0 ? "Безплатно" : formatPrice(d.price)}</td>
             </tr>
           ))}
-          <tr className="bg-lime/30">
-            <th scope="row" colSpan={2} className="px-5 py-3.5 font-medium text-ink">
-              Поръчки над {formatPrice(FREE_SHIPPING_FROM)}
-            </th>
-            <td className="px-5 py-3.5 text-right font-semibold text-ink">Безплатно</td>
-          </tr>
         </tbody>
       </table>
     </div>

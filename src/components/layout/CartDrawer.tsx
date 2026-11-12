@@ -1,6 +1,6 @@
 "use client";
 
-import { ShoppingBag, Trash2, Truck, X } from "lucide-react";
+import { ShoppingBag, Trash2, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useEffect } from "react";
@@ -8,30 +8,7 @@ import { QtyStepper } from "@/components/product/AddToCart";
 import { ProductVisual } from "@/components/product/PackShot";
 import { btn } from "@/components/ui";
 import { formatPrice, unitPriceFor } from "@/lib/format";
-import { FREE_SHIPPING_FROM } from "@/lib/site";
 import { cartTotals, useCart, useHydrated, type CartItem } from "@/lib/store";
-
-export function ShippingMeter({ subtotal }: { subtotal: number }) {
-  const left = FREE_SHIPPING_FROM - subtotal;
-  const pct = Math.min(100, Math.round((subtotal / FREE_SHIPPING_FROM) * 100));
-  return (
-    <div className="rounded-2xl bg-sand p-4">
-      <p className="flex items-center gap-2 text-sm font-medium">
-        <Truck className="h-4 w-4 text-forest" aria-hidden />
-        {left > 0 ? (
-          <span>
-            Още <strong className="tabular-nums">{formatPrice(left)}</strong> до безплатна доставка
-          </span>
-        ) : (
-          <span>Доставката ти е безплатна!</span>
-        )}
-      </p>
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-paper" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Напредък към безплатна доставка">
-        <div className="h-full rounded-full bg-forest transition-[width] duration-500 ease-out-soft" style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  );
-}
 
 export function CartLine({ item, onNavigate }: { item: CartItem; onNavigate?: () => void }) {
   const setQty = useCart((s) => s.setQty);
@@ -128,7 +105,6 @@ export function CartDrawer() {
             ) : (
               <>
                 <div className="flex-1 overflow-y-auto px-5 sm:px-6">
-                  <ShippingMeter subtotal={subtotal} />
                   <ul className="divide-y divide-line">
                     {items.map((i) => (
                       <CartLine key={i.id} item={i} onNavigate={close} />

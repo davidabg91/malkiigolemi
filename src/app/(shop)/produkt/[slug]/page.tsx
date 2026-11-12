@@ -16,7 +16,7 @@ import { Breadcrumbs, SectionHeading } from "@/components/ui";
 import { getSession } from "@/lib/auth";
 import { discountPercent, formatPrice } from "@/lib/format";
 import { getProduct } from "@/lib/queries";
-import { FREE_SHIPPING_FROM, ORIGIN_LABELS, site } from "@/lib/site";
+import { ORIGIN_LABELS, site } from "@/lib/site";
 
 type Props = PageProps<"/produkt/[slug]">;
 
@@ -150,7 +150,7 @@ async function Content({ params }: Pick<Props, "params">) {
 
             <ul className="mt-8 grid gap-3 sm:grid-cols-3">
               {[
-                { icon: Truck, text: `Безплатна доставка над ${formatPrice(FREE_SHIPPING_FROM)}` },
+                { icon: Truck, text: "Безплатна доставка с BoxNow" },
                 { icon: PackageCheck, text: "Преглед преди плащане" },
                 { icon: ShieldCheck, text: "Оригинален внос" },
               ].map(({ icon: Icon, text }) => (
