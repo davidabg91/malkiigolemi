@@ -204,13 +204,16 @@ async function Content({ params }: Pick<Props, "params">) {
 
 function Skeleton() {
   return (
-    <div className="grid gap-8 lg:grid-cols-2 lg:gap-14" aria-hidden>
-      <div className="aspect-square animate-pulse rounded-tile bg-sand" />
-      <div className="space-y-5 py-4">
-        <div className="h-4 w-32 animate-pulse rounded-full bg-sand" />
-        <div className="h-12 w-4/5 animate-pulse rounded-2xl bg-sand" />
-        <div className="h-10 w-40 animate-pulse rounded-2xl bg-sand" />
-        <div className="h-12 w-full animate-pulse rounded-full bg-sand" />
+    <div className="space-y-6" aria-hidden>
+      <div className="h-5 w-44 animate-pulse rounded-full bg-sand" />
+      <div className="grid gap-8 lg:grid-cols-2 lg:gap-14">
+        <div className="aspect-square animate-pulse rounded-tile bg-sand" />
+        <div className="space-y-5 py-4">
+          <div className="h-4 w-32 animate-pulse rounded-full bg-sand" />
+          <div className="h-12 w-4/5 animate-pulse rounded-2xl bg-sand" />
+          <div className="h-10 w-40 animate-pulse rounded-2xl bg-sand" />
+          <div className="h-12 w-full animate-pulse rounded-full bg-sand" />
+        </div>
       </div>
     </div>
   );
