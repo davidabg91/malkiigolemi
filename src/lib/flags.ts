@@ -2,7 +2,7 @@ import "server-only";
 import { db } from "@/db";
 import { flaggedContacts, type FlaggedContact } from "@/db/schema";
 
-/** "+359 88 637 8751", "00359886378751" and "0886378751" are the same number. */
+/** "+359 87 791 5191", "00359877915191" and "0877915191" are the same number. */
 export function normalizePhone(phone: string | null | undefined) {
   let digits = (phone ?? "").replace(/\D/g, "");
   if (digits.startsWith("00359")) digits = `0${digits.slice(5)}`;
