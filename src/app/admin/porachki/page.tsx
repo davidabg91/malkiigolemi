@@ -1,4 +1,5 @@
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, like, or, sql, type SQL } from "drizzle-orm";
+import { Search, X } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -6,6 +7,7 @@ import { AdminSkeleton, PageTitle, Panel, td, th } from "@/components/admin/bits
 import { BULK_FORM, BulkStatusBar, SelectAllOrders } from "@/components/admin/BulkStatus";
 import { FlagBadge } from "@/components/admin/Flag";
 import { StatusPill } from "@/components/StatusPill";
+import { btn } from "@/components/ui";
 import { db } from "@/db";
 import { ORDER_STATUSES, orders, type OrderStatus } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
@@ -15,19 +17,43 @@ import { DELIVERY_METHODS, ORDER_STATUS_LABELS } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Поръчки" };
 
+const capitalize = (s: string) => s.replace(/(^|\s)(\S)/g, (_, gap: string, c: string) => gap + c.toUpperCase());
+
+/**
+ * Orders matching a free-text search: number, name, email, city or phone.
+ * SQLite's LIKE ignores case only for Latin letters, so a Cyrillic name is tried as typed, lower case,
+ * upper case and Capitalised. Phones are compared by digits, and "0888…" also finds "+359888…".
+ */
+function searchWhere(q: string): SQL | undefined {
+  const text = q.trim().replace(/[%_]/g, "");
+  if (!text) return undefined;
+  const forms = [...new Set([text, text.toLowerCase(), text.toUpperCase(), capitalize(text.toLowerCase())])];
+  const conds: SQL[] = forms.flatMap((f) => [like(orders.number, `%${f}%`), like(orders.name, `%${f}%`), like(orders.email, `%${f}%`), like(orders.city, `%${f}%`)]);
+  const digits = text.replace(/\D/g, "");
+  if (digits.length >= 3) {
+    const phone = sql`replace(replace(replace(replace(${orders.phone}, ' ', ''), '-', ''), '+', ''), '/', '')`;
+    conds.push(sql`${phone} like ${`%${digits}%`}`);
+    if (digits.startsWith("0")) conds.push(sql`${phone} like ${`%${digits.slice(1)}%`}`);
+  }
+  return or(...conds);
+}
+
 async function AdminOrders({ searchParams }: Pick<PageProps<"/admin/porachki">, "searchParams">) {
   await requireAdmin();
   const sp = await searchParams;
   const status = ORDER_STATUSES.find((s) => s === sp.status) as OrderStatus | undefined;
+  const q = (typeof sp.q === "string" ? sp.q : "").trim().slice(0, 80);
+  const search = searchWhere(q);
 
   const [list, counts, flags] = await Promise.all([
     db
       .select()
       .from(orders)
-      .where(status ? eq(orders.status, status) : undefined)
+      .where(and(search, status ? eq(orders.status, status) : undefined))
       .orderBy(desc(orders.createdAt))
       .limit(200),
-    db.select({ status: orders.status, n: sql<number>`count(*)` }).from(orders).groupBy(orders.status),
+    // The tab counts follow the search, so they say how many matches each status has.
+    db.select({ status: orders.status, n: sql<number>`count(*)` }).from(orders).where(search).groupBy(orders.status),
     getFlagIndex(),
   ]);
   const countOf = (s: string) => counts.find((c) => c.status === s)?.n ?? 0;
@@ -35,19 +61,52 @@ async function AdminOrders({ searchParams }: Pick<PageProps<"/admin/porachki">, 
 
   const tab = (active: boolean) =>
     `inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-full px-4 text-sm font-medium transition ${active ? "bg-ink text-cream" : "bg-paper shadow-soft hover:bg-lime"}`;
+  const href = (s?: string) => {
+    const qs = new URLSearchParams();
+    if (s) qs.set("status", s);
+    if (q) qs.set("q", q);
+    const str = qs.toString();
+    return str ? `/admin/porachki?${str}` : "/admin/porachki";
+  };
 
   return (
     <>
       <PageTitle title="Поръчки" />
+      <form action="/admin/porachki" role="search" className="mb-4 flex max-w-2xl gap-2">
+        {status && <input type="hidden" name="status" value={status} />}
+        <label htmlFor="orders-q" className="sr-only">
+          Търсене в поръчките
+        </label>
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-ink-soft" aria-hidden />
+          <input
+            id="orders-q"
+            name="q"
+            type="search"
+            defaultValue={q}
+            placeholder="Номер, име, телефон, имейл или град…"
+            autoComplete="off"
+            className="field h-11 bg-paper pl-11"
+          />
+        </div>
+        <button type="submit" className={`${btn.primary} h-11 px-5`}>
+          Търси
+        </button>
+        {q && (
+          <Link href={href(status)} className={`${btn.ghost} h-11 px-4`} aria-label="Изчисти търсенето">
+            <X className="h-4 w-4" />
+          </Link>
+        )}
+      </form>
       <ul className="no-scrollbar mb-5 flex gap-2 overflow-x-auto pb-1">
         <li>
-          <Link href="/admin/porachki" className={tab(!status)}>
+          <Link href={href()} className={tab(!status)}>
             Всички <span className="opacity-60">{all}</span>
           </Link>
         </li>
         {ORDER_STATUSES.map((s) => (
           <li key={s}>
-            <Link href={`/admin/porachki?status=${s}`} className={tab(status === s)}>
+            <Link href={href(s)} className={tab(status === s)}>
               {ORDER_STATUS_LABELS[s]} <span className="opacity-60">{countOf(s)}</span>
             </Link>
           </li>
@@ -57,7 +116,7 @@ async function AdminOrders({ searchParams }: Pick<PageProps<"/admin/porachki">, 
       {list.length > 0 && <BulkStatusBar />}
       <Panel>
         {list.length === 0 ? (
-          <p className="px-5 py-14 text-center text-ink-soft">Няма поръчки с този статус.</p>
+          <p className="px-5 py-14 text-center text-ink-soft">{q ? `Няма поръчки за „${q}“${status ? " с този статус" : ""}.` : "Няма поръчки с този статус."}</p>
         ) : (
           <div className="overflow-x-auto p-1">
             <table className="w-full min-w-[46rem] text-[0.95rem]">

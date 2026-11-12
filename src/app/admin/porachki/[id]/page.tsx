@@ -1,5 +1,5 @@
-import { eq } from "drizzle-orm";
-import { AlertCircle, ArrowLeft, Mail, MapPin, Phone, Printer, StickyNote, Truck } from "lucide-react";
+import { eq, inArray } from "drizzle-orm";
+import { AlertCircle, ArrowLeft, Mail, MapPin, Package, Phone, Printer, StickyNote, Truck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -8,10 +8,11 @@ import { setOrderStatus } from "@/actions/admin";
 import { flagOrderContact, removeFlag } from "@/actions/customers";
 import { AdminSkeleton, Panel, td, th } from "@/components/admin/bits";
 import { FlagBanner, FlagPanel } from "@/components/admin/Flag";
+import { ProductVisual } from "@/components/product/PackShot";
 import { StatusPill } from "@/components/StatusPill";
 import { btn } from "@/components/ui";
 import { db } from "@/db";
-import { ORDER_STATUSES, orders } from "@/db/schema";
+import { brands, ORDER_STATUSES, orders, products } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { courierName } from "@/lib/couriers";
 import { findFlag, getFlagIndex } from "@/lib/flags";
@@ -27,6 +28,17 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
   const order = await db.query.orders.findFirst({ where: eq(orders.id, id), with: { items: true } });
   if (!order) notFound();
   const flag = findFlag(await getFlagIndex(), { userId: order.userId, email: order.email, phone: order.phone });
+
+  // The products' pictures. Hand-typed Facebook items have no product, and a product may have been deleted since.
+  const productIds = order.items.map((i) => i.productId).filter((v): v is number => v != null);
+  const visuals = productIds.length
+    ? await db
+        .select({ id: products.id, name: products.name, image: products.image, pack: products.pack, color: products.color, brand: brands.name })
+        .from(products)
+        .leftJoin(brands, eq(products.brandId, brands.id))
+        .where(inArray(products.id, productIds))
+    : [];
+  const visualOf = new Map(visuals.map((v) => [v.id, v]));
 
   return (
     <>
@@ -74,17 +86,36 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {order.items.map((i) => (
-                  <tr key={i.id}>
-                    <td className={td}>
-                      {i.name}
-                      <p className="text-xs text-ink-soft">Арт. № {i.sku}</p>
-                    </td>
-                    <td className={`${td} text-right tabular-nums`}>{formatPrice(i.price)}</td>
-                    <td className={`${td} text-right tabular-nums`}>{i.qty}</td>
-                    <td className={`${td} text-right font-semibold tabular-nums`}>{formatPrice(i.price * i.qty)}</td>
-                  </tr>
-                ))}
+                {order.items.map((i) => {
+                  const v = i.productId != null ? visualOf.get(i.productId) : undefined;
+                  return (
+                    <tr key={i.id}>
+                      <td className={td}>
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl"
+                            style={{ background: v ? `color-mix(in srgb, ${v.color} 12%, #f6f2e8)` : "#f1ede2" }}
+                          >
+                            {v ? <ProductVisual product={v} size={112} className="h-[88%] w-[88%]" /> : <Package className="h-6 w-6 text-ink-soft" aria-hidden />}
+                          </span>
+                          <div className="min-w-0">
+                            {v ? (
+                              <Link href={`/admin/produkti/${v.id}`} className="font-medium hover:text-forest">
+                                {i.name}
+                              </Link>
+                            ) : (
+                              i.name
+                            )}
+                            <p className="text-xs text-ink-soft">Арт. № {i.sku}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className={`${td} text-right tabular-nums`}>{formatPrice(i.price)}</td>
+                      <td className={`${td} text-right tabular-nums`}>{i.qty}</td>
+                      <td className={`${td} text-right font-semibold tabular-nums`}>{formatPrice(i.price * i.qty)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
