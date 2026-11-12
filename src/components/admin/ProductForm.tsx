@@ -27,10 +27,12 @@ export function ProductForm({
   product,
   brands,
   categories,
+  returnUrl,
 }: {
   product?: Product;
   brands: Brand[];
   categories: CategoryOption[];
+  returnUrl?: string;
 }) {
   // Per-form id prefix: the new and edit pages can both stay mounted (hidden) after navigating.
   const uid = useId();
@@ -77,6 +79,7 @@ export function ProductForm({
       }}
       className="grid items-start gap-6 xl:grid-cols-[1fr_20rem]"
     >
+      {returnUrl && <input type="hidden" name="returnUrl" value={returnUrl} />}
       <div className="space-y-6">
         <Group title="Основни данни">
           {input("name", "Име на продукта", { required: true, defaultValue: product?.name, maxLength: 160 }, true)}
@@ -242,7 +245,7 @@ export function ProductForm({
             {pending && <Loader2 className="h-5 w-5 animate-spin" aria-hidden />}
             {product ? "Запази промените" : "Създай продукта"}
           </button>
-          <Link href="/admin/produkti" className={btn.ghost}>
+          <Link href={returnUrl || "/admin/produkti"} className={btn.ghost}>
             Отказ
           </Link>
         </div>
