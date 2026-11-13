@@ -3,6 +3,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { orderItems, orders, products, type OrderStatus } from "@/db/schema";
 import { syncOrderPoints } from "./loyalty";
+import { sendOrderShipped } from "./order-mail";
 import { notifyRestocked } from "./stock-alerts";
 
 /**
@@ -11,7 +12,7 @@ import { notifyRestocked } from "./stock-alerts";
  * - changes the status only if it is still `from` (or any of `allowedFrom`), so two clicks cannot both apply;
  * - returns goods to stock when an order is cancelled, and takes them again if it is re-opened;
  * - keeps loyalty points in step (earned on delivery, used points returned on cancel).
- * Afterwards, anyone waiting for a product that came back in stock is told.
+ * Afterwards, anyone waiting for a product that came back in stock is told, and a shipped order's customer gets an e-mail.
  */
 export async function changeOrderStatus(
   orderId: number,
@@ -49,6 +50,7 @@ export async function changeOrderStatus(
     return "changed" as const;
   });
   if (restocked.length) await notifyRestocked(restocked);
+  if (result === "changed" && to === "shipped") await sendOrderShipped(orderId);
   return result;
 }
 

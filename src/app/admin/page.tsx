@@ -7,6 +7,8 @@ import { FlagBadge } from "@/components/admin/Flag";
 import { StatusPill } from "@/components/StatusPill";
 import { db } from "@/db";
 import { orders, products, stockAlerts } from "@/db/schema";
+import { MailTest } from "@/components/admin/MailTest";
+import { site } from "@/lib/site";
 import { mailConfigured } from "@/lib/mail";
 import { requireAdmin } from "@/lib/auth";
 import { findFlag, getFlagIndex } from "@/lib/flags";
@@ -119,6 +121,10 @@ async function AdminDashboard() {
         </Panel>
 
         <div className="space-y-6">
+        <Panel className="p-5">
+          <h2 className="font-display text-lg font-semibold">Имейли</h2>
+          <MailTest configured={mailConfigured()} to={site.email} />
+        </Panel>
         {awaited.length > 0 && (
           <Panel className="p-5">
             <h2 className="font-display text-lg font-semibold">Клиенти чакат наличност</h2>
