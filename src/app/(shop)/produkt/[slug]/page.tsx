@@ -22,11 +22,15 @@ type Props = PageProps<"/produkt/[slug]">;
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const data = await getProduct(slug);
-  if (!data || !data.product.active) return { title: "Продуктът не е намерен" };
+  if (!data || !data.product.active || data.category?.active === false || data.parent?.active === false) return { title: "Продуктът не е намерен" };
   const { product } = data;
+  const title = `${product.name}${product.brand ? ` ${product.brand}` : ""} ${product.unit}`.trim();
+  const description = product.description.slice(0, 160) || `${title} — ${formatPrice(product.price)}`;
   return {
-    title: `${product.name}${product.brand ? ` ${product.brand}` : ""} ${product.unit}`.trim(),
-    description: data.product.description.slice(0, 160),
+    title,
+    description,
+    // The share card: this product's own title, text and link (the picture comes from opengraph-image.tsx).
+    openGraph: { type: "website", siteName: site.name, locale: "bg_BG", title, description, url: `/produkt/${slug}` },
   };
 }
 
