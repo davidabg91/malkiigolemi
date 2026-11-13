@@ -1,0 +1,18 @@
+import "server-only";
+import { eq, isNull, sql } from "drizzle-orm";
+import { db } from "@/db";
+import { fbClaims, orders, withdrawals } from "@/db/schema";
+
+/** Things waiting for the admin: shown as badges in the admin menu and on the shop header's profile icon. */
+export type AdminAlerts = { newOrders: number; withdrawals: number; fbClaims: number; total: number };
+
+export async function getAdminAlerts(): Promise<AdminAlerts> {
+  const count = sql<number>`count(*)`;
+  const [[o], [w], [f]] = await Promise.all([
+    db.select({ n: count }).from(orders).where(eq(orders.status, "new")),
+    db.select({ n: count }).from(withdrawals).where(isNull(withdrawals.handledAt)),
+    db.select({ n: count }).from(fbClaims).where(eq(fbClaims.status, "pending")),
+  ]);
+  const a = { newOrders: Number(o.n), withdrawals: Number(w.n), fbClaims: Number(f.n) };
+  return { ...a, total: a.newOrders + a.withdrawals + a.fbClaims };
+}

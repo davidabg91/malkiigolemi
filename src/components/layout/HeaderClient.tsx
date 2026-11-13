@@ -1,15 +1,17 @@
 "use client";
 
-import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Heart, LayoutGrid, Loader2, Menu, Phone, ShoppingBag, User, X } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Heart, LayoutGrid, Loader2, Menu, Phone, ShoppingBag, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useEffect, useEffectEvent, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { reorderCategories } from "@/actions/admin";
+import type { AdminAlerts } from "@/lib/admin-alerts";
 import { CategoryIcon, FacebookIcon, Logo } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
 import { site, TONES } from "@/lib/site";
 import { cartTotals, useCart, useHydrated, useWishlist } from "@/lib/store";
+import { AccountButton } from "./AccountButton";
 import { arrayMove, CategoryNav } from "./CategoryNav";
 import { SearchBox } from "./SearchBox";
 
@@ -43,7 +45,7 @@ function CountBadge({ n, className = "-right-0.5 -top-0.5" }: { n: number; class
   );
 }
 
-export function HeaderClient({ tree, isAdmin }: { tree: MenuCategory[]; isAdmin: boolean }) {
+export function HeaderClient({ tree, isAdmin, adminAlerts = null }: { tree: MenuCategory[]; isAdmin: boolean; adminAlerts?: AdminAlerts | null }) {
   const [catItems, setCatItems] = useState<MenuCategory[]>(tree);
   const [megaReordering, setMegaReordering] = useState(false);
   const [mobileReordering, setMobileReordering] = useState(false);
@@ -291,9 +293,7 @@ export function HeaderClient({ tree, isAdmin }: { tree: MenuCategory[]; isAdmin:
           </a>
 
           <div className="ml-auto flex items-center gap-0.5 md:ml-0">
-            <Link href="/profil" className={iconBtn} aria-label="Моят профил">
-              <User className="h-[22px] w-[22px]" strokeWidth={1.75} />
-            </Link>
+            <AccountButton alerts={adminAlerts} />
             <Link href="/lyubimi" className={iconBtn} aria-label={`Любими продукти (${hydrated ? wishCount : 0})`}>
               <Heart className="h-[22px] w-[22px]" strokeWidth={1.75} />
               <CountBadge n={hydrated ? wishCount : 0} />
