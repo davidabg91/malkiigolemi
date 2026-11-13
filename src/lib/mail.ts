@@ -9,8 +9,9 @@ import nodemailer, { type Transporter } from "nodemailer";
 const smtp = () => {
   const user = process.env.SMTP_USER?.trim();
   const host = process.env.SMTP_HOST || "smtp.gmail.com";
-  // Google shows app passwords as "abcd efgh ijkl mnop"; pasted with the spaces (or a stray line break) they are rejected.
-  const pass = host === "smtp.gmail.com" ? process.env.SMTP_PASS?.replace(/\s+/g, "") : process.env.SMTP_PASS?.trim();
+  // Google shows app passwords as "abcd efgh ijkl mnop"; pasted with the spaces, quotes or a stray line break they are rejected.
+  const raw = process.env.SMTP_PASS?.trim().replace(/^["'](.*)["']$/, "$1");
+  const pass = host === "smtp.gmail.com" ? raw?.replace(/\s+/g, "") : raw;
   return user && pass ? { host, port: Number(process.env.SMTP_PORT || 465), user, pass } : null;
 };
 
@@ -62,6 +63,30 @@ export async function sendMail(to: string, subject: string, html: string): Promi
 }
 
 export const mailConfigured = () => Boolean(smtp() || (process.env.RESEND_API_KEY && process.env.MAIL_FROM));
+
+/**
+ * For the admin's test button: logs in to the SMTP server without sending, and describes the settings
+ * without revealing the password (only its length and whether it looks like a Gmail app password).
+ */
+export async function checkSmtp(): Promise<{ ok: boolean; detail: string }> {
+  const cfg = smtp();
+  if (!cfg) return { ok: false, detail: "Липсва SMTP_USER или SMTP_PASS." };
+  const shape =
+    cfg.host === "smtp.gmail.com"
+      ? /^[a-z]{16}$/.test(cfg.pass)
+        ? ", прилича на парола за приложение"
+        : ", НЕ прилича на парола за приложение (трябват 16 малки латински букви)"
+      : "";
+  const settings = `Акаунт: ${cfg.user} · сървър: ${cfg.host}:${cfg.port} · парола: ${cfg.pass.length} знака${shape}.`;
+  try {
+    await nodemailer.createTransport({ host: cfg.host, port: cfg.port, secure: cfg.port === 465, auth: { user: cfg.user, pass: cfg.pass } }).verify();
+    return { ok: true, detail: settings };
+  } catch (e) {
+    const message = e instanceof Error ? e.message.split("\n")[0].replace(/https?:\/\/\S+/g, "").trim() : "";
+    const reason = message || (e as { code?: string }).code || String(e);
+    return { ok: false, detail: `${settings} Отговор на сървъра: ${reason}` };
+  }
+}
 
 const escape = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
