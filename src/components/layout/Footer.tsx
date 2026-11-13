@@ -2,7 +2,7 @@ import { ArrowUpRight, Clock, Mail, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
 import { FacebookIcon, Logo } from "@/components/ui";
 import { getCategoryTree } from "@/lib/queries";
-import { site } from "@/lib/site";
+import { COMPANY, site } from "@/lib/site";
 
 export const INFO_PAGES = [
   { href: "/facebook", label: "Facebook общност" },
@@ -11,6 +11,7 @@ export const INFO_PAGES = [
   { href: "/dostavka", label: "Доставка и плащане" },
   { href: "/usloviya", label: "Общи условия" },
   { href: "/poveritelnost", label: "Поверителност" },
+  { href: "/otkaz", label: "Откажете се от договора тук" },
 ];
 
 export async function Footer() {
@@ -97,7 +98,13 @@ export async function Footer() {
       </div>
       <div className="border-t border-cream/10">
         <div className="container-shop flex flex-col gap-1.5 py-5 text-sm text-cream/50 sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 {site.name}. Всички права запазени.</p>
+          <div>
+            <p>© 2026 {site.name}. Всички права запазени.</p>
+            <p className="mt-1 text-xs">
+              {COMPANY.name} · ЕИК {COMPANY.eik}
+              {COMPANY.vatNumber && <> · ДДС № {COMPANY.vatNumber}</>} · {COMPANY.address}
+            </p>
+          </div>
           <p>
             Изработка и поддръжка:{" "}
             <a

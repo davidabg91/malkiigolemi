@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgePercent, BarChart3, ClipboardPaste, ExternalLink, Gift, MessageSquareText, FolderTree, LayoutDashboard, LogOut, Package, ReceiptText, Truck, Users } from "lucide-react";
+import { BadgePercent, BarChart3, ClipboardPaste, ExternalLink, Gift, MessageSquareText, FolderTree, LayoutDashboard, LogOut, Package, ReceiptText, Truck, Undo2, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/actions/auth";
@@ -9,6 +9,7 @@ import { Logo } from "@/components/ui";
 const LINKS = [
   { href: "/admin", label: "Табло", icon: LayoutDashboard, exact: true },
   { href: "/admin/porachki", label: "Поръчки", icon: ReceiptText },
+  { href: "/admin/otkazi", label: "Откази", icon: Undo2 },
   { href: "/admin/facebook", label: "От Facebook", icon: ClipboardPaste },
   { href: "/admin/produkti", label: "Продукти", icon: Package },
   { href: "/admin/kategorii", label: "Категории", icon: FolderTree },
@@ -20,7 +21,7 @@ const LINKS = [
   { href: "/admin/kurieri", label: "Куриери", icon: Truck },
 ];
 
-export function AdminNav({ name, newOrders }: { name: string; newOrders: number }) {
+export function AdminNav({ name, newOrders, openWithdrawals }: { name: string; newOrders: number; openWithdrawals: number }) {
   const pathname = usePathname();
   return (
     <aside className="flex shrink-0 flex-col border-b border-line bg-paper lg:sticky lg:top-0 lg:h-dvh lg:w-64 lg:border-b-0 lg:border-r">
@@ -32,6 +33,7 @@ export function AdminNav({ name, newOrders }: { name: string; newOrders: number 
       <nav aria-label="Админ навигация" className="no-scrollbar flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-col lg:pb-0">
         {LINKS.map(({ href, label, icon: Icon, exact }) => {
           const active = exact ? pathname === href : pathname.startsWith(href);
+          const badge = href === "/admin/porachki" ? newOrders : href === "/admin/otkazi" ? openWithdrawals : 0;
           return (
             <Link
               key={href}
@@ -41,8 +43,8 @@ export function AdminNav({ name, newOrders }: { name: string; newOrders: number 
             >
               <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden />
               {label}
-              {href === "/admin/porachki" && newOrders > 0 && (
-                <span className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-tomato px-1.5 text-xs font-bold text-white">{newOrders}</span>
+              {badge > 0 && (
+                <span className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-tomato px-1.5 text-xs font-bold text-white">{badge}</span>
               )}
             </Link>
           );

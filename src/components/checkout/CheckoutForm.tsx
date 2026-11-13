@@ -419,11 +419,8 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
           ) : (
             <Lock className="h-[18px] w-[18px]" aria-hidden />
           )}
-          {pending || placed
-            ? "Изпращаме поръчката…"
-            : effectivePayment === "card"
-            ? "Потвърди поръчката с карта"
-            : "Потвърди поръчката"}
+          {/* ЗЗП чл. 49: the button must say plainly that ordering means paying. */}
+          {pending || placed ? "Изпращаме поръчката…" : "Поръчка със задължение за плащане"}
         </button>
         <p className="mt-3 text-center text-xs leading-relaxed text-ink-soft">
           С натискането на бутона приемаш{" "}
@@ -433,6 +430,10 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
           и{" "}
           <Link href="/poveritelnost" className="underline underline-offset-2 hover:text-ink">
             политиката за поверителност
+          </Link>
+          . Имаш право на отказ в 14-дневен срок —{" "}
+          <Link href="/otkaz" className="underline underline-offset-2 hover:text-ink">
+            виж условията
           </Link>
           .
         </p>

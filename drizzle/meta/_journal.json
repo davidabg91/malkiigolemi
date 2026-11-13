@@ -78,6 +78,13 @@
       "when": 1794561874474,
       "tag": "0010_order_shipments",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1794573972217,
+      "tag": "0011_withdrawals",
+      "breakpoints": true
     }
   ]
 }
