@@ -2,6 +2,7 @@ import { Truck } from "lucide-react";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { FacebookIcon } from "@/components/ui";
+import { getAdminAlerts } from "@/lib/admin-alerts";
 import { getSession } from "@/lib/auth";
 import { getCategoryTree } from "@/lib/queries";
 import { site } from "@/lib/site";
@@ -15,7 +16,8 @@ async function SessionHeader({ tree }: { tree: MenuCategory[] }) {
   // Checking the session compares its expiry with the current time, so it must wait for the real request.
   await connection();
   const session = await getSession();
-  return <HeaderClient tree={tree} isAdmin={session?.role === "admin"} />;
+  const isAdmin = session?.role === "admin";
+  return <HeaderClient tree={tree} isAdmin={isAdmin} adminAlerts={isAdmin ? await getAdminAlerts() : null} />;
 }
 
 export async function Header() {

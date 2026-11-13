@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/actions/auth";
 import { Logo } from "@/components/ui";
+import type { AdminAlerts } from "@/lib/admin-alerts";
 
 const LINKS = [
   { href: "/admin", label: "Табло", icon: LayoutDashboard, exact: true },
@@ -21,7 +22,7 @@ const LINKS = [
   { href: "/admin/kurieri", label: "Куриери", icon: Truck },
 ];
 
-export function AdminNav({ name, newOrders, openWithdrawals }: { name: string; newOrders: number; openWithdrawals: number }) {
+export function AdminNav({ name, alerts }: { name: string; alerts: AdminAlerts }) {
   const pathname = usePathname();
   return (
     <aside className="flex shrink-0 flex-col border-b border-line bg-paper lg:sticky lg:top-0 lg:h-dvh lg:w-64 lg:border-b-0 lg:border-r">
@@ -33,7 +34,7 @@ export function AdminNav({ name, newOrders, openWithdrawals }: { name: string; n
       <nav aria-label="Админ навигация" className="no-scrollbar flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-col lg:pb-0">
         {LINKS.map(({ href, label, icon: Icon, exact }) => {
           const active = exact ? pathname === href : pathname.startsWith(href);
-          const badge = href === "/admin/porachki" ? newOrders : href === "/admin/otkazi" ? openWithdrawals : 0;
+          const badge = href === "/admin/porachki" ? alerts.newOrders : href === "/admin/otkazi" ? alerts.withdrawals : href === "/admin/facebook" ? alerts.fbClaims : 0;
           return (
             <Link
               key={href}
