@@ -23,6 +23,10 @@ export const btn = {
   dark: `${base} h-12 bg-ink px-6 text-cream hover:bg-forest-deep`,
   outlineLight: `${base} h-12 border border-cream/30 px-6 text-cream hover:border-cream hover:bg-cream/10`,
   sm: `${base} h-10 border border-line bg-paper px-4 text-sm text-ink hover:border-ink`,
+  // Small variants with their own colours: adding bg-/text- classes to `sm` clashes with its bg-paper/text-ink.
+  smPrimary: `${base} h-10 bg-forest px-4 text-sm text-white hover:bg-forest-deep`,
+  smDark: `${base} h-10 bg-ink px-4 text-sm text-cream hover:bg-forest-deep`,
+  smDanger: `${base} h-10 border border-line bg-paper px-4 text-sm text-tomato hover:border-tomato`,
 };
 
 export const CATEGORY_ICONS: Record<string, LucideIcon> = {
