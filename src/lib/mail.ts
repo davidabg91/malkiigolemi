@@ -7,9 +7,11 @@ import nodemailer, { type Transporter } from "nodemailer";
  * the sender shown to customers; with Gmail it must be the same mailbox. RESEND_API_KEY still works instead.
  */
 const smtp = () => {
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  return user && pass ? { host: process.env.SMTP_HOST || "smtp.gmail.com", port: Number(process.env.SMTP_PORT || 465), user, pass } : null;
+  const user = process.env.SMTP_USER?.trim();
+  const host = process.env.SMTP_HOST || "smtp.gmail.com";
+  // Google shows app passwords as "abcd efgh ijkl mnop"; pasted with the spaces (or a stray line break) they are rejected.
+  const pass = host === "smtp.gmail.com" ? process.env.SMTP_PASS?.replace(/\s+/g, "") : process.env.SMTP_PASS?.trim();
+  return user && pass ? { host, port: Number(process.env.SMTP_PORT || 465), user, pass } : null;
 };
 
 let transporter: Transporter | undefined;
