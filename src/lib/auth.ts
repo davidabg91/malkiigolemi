@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { cache } from "react";
 import { db } from "@/db";
 import { users } from "@/db/schema";
@@ -43,6 +44,8 @@ export async function createSession(session: Session) {
 export const getSession = cache(async (): Promise<Session | null> => {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
+  // Checking the token's expiry reads the clock, so it must wait for the real request (never a prerender).
+  await connection();
   let uid: number;
   try {
     const { payload } = await jwtVerify(token, secret(), { algorithms: ["HS256"] });

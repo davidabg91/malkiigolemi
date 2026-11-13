@@ -1,9 +1,10 @@
 "use client";
 
-import { Check, FlaskConical, Loader2, PlugZap, ShieldCheck, XCircle } from "lucide-react";
+import { Building2, Check, FlaskConical, Loader2, PlugZap, ShieldCheck, User, XCircle } from "lucide-react";
 import { useActionState, useEffect, useId, useState, useTransition } from "react";
 import { saveEcontSettingsAction, testEcontConnectionAction, type EcontConnection } from "@/actions/econt";
 import { btn } from "@/components/ui";
+import type { EcontProfile } from "@/lib/econt";
 import type { EcontSettings } from "@/lib/econt-settings";
 
 type Office = { code: string; name: string; address: string };
@@ -18,6 +19,31 @@ export function EcontSettingsForm({ initial, live }: { initial: EcontSettings; l
   const err = state?.fieldErrors ?? {};
   const [checking, startCheck] = useTransition();
   const [connection, setConnection] = useState<EcontConnection | null>(null);
+  // The Econt profile waybills go out for: the company, not one of its authorised people.
+  const [chosen, setChosen] = useState<{ id: number | null; name: string; company: boolean }>({
+    id: initial.senderClientId,
+    name: initial.senderClientName,
+    company: initial.senderClientCompany,
+  });
+  const profiles: EcontProfile[] = connection?.ok ? connection.profiles : [];
+  const chosenProfile = profiles.find((p) => p.id === chosen.id);
+
+  const loadProfiles = () =>
+    startCheck(async () => {
+      const result = await testEcontConnectionAction();
+      setConnection(result);
+      // Nothing chosen yet, or the saved profile is gone: take the company.
+      if (result.ok && !result.profiles.some((p) => p.id === chosen.id)) {
+        const pick = result.profiles.find((p) => p.company) ?? null;
+        setChosen(pick ? { id: pick.id, name: pick.name, company: true } : { id: null, name: "", company: false });
+      }
+    });
+
+  // Read the profiles once when the page opens, so the choice below always matches Econt.
+  useEffect(() => {
+    loadProfiles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on open
+  }, []);
 
   // The Econt offices in the chosen town, to pick the one parcels are taken to.
   useEffect(() => {
@@ -76,12 +102,7 @@ export function EcontSettingsForm({ initial, live }: { initial: EcontSettings; l
       )}
 
       <div className="flex flex-wrap items-start gap-3">
-        <button
-          type="button"
-          disabled={checking}
-          onClick={() => startCheck(async () => setConnection(await testEcontConnectionAction()))}
-          className={btn.sm}
-        >
+        <button type="button" disabled={checking} onClick={loadProfiles} className={btn.sm}>
           {checking ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <PlugZap className="h-4 w-4" aria-hidden />}
           Провери връзката с Еконт
         </button>
@@ -90,9 +111,7 @@ export function EcontSettingsForm({ initial, live }: { initial: EcontSettings; l
             <p role="status" className="flex items-start gap-2 text-sm text-forest">
               <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
               <span>
-                Свързан{connection.live ? "" : " (тестова система)"} като <strong>{connection.name}</strong>
-                {connection.clientNumber && <> · клиентски № {connection.clientNumber}</>}
-                {connection.live && !connection.company && <> · профилът е на физическо лице, не на фирма</>}
+                Връзката с Еконт работи{connection.live ? "" : " (тестова система)"} · профили към потребителя: {connection.profiles.length}
               </span>
             </p>
           ) : (
@@ -103,10 +122,61 @@ export function EcontSettingsForm({ initial, live }: { initial: EcontSettings; l
           ))}
       </div>
 
-      <fieldset className="grid gap-4 sm:grid-cols-2">
-        <legend className="mb-3 font-semibold">Подател</legend>
-        {field("senderName", "Име на подателя (фирма)", { required: true, maxLength: 80 })}
-        {field("senderPhone", "Телефон за връзка", { required: true, inputMode: "tel" })}
+      <input type="hidden" name="senderClientId" value={chosen.id ?? ""} />
+      <input type="hidden" name="senderClientName" value={chosen.name} />
+      <input type="hidden" name="senderClientCompany" value={chosen.company ? "1" : ""} />
+
+      <fieldset>
+        <legend className="mb-1 font-semibold">Подател в Еконт</legend>
+        <p className="mb-3 text-sm text-ink-soft">Товарителниците се издават от името на избрания профил и по неговия договор. Избери фирмата.</p>
+        {profiles.length > 0 ? (
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            {profiles.map((p) => (
+              <label
+                key={p.id}
+                className="flex cursor-pointer items-start gap-3 rounded-2xl border border-line p-3.5 transition has-[:checked]:border-forest has-[:checked]:bg-lime/20"
+              >
+                <input
+                  type="radio"
+                  name="econtProfile"
+                  checked={chosen.id === p.id}
+                  onChange={() => setChosen({ id: p.id, name: p.name, company: p.company })}
+                  className="mt-1 h-4 w-4 accent-[#1f5c3f]"
+                />
+                <span className="min-w-0">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    {p.company ? <Building2 className="h-4 w-4 shrink-0 text-forest" aria-hidden /> : <User className="h-4 w-4 shrink-0 text-ink-soft" aria-hidden />}
+                    {p.name}
+                  </span>
+                  <span className="block text-sm text-ink-soft">
+                    {p.company ? "Фирма" : "Физическо лице"}
+                    {p.ein && ` · ЕИК ${p.ein}`}
+                    {p.clientNumber && ` · клиентски № ${p.clientNumber}`}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+        ) : chosen.id ? (
+          <p className="rounded-2xl border border-line p-3.5 text-sm">
+            Избран профил: <strong>{chosen.name}</strong>
+          </p>
+        ) : (
+          <p className="text-sm text-ink-soft">{checking ? "Зареждане на профилите от Еконт…" : "Натисни „Провери връзката с Еконт“, за да се заредят профилите."}</p>
+        )}
+        {chosen.id && !chosen.company && profiles.length > 0 && (
+          <p className="mt-2 text-sm font-medium text-tomato">Избран е профил на физическо лице: товарителниците няма да са на фирмата.</p>
+        )}
+
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          {chosen.id && chosen.company ? (
+            field("senderAgent", "Упълномощено лице (име и фамилия)", { required: true, maxLength: 80, placeholder: "Изисква се от Еконт за фирма" })
+          ) : (
+            <input type="hidden" name="senderAgent" value={initial.senderAgent} />
+          )}
+          {chosen.id ? <input type="hidden" name="senderName" value={initial.senderName} /> : field("senderName", "Име на подателя", { required: true, maxLength: 80 })}
+          {field("senderPhone", "Телефон за връзка", { required: true, inputMode: "tel" })}
+        </div>
       </fieldset>
 
       <fieldset>
@@ -166,7 +236,23 @@ export function EcontSettingsForm({ initial, live }: { initial: EcontSettings; l
       <fieldset className="grid gap-4 sm:grid-cols-2">
         <legend className="mb-3 font-semibold">Пратки и наложен платеж</legend>
         {field("defaultWeight", "Тегло на пакет по подразбиране (кг)", { inputMode: "decimal", required: true })}
-        {field("codTemplate", "Споразумение за наложен платеж (от Еконт)", { placeholder: "по желание", maxLength: 60 })}
+        {chosenProfile && chosenProfile.codAgreements.length > 0 ? (
+          <div>
+            <label htmlFor={`${uid}-codTemplate`} className="mb-1.5 block text-sm font-medium">
+              Споразумение за наложен платеж
+            </label>
+            <select id={`${uid}-codTemplate`} name="codTemplate" defaultValue={initial.codTemplate} key={chosenProfile.id} className="field">
+              <option value="">Без споразумение</option>
+              {chosenProfile.codAgreements.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          field("codTemplate", "Споразумение за наложен платеж (от Еконт)", { placeholder: "по желание", maxLength: 60 })
+        )}
         <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-line p-3.5 has-[:checked]:border-forest has-[:checked]:bg-lime/20">
           <input type="checkbox" name="inspectBeforePay" defaultChecked={initial.inspectBeforePay} className="mt-1 h-4 w-4 accent-[#1f5c3f]" />
           <span>

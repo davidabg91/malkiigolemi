@@ -43,8 +43,10 @@ function labelInput(order: Order, s: EcontSettings, o: WaybillOptions): EcontLab
   const toOffice = order.delivery === "office" || order.delivery === "box";
   return {
     sender: {
-      name: s.senderName,
+      name: s.senderClientId ? s.senderClientName || s.senderName : s.senderName,
       phone: s.senderPhone,
+      clientId: s.senderClientId,
+      agentName: s.senderClientCompany ? s.senderAgent : null,
       officeCode: s.senderMode === "office" ? s.senderOfficeCode : null,
       city: s.senderCity,
       address: s.senderAddress,

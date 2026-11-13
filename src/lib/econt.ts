@@ -64,15 +64,37 @@ async function call<T>(method: string, body: unknown, timeoutMs = 20_000): Promi
   return json;
 }
 
-/** Who the site is logged in to Econt as: proves the username/password and shows the client number. */
-export async function econtProfile(): Promise<{ name: string; clientNumber: string | null; company: boolean; email: string | null }> {
-  const res = await call<{ profiles?: { client?: { name?: string; clientNumber?: string | null; juridicalEntity?: boolean; email?: string | null } }[] }>(
-    "Profile/ProfileService.getClientProfiles",
-    {},
-  );
-  const c = res.profiles?.[0]?.client;
-  if (!c) throw new EcontError("Входът в Еконт е успешен, но към потребителя няма клиентски профил.");
-  return { name: c.name ?? "—", clientNumber: c.clientNumber || null, company: Boolean(c.juridicalEntity), email: c.email ?? null };
+/** One of the client profiles an e-Econt login may act for: the company itself, or a person authorised by it. */
+export type EcontProfile = {
+  id: number;
+  name: string;
+  clientNumber: string | null;
+  ein: string | null;
+  /** A company (юридическо лице): its waybills also need an authorised person. */
+  company: boolean;
+  /** The profile's cash-on-delivery agreements (their codes go into the waybill). */
+  codAgreements: string[];
+};
+
+/**
+ * Every profile the configured login may send for. Doubles as the connection check: it fails on a wrong login.
+ * A login often has several (the company and its authorised people), in no particular order.
+ */
+export async function econtProfiles(): Promise<EcontProfile[]> {
+  type Raw = { client?: { id?: number; name?: string; clientNumber?: string | null; ein?: string | null; juridicalEntity?: boolean }; cdPayOptions?: { num?: string }[] };
+  const res = await call<{ profiles?: Raw[] }>("Profile/ProfileService.getClientProfiles", {});
+  const list = (res.profiles ?? [])
+    .filter((p) => p.client?.id)
+    .map((p) => ({
+      id: p.client!.id!,
+      name: (p.client!.name ?? "—").trim(),
+      clientNumber: p.client!.clientNumber?.trim() || null,
+      ein: p.client!.ein?.trim() || null,
+      company: Boolean(p.client!.juridicalEntity),
+      codAgreements: [...new Set((p.cdPayOptions ?? []).map((o) => o.num?.trim()).filter((n): n is string => Boolean(n)))],
+    }));
+  if (list.length === 0) throw new EcontError("Входът в Еконт е успешен, но към потребителя няма клиентски профил.");
+  return list;
 }
 
 // ---------------------------------------------------------------------------------------------- labels
@@ -80,6 +102,10 @@ export async function econtProfile(): Promise<{ name: string; clientNumber: stri
 export type EcontParty = {
   name: string;
   phone: string;
+  /** The Econt client profile to send for (the shop's company), so the waybill goes under its contract. */
+  clientId?: number | null;
+  /** The authorised person, required by Econt when the client is a company. */
+  agentName?: string | null;
   /** Econt office or locker code; when empty the address below is used. */
   officeCode?: string | null;
   city?: string;
@@ -121,7 +147,7 @@ export type EcontLabelResult = {
 };
 
 function party(p: EcontParty) {
-  const client = { name: p.name.trim(), phones: [p.phone.trim()] };
+  const client = { ...(p.clientId ? { id: p.clientId } : {}), name: p.name.trim(), phones: [p.phone.trim()] };
   if (p.officeCode) return { client, officeCode: p.officeCode };
   return { client, address: { city: { country: { code3: "BGR" }, name: (p.city ?? "").trim() }, other: (p.address ?? "").trim() } };
 }
@@ -146,6 +172,9 @@ export async function econtLabel(input: EcontLabelInput, mode: "calculate" | "va
   const r = party(input.receiver);
   const label = {
     senderClient: s.client,
+    ...(input.sender.clientId && input.sender.agentName?.trim()
+      ? { senderAgent: { name: input.sender.agentName.trim(), phones: [input.sender.phone.trim()] } }
+      : {}),
     ...(s.officeCode ? { senderOfficeCode: s.officeCode } : { senderAddress: s.address }),
     receiverClient: r.client,
     ...(r.officeCode ? { receiverOfficeCode: r.officeCode } : { receiverAddress: r.address }),
