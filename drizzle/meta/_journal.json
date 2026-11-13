@@ -99,6 +99,13 @@
       "when": 1794596466358,
       "tag": "0013_events",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1794608392121,
+      "tag": "0014_store_payments",
+      "breakpoints": true
     }
   ]
 }
