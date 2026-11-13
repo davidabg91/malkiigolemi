@@ -142,7 +142,7 @@ export async function orderFromClaim(claimId: number, _prev: FbFormState, formDa
 
   const price = product ? unitPriceFor(product, d.qty) : post.price!;
   const subtotal = price * d.qty;
-  const shipping = shippingFor(d.delivery, subtotal);
+  const shipping = shippingFor(d.delivery, subtotal, d.courier);
   const number = orderNumber();
 
   try {

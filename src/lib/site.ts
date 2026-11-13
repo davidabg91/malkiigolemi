@@ -54,7 +54,7 @@ export const DELIVERY_METHODS = [
   {
     id: "box",
     label: "До автомат",
-    hint: "Безплатно с BoxNow · 24/7",
+    hint: "Безплатно с BoxNow · Еконт и Спиди като до офис",
     price: 0,
     addressLabel: "Автомат (име или адрес)",
   },
@@ -92,10 +92,12 @@ export const STORE = {
 
 export type DeliveryId = (typeof DELIVERY_METHODS)[number]["id"];
 
+/** What delivery costs. Lockers are free only with BOX NOW; another courier's locker costs the same as its office. */
 export function shippingFor(delivery: string, subtotal: number, courier?: string | null) {
+  const officePrice = DELIVERY_METHODS.find((d) => d.id === "office")!.price;
   if (delivery === "store") return 0;
-  if (delivery === "box" && (!courier || courier === "boxnow")) return 0;
-  return DELIVERY_METHODS.find((d) => d.id === delivery)?.price ?? DELIVERY_METHODS[1].price;
+  if (delivery === "box") return !courier || courier === "boxnow" ? 0 : officePrice;
+  return DELIVERY_METHODS.find((d) => d.id === delivery)?.price ?? officePrice;
 }
 
 export const ORDER_STATUS_LABELS: Record<string, string> = {

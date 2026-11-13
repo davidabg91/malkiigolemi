@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { ComponentType, ReactNode } from "react";
 import { Breadcrumbs, btn, FacebookIcon, ShopMark } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
-import { COMPANY, DELIVERY_METHODS, site, STORE } from "@/lib/site";
+import { COMPANY, DELIVERY_METHODS, shippingFor, site, STORE } from "@/lib/site";
 
 export function InfoPage({ title, lead, children }: { title: string; lead?: string; children: ReactNode }) {
   return (
@@ -76,7 +76,7 @@ export function DeliveryTable() {
                 {d.label}
               </th>
               <td className="px-5 py-3.5">{d.hint}</td>
-              <td className="px-5 py-3.5 text-right font-semibold text-ink tabular-nums">{d.price === 0 ? "Безплатно" : formatPrice(d.price)}</td>
+              <td className="px-5 py-3.5 text-right font-semibold text-ink tabular-nums">{d.id === "box" ? `0 € с BoxNow, иначе ${formatPrice(shippingFor("box", 0, "econt"))}` : d.price === 0 ? "Безплатно" : formatPrice(d.price)}</td>
             </tr>
           ))}
         </tbody>

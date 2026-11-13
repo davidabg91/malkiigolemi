@@ -249,7 +249,8 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
                 // Lockers default to BoxNow unless the customer has a saved courier; they can still pick another.
                 if (d === "box" && !defaults.courier) setCourier("boxnow");
               }}
-              priceFor={(id) => shippingFor(id, subtotal, id === "box" ? courier : undefined)}
+              // The locker tile shows the BoxNow price until lockers are chosen, then the chosen courier's.
+              priceFor={(id) => shippingFor(id, subtotal, id === "box" ? (delivery === "box" ? courier : "boxnow") : undefined)}
             />
           </div>
           {pickup ? (
