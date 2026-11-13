@@ -26,6 +26,22 @@ export function formatDate(d: Date | number) {
   return dateFmt.format(d);
 }
 
+const stampFmt = new Intl.DateTimeFormat("bg-BG", {
+  timeZone: "Europe/Sofia",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false,
+});
+
+/** Exact Bulgarian date and time, e.g. "13.11.2026 г., 15:42:07", for records such as a withdrawal. */
+export function formatTimestamp(d: Date | number) {
+  return stampFmt.format(d);
+}
+
 /** Price for one unit, taking the "buy N or more" price into account. */
 export function unitPriceFor(
   item: { price: number; bulkMinQty?: number | null; bulkPrice?: number | null },

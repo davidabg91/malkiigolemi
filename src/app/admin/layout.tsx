@@ -1,9 +1,9 @@
-import { eq, sql } from "drizzle-orm";
+import { eq, isNull, sql } from "drizzle-orm";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { db } from "@/db";
-import { orders } from "@/db/schema";
+import { orders, withdrawals } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 
 export const metadata: Metadata = {
@@ -13,10 +13,13 @@ export const metadata: Metadata = {
 
 async function Shell({ children }: { children: React.ReactNode }) {
   const session = await requireAdmin();
-  const [{ n }] = await db.select({ n: sql<number>`count(*)` }).from(orders).where(eq(orders.status, "new"));
+  const [[{ n }], [{ open }]] = await Promise.all([
+    db.select({ n: sql<number>`count(*)` }).from(orders).where(eq(orders.status, "new")),
+    db.select({ open: sql<number>`count(*)` }).from(withdrawals).where(isNull(withdrawals.handledAt)),
+  ]);
   return (
     <div className="flex min-h-dvh flex-col lg:flex-row">
-      <AdminNav name={session.name} newOrders={n} />
+      <AdminNav name={session.name} newOrders={n} openWithdrawals={open} />
       <main className="min-w-0 flex-1 px-4 py-6 sm:px-8 sm:py-8">{children}</main>
     </div>
   );

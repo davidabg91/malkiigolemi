@@ -1,5 +1,5 @@
-import { eq, inArray } from "drizzle-orm";
-import { AlertCircle, ArrowLeft, Mail, MapPin, Package, Phone, Printer, StickyNote, Truck } from "lucide-react";
+import { desc, eq, inArray } from "drizzle-orm";
+import { AlertCircle, ArrowLeft, Mail, MapPin, Package, Phone, Printer, StickyNote, Truck, Undo2 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -13,14 +13,14 @@ import { ProductVisual } from "@/components/product/PackShot";
 import { StatusPill } from "@/components/StatusPill";
 import { btn } from "@/components/ui";
 import { db } from "@/db";
-import { brands, ORDER_STATUSES, orders, products } from "@/db/schema";
+import { brands, ORDER_STATUSES, orders, products, withdrawals } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { courierName } from "@/lib/couriers";
 import { econtMode, econtTrackingUrl, parseEvents } from "@/lib/econt";
 import { getEcontSettings, missingSenderFields } from "@/lib/econt-settings";
 import { defaultWaybill, waybillBlocker } from "@/lib/shipments";
 import { findFlag, getFlagIndex } from "@/lib/flags";
-import { formatDate, formatPrice } from "@/lib/format";
+import { formatDate, formatPrice, formatTimestamp } from "@/lib/format";
 import { DELIVERY_METHODS, ORDER_STATUS_LABELS } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Поръчка" };
@@ -32,6 +32,7 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
   const order = await db.query.orders.findFirst({ where: eq(orders.id, id), with: { items: true } });
   if (!order) notFound();
   const flag = findFlag(await getFlagIndex(), { userId: order.userId, email: order.email, phone: order.phone });
+  const [withdrawal] = await db.select().from(withdrawals).where(eq(withdrawals.orderId, order.id)).orderBy(desc(withdrawals.createdAt)).limit(1);
 
   // The products' pictures. Hand-typed Facebook items have no product, and a product may have been deleted since.
   const productIds = order.items.map((i) => i.productId).filter((v): v is number => v != null);
@@ -71,6 +72,22 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
         <FlagBanner flag={flag}>
           <p className="mt-1 text-ink-soft">Имейлът или телефонът на тази поръчка съвпада с отбелязан клиент. Обади се за потвърждение, преди да изпратиш.</p>
         </FlagBanner>
+      )}
+
+      {withdrawal && (
+        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-line bg-sun/25 p-4 text-sm">
+          <Undo2 className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
+          <div>
+            <p className="text-base font-semibold">Клиентът се е отказал от договора</p>
+            <p className="mt-1">
+              На {formatTimestamp(withdrawal.createdAt)}
+              {withdrawal.details ? ` — само от: ${withdrawal.details}` : " — от цялата поръчка"}.{" "}
+              <Link href="/admin/otkazi" className="font-semibold underline underline-offset-2">
+                Към отказите
+              </Link>
+            </p>
+          </div>
+        </div>
       )}
 
       {order.status === "cancelled" && (

@@ -1,5 +1,5 @@
 import { desc, eq } from "drizzle-orm";
-import { Package, Star, Truck, XCircle } from "lucide-react";
+import { Package, Star, Truck, Undo2, XCircle } from "lucide-react";
 import type { Metadata } from "next";
 import { after } from "next/server";
 import Link from "next/link";
@@ -19,6 +19,7 @@ import { getSession } from "@/lib/auth";
 import { econtTrackingUrl, parseEvents } from "@/lib/econt";
 import { formatDate, formatPrice } from "@/lib/format";
 import { syncShipmentsIfStale } from "@/lib/shipments";
+import { withdrawalOpen } from "@/lib/withdrawals";
 import { DELIVERY_METHODS } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Моите поръчки", robots: { index: false } };
@@ -71,6 +72,7 @@ async function Orders() {
           const pickup = o.delivery === "store";
           const method = DELIVERY_METHODS.find((d) => d.id === o.delivery);
           const canCancel = o.status === "new" || o.status === "confirmed";
+          const canWithdraw = withdrawalOpen(o);
 
           return (
             <li key={o.id} className="rounded-card bg-paper p-5 shadow-soft sm:p-6 border border-line/60">
@@ -230,6 +232,12 @@ async function Orders() {
 
                 <div className="flex flex-wrap items-center gap-2">
                   {canCancel && <CancelOrderButton orderId={o.id} orderNumber={o.number} />}
+                  {canWithdraw && (
+                    <Link href={`/otkaz?poruchka=${encodeURIComponent(o.number)}`} className={btn.sm}>
+                      <Undo2 className="h-4 w-4" aria-hidden />
+                      Откажете се от договора тук
+                    </Link>
+                  )}
                   <ReorderButton orderId={o.id} />
                 </div>
               </div>

@@ -19,6 +19,37 @@ export const site = {
   facebookGroupName: "Поръчки за малки и големи",
 } as const;
 
+/**
+ * The trader behind the shop, as the law asks it to be shown (ЗЕТ чл. 4, ЗЗП чл. 47): footer, contacts,
+ * terms, privacy policy and the withdrawal confirmation all read it from here.
+ */
+export const COMPANY = {
+  name: "КРИСОНИ ОНЛАЙН ЕООД",
+  eik: "208246034",
+  /** ДДС номер; null while the company is not VAT-registered. */
+  vatNumber: null as string | null,
+  manager: "Иванка Петкова",
+  address: "гр. Плевен 5800, бл. 13, ет. 5, ап. 26",
+} as const;
+
+/** Public bodies a customer can turn to; named in the terms and the privacy policy. */
+export const AUTHORITIES = {
+  kzp: {
+    name: "Комисия за защита на потребителите (КЗП)",
+    address: "гр. София 1000, пл. „Славейков“ № 4А",
+    phone: "0700 111 22",
+    url: "https://kzp.bg",
+  },
+  kzld: {
+    name: "Комисия за защита на личните данни (КЗЛД)",
+    address: "гр. София 1592, бул. „Проф. Цветан Лазаров“ № 2",
+    url: "https://www.cpdp.bg",
+  },
+} as const;
+
+/** Days a consumer has to withdraw from a distance contract (ЗЗП чл. 50). */
+export const WITHDRAWAL_DAYS = 14;
+
 export const DELIVERY_METHODS = [
   {
     id: "box",

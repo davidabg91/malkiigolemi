@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { ComponentType, ReactNode } from "react";
 import { Breadcrumbs, btn, FacebookIcon, ShopMark } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
-import { DELIVERY_METHODS, site, STORE } from "@/lib/site";
+import { COMPANY, DELIVERY_METHODS, site, STORE } from "@/lib/site";
 
 export function InfoPage({ title, lead, children }: { title: string; lead?: string; children: ReactNode }) {
   return (
@@ -18,12 +18,37 @@ export function InfoPage({ title, lead, children }: { title: string; lead?: stri
   );
 }
 
-/** Marks legal copy that the shop owner still has to supply. */
-export function Placeholder() {
+/** The trader's legal details (ЗЕТ чл. 4), for the terms, privacy policy and contacts. */
+export function CompanyDetails() {
+  const rows: [string, ReactNode][] = [
+    ["Търговец", COMPANY.name],
+    ["ЕИК", COMPANY.eik],
+    ...(COMPANY.vatNumber ? ([["ДДС №", COMPANY.vatNumber]] as [string, ReactNode][]) : []),
+    ["Седалище и адрес на управление", COMPANY.address],
+    ["Управител", COMPANY.manager],
+    ["Адрес на магазина", STORE.address],
+    [
+      "Имейл",
+      <a key="e" href={`mailto:${site.email}`} className="font-medium text-ink underline underline-offset-2">
+        {site.email}
+      </a>,
+    ],
+    [
+      "Телефон",
+      <a key="p" href={site.phoneHref} className="font-medium text-ink underline underline-offset-2">
+        {site.phone}
+      </a>,
+    ],
+  ];
   return (
-    <p className="rounded-2xl border border-dashed border-ink/25 bg-sand px-4 py-3 text-sm">
-      Примерен текст. Преди пускане на сайта го заменете с документ, изготвен за вашата фирма (данни на търговеца, ЕИК, адрес, право на отказ).
-    </p>
+    <dl className="grid gap-x-6 gap-y-2 rounded-2xl border border-line bg-paper p-5 text-[0.95rem] sm:grid-cols-[auto_1fr]">
+      {rows.map(([k, v]) => (
+        <div key={k} className="contents">
+          <dt>{k}</dt>
+          <dd className="font-medium text-ink">{v}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 

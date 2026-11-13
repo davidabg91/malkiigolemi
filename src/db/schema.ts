@@ -325,6 +325,32 @@ export const stockAlerts = sqliteTable(
   (t) => [uniqueIndex("stock_alerts_product_email_idx").on(t.productId, t.email)],
 );
 
+/**
+ * A consumer's statement of withdrawal from a contract, sent through the „Откажете се от договора тук“
+ * function (ЗЗП чл. 52а). Kept as submitted, with the moment it arrived, as proof for both sides.
+ */
+export const withdrawals = sqliteTable(
+  "withdrawals",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    /** The order it was matched to by number; null when the number did not match any order. */
+    orderId: integer("order_id").references(() => orders.id, { onDelete: "set null" }),
+    /** The order number exactly as the customer typed it. */
+    orderNumber: text("order_number").notNull(),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    /** Which products, when the withdrawal covers only part of the order; empty for the whole order. */
+    details: text("details"),
+    userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+    /** When the confirmation e-mail went out (automatically, or marked by the admin after sending it). */
+    confirmedAt: integer("confirmed_at", { mode: "timestamp" }),
+    /** When the shop finished handling it (goods back, money refunded). */
+    handledAt: integer("handled_at", { mode: "timestamp" }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("withdrawals_order_idx").on(t.orderId)],
+);
+
 export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
@@ -338,6 +364,7 @@ export type User = typeof users.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type OrderItem = typeof orderItems.$inferSelect;
 export type Setting = typeof settings.$inferSelect;
+export type Withdrawal = typeof withdrawals.$inferSelect;
 export type FlaggedContact = typeof flaggedContacts.$inferSelect;
 export type FbPost = typeof fbPosts.$inferSelect;
 export type FbClaim = typeof fbClaims.$inferSelect;
