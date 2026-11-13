@@ -100,7 +100,7 @@ export function EcontWaybill({
             {existing.cost != null && <p className="text-xs text-ink-soft">Цена за магазина: {formatPrice(existing.cost)}</p>}
           </div>
           {existing.pdfUrl && (
-            <a href={existing.pdfUrl} target="_blank" rel="noopener noreferrer" className={`${btn.sm} bg-ink text-cream hover:bg-forest-deep`}>
+            <a href={existing.pdfUrl} target="_blank" rel="noopener noreferrer" className={btn.smDark}>
               <Printer className="h-4 w-4" aria-hidden />
               Печат (PDF)
             </a>
@@ -127,7 +127,7 @@ export function EcontWaybill({
             onClick={() => {
               if (confirm(`Да изтрия ли товарителница ${existing.number} в Еконт? Става само докато пратката не е предадена.`)) act("delete", () => deleteWaybillAction(orderId));
             }}
-            className={`${btn.sm} text-tomato hover:border-tomato`}
+            className={btn.smDanger}
           >
             {spin("delete") ?? <Trash2 className="h-4 w-4" aria-hidden />}
             Изтрий товарителницата
@@ -243,7 +243,7 @@ export function EcontWaybill({
             if (live && !confirm("Да създам ли истинска товарителница в Еконт? Тя ще се таксува по договора ти.")) return;
             act("create", () => createWaybillAction(orderId, options()));
           }}
-          className={`${btn.sm} border-forest bg-forest text-white hover:bg-forest-deep`}
+          className={btn.smPrimary}
         >
           {spin("create") ?? <Truck className="h-4 w-4" aria-hidden />}
           Създай товарителница
