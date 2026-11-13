@@ -3,9 +3,9 @@
 import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Heart, LayoutGrid, Loader2, Menu, Phone, ShoppingBag, User, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useEffectEvent, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { checkIsAdmin, reorderCategories } from "@/actions/admin";
+import { reorderCategories } from "@/actions/admin";
 import { CategoryIcon, FacebookIcon, Logo } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
 import { site, TONES } from "@/lib/site";
@@ -43,11 +43,16 @@ function CountBadge({ n, className = "-right-0.5 -top-0.5" }: { n: number; class
   );
 }
 
-export function HeaderClient({ tree }: { tree: MenuCategory[] }) {
-  const [isAdmin, setIsAdmin] = useState(false);
+export function HeaderClient({ tree, isAdmin }: { tree: MenuCategory[]; isAdmin: boolean }) {
   const [catItems, setCatItems] = useState<MenuCategory[]>(tree);
   const [megaReordering, setMegaReordering] = useState(false);
   const [mobileReordering, setMobileReordering] = useState(false);
+  // Take a new menu from the server, unless the admin is in the middle of reordering it.
+  const [syncedTree, setSyncedTree] = useState(tree);
+  if (tree !== syncedTree && !megaReordering && !mobileReordering) {
+    setSyncedTree(tree);
+    setCatItems(tree);
+  }
   const [isPending, startTransition] = useTransition();
   const [savedToast, setSavedToast] = useState(false);
   const [draggingId, setDraggingId] = useState<number | null>(null);
@@ -64,18 +69,6 @@ export function HeaderClient({ tree }: { tree: MenuCategory[] }) {
   const { count, subtotal } = cartTotals(hydrated ? items : []);
 
   useLockScroll(drawer);
-
-  useEffect(() => {
-    checkIsAdmin().then((res) => {
-      if (res) setIsAdmin(true);
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!megaReordering && !mobileReordering) {
-      setCatItems(tree);
-    }
-  }, [tree, megaReordering, mobileReordering]);
 
   // Long-press detection on the desktop "Категории" button
   const catLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -224,30 +217,29 @@ export function HeaderClient({ tree }: { tree: MenuCategory[] }) {
     });
   };
 
+  // Effect events always see the latest reorder state, so the listeners are added once per opening.
+  const onMegaKey = useEffectEvent((e: KeyboardEvent) => {
+    if (e.key !== "Escape") return;
+    if (megaReordering) handleSaveMegaReorder();
+    else setMega(false);
+  });
+  const onMegaPointerDown = useEffectEvent((e: PointerEvent) => {
+    if (megaRef.current?.contains(e.target as Node)) return;
+    if (megaReordering) handleSaveMegaReorder();
+    setMega(false);
+  });
+
   useEffect(() => {
     if (!mega) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (megaReordering) {
-          handleSaveMegaReorder();
-        } else {
-          setMega(false);
-        }
-      }
-    };
-    const onDown = (e: PointerEvent) => {
-      if (!megaRef.current?.contains(e.target as Node)) {
-        if (megaReordering) handleSaveMegaReorder();
-        setMega(false);
-      }
-    };
+    const onKey = (e: KeyboardEvent) => onMegaKey(e);
+    const onDown = (e: PointerEvent) => onMegaPointerDown(e);
     document.addEventListener("keydown", onKey);
     document.addEventListener("pointerdown", onDown);
     return () => {
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("pointerdown", onDown);
     };
-  }, [mega, megaReordering, catItems]);
+  }, [mega]);
 
   const iconBtn =
     "relative grid h-11 w-11 place-items-center rounded-full text-ink transition hover:bg-sand";

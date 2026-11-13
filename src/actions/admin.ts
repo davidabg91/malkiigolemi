@@ -7,7 +7,7 @@ import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { db } from "@/db";
 import { brands, categories, ORDER_STATUSES, products, type OrderStatus } from "@/db/schema";
-import { assertAdmin, getSession } from "@/lib/auth";
+import { assertAdmin } from "@/lib/auth";
 import { removeImage, saveImage } from "@/lib/images";
 import { PACKS } from "@/lib/listing";
 import { CATALOG_TAG } from "@/lib/queries";
@@ -311,11 +311,6 @@ export async function deleteCategory(id: number): Promise<void> {
   await db.delete(categories).where(eq(categories.id, id));
   updateTag(CATALOG_TAG);
   refresh();
-}
-
-export async function checkIsAdmin(): Promise<boolean> {
-  const session = await getSession();
-  return session?.role === "admin";
 }
 
 export async function reorderCategories(orderedIds: number[]): Promise<void> {

@@ -31,8 +31,8 @@ export function Badges({ product }: { product: ProductCardData }) {
  */
 export function ProductStamp({ className = "" }: { className?: string }) {
   return (
-    <span className={`pointer-events-none absolute z-[1] rounded-full bg-white/90 shadow-[0_2px_8px_rgb(15_23_42/0.12)] ring-1 ring-black/5 backdrop-blur-sm ${className}`}>
-      <LogoArt idPrefix="stamp-" className="h-full w-auto" />
+    <span aria-hidden className={`pointer-events-none absolute z-[1] rounded-full bg-white/90 shadow-[0_2px_8px_rgb(15_23_42/0.12)] ring-1 ring-black/5 backdrop-blur-sm ${className}`}>
+      <LogoArt className="h-full w-auto" />
     </span>
   );
 }

@@ -197,7 +197,7 @@ export function CourierOfficePicker({
           <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-lime/60 bg-lime/15 p-3.5 text-xs sm:text-sm text-ink leading-relaxed">
             <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-forest" aria-hidden />
             <div>
-              <strong className="font-bold text-forest">Безплатна доставка до автомат:</strong> Доставката с <strong>BoxNow</strong> до автомат е <strong>напълно безплатна (0.00 лв.)</strong>! За пратки до автомат е <strong>задължително плащане с карта</strong> — автоматите са денонощни/соларни и не поддържат наложен платеж в брой.
+              <strong className="font-bold text-forest">Безплатна доставка до автомат:</strong> Доставката с <strong>BoxNow</strong> до автомат е <strong>напълно безплатна</strong>! За пратки до автомат е <strong>задължително плащане с карта</strong> — автоматите са денонощни/соларни и не поддържат наложен платеж в брой.
             </div>
           </div>
         )}

@@ -3,7 +3,7 @@
 import { Banknote, CreditCard, Info, Loader2, Lock } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useLayoutEffect, useState, useTransition, type FormEvent } from "react";
+import { useId, useLayoutEffect, useState, useTransition, type FormEvent } from "react";
 import { placeOrder } from "@/actions/checkout";
 import { ProductVisual } from "@/components/product/PackShot";
 import { StoreLocation } from "@/components/StoreLocation";
@@ -126,7 +126,7 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
   const items = useCart((s) => s.items);
   const clear = useCart((s) => s.clear);
   const [delivery, setDelivery] = useState<DeliveryId>(isDeliveryId(defaults.delivery) ? defaults.delivery : "office");
-  const [courier, setCourier] = useState<CourierId>((defaults.courier as CourierId) || "speedy");
+  const [courier, setCourier] = useState<CourierId>((defaults.courier as CourierId) || (defaults.delivery === "box" ? "boxnow" : "speedy"));
   const [city, setCity] = useState<string>(defaults.city || "Плевен");
   // With an office or locker saved, the stored address is the office's own, not a street address to deliver to.
   const [address, setAddress] = useState<string>(defaults.delivery === "office" || defaults.delivery === "box" ? "" : defaults.address);
@@ -153,16 +153,7 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
     [],
   );
 
-  // When delivery is "До автомат" (box), enforce card payment only and default to BoxNow if not set
-  useEffect(() => {
-    if (delivery === "box") {
-      setPayment("card");
-      if (courier !== "boxnow" && !defaults.courier) {
-        setCourier("boxnow");
-      }
-    }
-  }, [delivery, courier, defaults.courier]);
-
+  // "До автомат" is card only; the choice made for other deliveries is kept for when the customer switches back.
   const effectivePayment = delivery === "box" ? "card" : payment;
   const { subtotal } = cartTotals(items);
   const loyalty = defaults.loyalty;
@@ -253,6 +244,8 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
               onChange={(d) => {
                 setDelivery(d);
                 setSelectedOffice(null);
+                // Lockers default to BoxNow unless the customer has a saved courier; they can still pick another.
+                if (d === "box" && !defaults.courier) setCourier("boxnow");
               }}
               priceFor={(id) => shippingFor(id, subtotal, id === "box" ? courier : undefined)}
             />

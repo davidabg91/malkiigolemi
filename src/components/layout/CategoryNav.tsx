@@ -1,9 +1,9 @@
 "use client";
 
-import { Check, ChevronLeft, ChevronRight, GripHorizontal, Loader2, SlidersHorizontal } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Loader2, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState, useTransition } from "react";
-import { checkIsAdmin, reorderCategories } from "@/actions/admin";
+import { useEffect, useEffectEvent, useRef, useState, useTransition } from "react";
+import { reorderCategories } from "@/actions/admin";
 import { CategoryIcon } from "@/components/ui";
 import { TONES } from "@/lib/site";
 import type { MenuCategory } from "./HeaderClient";
@@ -33,25 +33,22 @@ export function CategoryNav({
   setItems: controlledSetItems,
   isEditing: controlledIsEditing,
   setIsEditing: controlledSetIsEditing,
-  isAdmin: controlledIsAdmin,
+  isAdmin = false,
 }: CategoryNavProps) {
-  const [localIsAdmin, setLocalIsAdmin] = useState(false);
   const [localItems, setLocalItems] = useState<MenuCategory[]>(tree);
   const [localIsEditing, setLocalIsEditing] = useState(false);
 
-  const isAdmin = controlledIsAdmin !== undefined ? controlledIsAdmin : localIsAdmin;
   const items = controlledItems ?? localItems;
   const setItems = controlledSetItems ?? setLocalItems;
   const isEditing = controlledIsEditing !== undefined ? controlledIsEditing : localIsEditing;
   const setIsEditing = controlledSetIsEditing ?? setLocalIsEditing;
 
-  useEffect(() => {
-    if (controlledIsAdmin === undefined) {
-      checkIsAdmin().then((admin) => {
-        if (admin) setLocalIsAdmin(true);
-      });
-    }
-  }, [controlledIsAdmin]);
+  // Take a new menu from the server, unless the admin is in the middle of reordering it.
+  const [syncedTree, setSyncedTree] = useState(tree);
+  if (tree !== syncedTree && !isEditing && !controlledItems) {
+    setSyncedTree(tree);
+    setLocalItems(tree);
+  }
 
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const [dragOverId, setDragOverId] = useState<number | null>(null);
@@ -62,12 +59,6 @@ export function CategoryNav({
   const startPos = useRef<{ x: number; y: number } | null>(null);
   const hasTriggeredLongPress = useRef(false);
 
-  // Sync state if tree prop updates
-  useEffect(() => {
-    if (!isEditing && !controlledItems) {
-      setLocalItems(tree);
-    }
-  }, [tree, isEditing, controlledItems]);
 
   const triggerWiggle = () => {
     if (!isAdmin) return;
@@ -124,17 +115,16 @@ export function CategoryNav({
     });
   };
 
-  // Keyboard shortcut: Escape exits/saves
+  // Keyboard shortcut: Escape exits/saves. The effect event always saves the latest order.
+  const onEscape = useEffectEvent((e: KeyboardEvent) => {
+    if (e.key === "Escape") handleSaveAndExit();
+  });
   useEffect(() => {
     if (!isEditing) return;
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        handleSaveAndExit();
-      }
-    };
+    const handleKey = (e: KeyboardEvent) => onEscape(e);
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [isEditing, items]);
+  }, [isEditing]);
 
   const moveLeft = (index: number) => {
     if (index <= 0) return;
