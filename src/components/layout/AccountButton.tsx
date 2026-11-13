@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, ClipboardPaste, LayoutDashboard, ReceiptText, Undo2, User, UserRound } from "lucide-react";
+import { ArrowRight, ClipboardPaste, LayoutDashboard, QrCode, ReceiptText, Undo2, User, UserRound } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useEffect, useEffectEvent, useId, useRef, useState } from "react";
@@ -11,7 +11,7 @@ const iconBtn = "relative grid h-11 w-11 place-items-center rounded-full transit
 
 /**
  * The header's profile icon. For an admin it also carries what is waiting in the admin panel: the icon
- * turns red with a count, and a click opens a small bubble listing new orders, withdrawals and Facebook claims.
+ * turns red with a count, and a click opens a small bubble listing new orders, shop payments, withdrawals and Facebook claims.
  */
 export function AccountButton({ alerts: initial }: { alerts: AdminAlerts | null }) {
   if (!initial) {
@@ -71,6 +71,7 @@ function AdminAccountButton({ initial }: { initial: AdminAlerts }) {
   const hot = alerts.total > 0;
   const rows = [
     { href: "/admin/porachki?status=new", label: "Нови поръчки", hint: "чакат потвърждение", n: alerts.newOrders, icon: ReceiptText },
+    { href: "/admin/plashtaniya", label: "Плащания в магазина", hint: "получени през QR кода", n: alerts.storePayments, icon: QrCode },
     { href: "/admin/otkazi", label: "Откази от договор", hint: "за обработка", n: alerts.withdrawals, icon: Undo2 },
     { href: "/admin/facebook", label: "Заявки от Facebook", hint: "неоформени коментари", n: alerts.fbClaims, icon: ClipboardPaste },
   ];

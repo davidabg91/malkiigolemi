@@ -360,6 +360,23 @@ export const withdrawals = sqliteTable(
 );
 
 /**
+ * A card payment taken in the physical shop: the customer scans the QR code at the till, types the amount
+ * on /plati and pays through Stripe. A row is written only once Stripe confirms the money.
+ */
+export const storePayments = sqliteTable("store_payments", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  /** Euro cents. */
+  amount: integer("amount").notNull(),
+  /** What the customer wrote about the payment (a name, what it is for). */
+  note: text("note"),
+  stripeSessionId: text("stripe_session_id").notNull().unique(),
+  stripePaymentIntent: text("stripe_payment_intent"),
+  /** When the shop marked it as seen at the till; until then it counts as an admin notification. */
+  seenAt: integer("seen_at", { mode: "timestamp" }),
+  createdAt: createdAt(),
+});
+
+/**
  * Anonymous visit statistics for the admin (Админ → Посетители): page views, time on page, clicks,
  * cart adds and orders. No cookie or device storage is used: `visitor` is a hash of the day, the IP
  * address and the browser, so it cannot be linked across days or back to a person. Rows are deleted after 90 days.
@@ -406,6 +423,7 @@ export type Order = typeof orders.$inferSelect;
 export type OrderItem = typeof orderItems.$inferSelect;
 export type Setting = typeof settings.$inferSelect;
 export type Withdrawal = typeof withdrawals.$inferSelect;
+export type StorePayment = typeof storePayments.$inferSelect;
 export type FlaggedContact = typeof flaggedContacts.$inferSelect;
 export type FbPost = typeof fbPosts.$inferSelect;
 export type FbClaim = typeof fbClaims.$inferSelect;

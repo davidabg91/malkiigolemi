@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, BadgePercent, BarChart3, ClipboardPaste, ExternalLink, Gift, MessageSquareText, FolderTree, LayoutDashboard, LogOut, Package, ReceiptText, Truck, Undo2, Users } from "lucide-react";
+import { Activity, BadgePercent, BarChart3, ClipboardPaste, ExternalLink, Gift, MessageSquareText, FolderTree, LayoutDashboard, LogOut, Package, QrCode, ReceiptText, Truck, Undo2, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/actions/auth";
@@ -10,6 +10,7 @@ import type { AdminAlerts } from "@/lib/admin-alerts";
 const LINKS = [
   { href: "/admin", label: "Табло", icon: LayoutDashboard, exact: true },
   { href: "/admin/porachki", label: "Поръчки", icon: ReceiptText },
+  { href: "/admin/plashtaniya", label: "Плащания", icon: QrCode },
   { href: "/admin/otkazi", label: "Откази", icon: Undo2 },
   { href: "/admin/facebook", label: "От Facebook", icon: ClipboardPaste },
   { href: "/admin/produkti", label: "Продукти", icon: Package },
@@ -35,7 +36,7 @@ export function AdminNav({ name, alerts }: { name: string; alerts: AdminAlerts }
       <nav aria-label="Админ навигация" className="no-scrollbar flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-col lg:pb-0">
         {LINKS.map(({ href, label, icon: Icon, exact }) => {
           const active = exact ? pathname === href : pathname.startsWith(href);
-          const badge = href === "/admin/porachki" ? alerts.newOrders : href === "/admin/otkazi" ? alerts.withdrawals : href === "/admin/facebook" ? alerts.fbClaims : 0;
+          const badge = href === "/admin/porachki" ? alerts.newOrders : href === "/admin/otkazi" ? alerts.withdrawals : href === "/admin/facebook" ? alerts.fbClaims : href === "/admin/plashtaniya" ? alerts.storePayments : 0;
           return (
             <Link
               key={href}

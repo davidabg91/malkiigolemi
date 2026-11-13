@@ -9,6 +9,13 @@ export function formatPrice(cents: number) {
   return eur.format(cents / 100);
 }
 
+/** Reads a sum typed by a person, "12,50" or "12.5 €", into euro cents; null when it is not a sum. */
+export function parseEuro(raw: string) {
+  const s = raw.replace(/[\s€]/g, "").replace(",", ".");
+  if (!/^\d{1,6}(\.\d{1,2})?$/.test(s)) return null;
+  return Math.round(Number(s) * 100);
+}
+
 export function discountPercent(price: number, oldPrice: number | null | undefined) {
   if (!oldPrice || oldPrice <= price) return 0;
   return Math.round((1 - price / oldPrice) * 100);

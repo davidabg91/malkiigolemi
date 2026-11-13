@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { changeOrderStatus } from "@/lib/order-status";
+import { isStorePayment, recordStorePayment } from "@/lib/store-payments";
 import { recordPayment, stripe, stripeConfigured } from "@/lib/stripe";
 
 /** An unpaid card order whose payment page ran out: cancelled, so its goods go back on sale. */
@@ -30,7 +31,8 @@ export async function POST(request: Request) {
   switch (event.type) {
     case "checkout.session.completed":
     case "checkout.session.async_payment_succeeded":
-      await recordPayment(event.data.object);
+      if (isStorePayment(event.data.object)) await recordStorePayment(event.data.object);
+      else await recordPayment(event.data.object);
       break;
     case "checkout.session.expired":
       await cancelUnpaid(event.data.object);
