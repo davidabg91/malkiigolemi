@@ -1,7 +1,7 @@
 "use server";
 
 import { assertAdmin } from "@/lib/auth";
-import { mailConfigured, mailLayout, sendMail } from "@/lib/mail";
+import { checkSmtp, mailConfigured, mailLayout, sendMail } from "@/lib/mail";
 import { site } from "@/lib/site";
 
 export type MailTestState = { ok?: boolean; error?: string } | undefined;
@@ -10,6 +10,10 @@ export type MailTestState = { ok?: boolean; error?: string } | undefined;
 export async function sendTestMailAction(): Promise<MailTestState> {
   await assertAdmin();
   if (!mailConfigured()) return { error: "Имейлите още не са настроени." };
+  if (process.env.SMTP_USER) {
+    const check = await checkSmtp();
+    if (!check.ok) return { error: `Входът в пощата не успя. ${check.detail}` };
+  }
   const ok = await sendMail(
     site.email,
     "Пробен имейл от сайта",
