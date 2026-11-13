@@ -210,7 +210,9 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
       if (result.ok) {
         setPlaced(true);
         clear();
-        router.push(`/porachka/${result.number}`);
+        // Card orders continue on Stripe's payment page and come back to the order page afterwards.
+        if (result.payUrl) window.location.assign(result.payUrl);
+        else router.push(`/porachka/${result.number}`);
         return;
       }
       setErrors(result.fieldErrors ?? {});
@@ -343,7 +345,7 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
             <p role="status" className="mt-4 flex gap-2.5 rounded-2xl bg-sand px-4 py-3 text-sm">
               <Info className="mt-0.5 h-4 w-4 shrink-0 text-forest" aria-hidden />
               <span>
-                Плащането се извършва сигурно с дебитна или кредитна карта през защитена банкова система.
+                След потвърждаване ще те пренасочим към защитената страница на Stripe — карта, Apple Pay или Google Pay. Данните на картата не минават през нас.
               </span>
             </p>
           ) : null}

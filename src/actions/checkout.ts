@@ -15,6 +15,7 @@ import { pricedColumns } from "@/lib/pricing";
 import { savedOffice } from "@/lib/courier-offices";
 import { CATALOG_TAG, sellable } from "@/lib/queries";
 import { DELIVERY_METHODS, shippingFor, STORE } from "@/lib/site";
+import { createCheckout, stripeConfigured } from "@/lib/stripe";
 
 const input = z.object({
   name: z.string().trim().min(3, "Въведи име и фамилия.").max(80),
@@ -61,7 +62,7 @@ const input = z.object({
 
 export type CheckoutInput = z.input<typeof input>;
 export type CheckoutResult =
-  | { ok: true; number: string }
+  | { ok: true; number: string; /** Stripe's payment page, for card orders. */ payUrl?: string }
   | { ok: false; error: string; fieldErrors?: Record<string, string> };
 
 export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
@@ -198,6 +199,15 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
       .catch(() => {});
   }
   if (soldOut) updateTag(CATALOG_TAG);
+  if (data.payment === "card" && stripeConfigured()) {
+    // The "order received" e-mails wait for the payment (see recordPayment). If Stripe cannot open the
+    // page now, the order page offers to pay again.
+    const payUrl = await createCheckout(orderId).catch((e) => {
+      console.error("Stripe checkout failed", number, e);
+      return undefined;
+    });
+    return { ok: true, number, payUrl };
+  }
   after(() => sendOrderPlaced(orderId));
   return { ok: true, number };
 }

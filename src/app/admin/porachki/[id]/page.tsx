@@ -19,6 +19,7 @@ import { courierName } from "@/lib/couriers";
 import { econtMode, econtTrackingUrl, parseEvents } from "@/lib/econt";
 import { getEcontSettings, missingSenderFields } from "@/lib/econt-settings";
 import { defaultWaybill, waybillBlocker } from "@/lib/shipments";
+import { stripePaymentUrl } from "@/lib/stripe";
 import { findFlag, getFlagIndex } from "@/lib/flags";
 import { formatDate, formatPrice, formatTimestamp } from "@/lib/format";
 import { DELIVERY_METHODS, ORDER_STATUS_LABELS } from "@/lib/site";
@@ -172,9 +173,28 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
               </div>
             )}
             <div className="flex justify-between text-lg font-bold">
-              <dt>Общо (наложен платеж)</dt>
+              <dt>{order.payment === "card" ? "Общо (с карта)" : order.delivery === "store" ? "Общо (в магазина)" : "Общо (наложен платеж)"}</dt>
               <dd className="tabular-nums">{formatPrice(order.total)}</dd>
             </div>
+            {order.payment === "card" && (
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-sm">
+                <dt className="text-ink-soft">Плащане с карта</dt>
+                <dd className="flex items-center gap-2">
+                  {order.refundedAt ? (
+                    <span className="rounded-full bg-sand px-2.5 py-0.5 font-semibold">Върнато {formatDate(order.refundedAt)}</span>
+                  ) : order.paidAt ? (
+                    <span className="rounded-full bg-lime/60 px-2.5 py-0.5 font-semibold">Платено {formatDate(order.paidAt)}</span>
+                  ) : (
+                    <span className="rounded-full bg-tomato px-2.5 py-0.5 font-semibold text-white">Не е платено</span>
+                  )}
+                  {order.stripePaymentIntent && (
+                    <a href={stripePaymentUrl(order.stripePaymentIntent)} target="_blank" rel="noopener noreferrer" className="font-medium underline underline-offset-2">
+                      в Stripe
+                    </a>
+                  )}
+                </dd>
+              </div>
+            )}
           </dl>
         </Panel>
 
@@ -268,7 +288,7 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
                   <p className="font-medium text-ink">Готово за генериране на товарителница</p>
                   <p className="mt-0.5">
                     Куриер: {courierName(order.courier) ?? "не е избран"} ·
-                    Код: {order.officeCode || "До адрес"} · НП: {formatPrice(order.total)}
+                    Код: {order.officeCode || "До адрес"} · {order.payment === "card" ? "без наложен платеж (с карта)" : `НП: ${formatPrice(order.total)}`}
                   </p>
                 </div>
               ) : null}
