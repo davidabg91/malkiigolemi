@@ -95,17 +95,9 @@ export function Logo({ className = "", light = false }: { className?: string; li
 /**
  * The official store logo.
  */
-export function LogoArt({
-  className = "",
-  light = false,
-  idPrefix = "",
-}: {
-  className?: string;
-  light?: boolean;
-  idPrefix?: string;
-}) {
+export function LogoArt({ className = "" }: { className?: string }) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element
+    // eslint-disable-next-line @next/next/no-img-element -- a small fixed logo, sized by the caller
     <img
       src="/logo.png"
       alt="Поръчки за малки и големи"

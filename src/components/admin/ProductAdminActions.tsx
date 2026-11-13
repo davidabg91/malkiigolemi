@@ -24,10 +24,12 @@ export function ProductAdminActions({ product }: ProductAdminActionsProps) {
   const [isPendingToggle, startTransitionToggle] = useTransition();
   const [isPendingDelete, startTransitionDelete] = useTransition();
 
-  // Sync state if prop changes
-  useEffect(() => {
+  // Follow the server's value when it changes (e.g. after a refresh).
+  const [syncedActive, setSyncedActive] = useState(product.active);
+  if (product.active !== syncedActive) {
+    setSyncedActive(product.active);
     setIsActive(product.active);
-  }, [product.active]);
+  }
 
   // Handle Escape key to close modal
   useEffect(() => {

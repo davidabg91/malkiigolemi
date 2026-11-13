@@ -56,7 +56,7 @@ export function ProductZoom({ label, zoomed, children }: { label: string; zoomed
             </div>
 
             <p className="mt-3 text-center text-xs font-medium text-white/70">
-              {label} · <span className="text-white/40">Натиснете където и да е за затваряне</span>
+              {label} · <span className="text-white/40">Натисни извън снимката или Esc, за да затвориш</span>
             </p>
 
             <button

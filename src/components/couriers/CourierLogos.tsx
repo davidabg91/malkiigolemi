@@ -4,6 +4,7 @@ import type { CourierId } from "@/lib/couriers";
 /** Official vector logo for Econt */
 export function EcontLogo({ className = "h-6 w-auto" }: { className?: string }) {
   return (
+    // eslint-disable-next-line @next/next/no-img-element -- a small static SVG logo
     <img
       src="/econt-logo.svg"
       alt="Еконт"
@@ -17,6 +18,7 @@ export function EcontLogo({ className = "h-6 w-auto" }: { className?: string }) 
 /** Official vector logo for Speedy */
 export function SpeedyLogo({ className = "h-6 w-auto" }: { className?: string }) {
   return (
+    // eslint-disable-next-line @next/next/no-img-element -- a small static SVG logo
     <img
       src="/speedy-logo.svg"
       alt="Спиди"
@@ -30,6 +32,7 @@ export function SpeedyLogo({ className = "h-6 w-auto" }: { className?: string })
 /** Official vector logo for Box Now */
 export function BoxNowLogo({ className = "h-6 w-auto" }: { className?: string }) {
   return (
+    // eslint-disable-next-line @next/next/no-img-element -- a small static SVG logo
     <img
       src="/boxnow-logo.svg"
       alt="Box Now"
@@ -43,6 +46,7 @@ export function BoxNowLogo({ className = "h-6 w-auto" }: { className?: string })
 /** Official vector logo for Pigeon Express */
 export function PigeonExpressLogo({ className = "h-6 w-auto" }: { className?: string }) {
   return (
+    // eslint-disable-next-line @next/next/no-img-element -- a small static SVG logo
     <img
       src="/pigeonexpress-logo.svg"
       alt="Pigeon Express"
