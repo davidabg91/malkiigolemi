@@ -13,7 +13,8 @@ import { stripe } from "./stripe";
  * Card payments at the till: the customer scans the shop's QR code, types the sum on /plati and pays on
  * Stripe's page (Apple Pay, Google Pay or a card). The shop sees it in Админ → Плащания.
  */
-export const STORE_PAY_URL = `${site.url}/plati`;
+// The printed QR code carries this address for good, so it is the shop's own domain whatever SITE_URL says.
+export const STORE_PAY_URL = `https://${site.domain}/plati`;
 /** Euro cents a customer may pay in one go. */
 export const STORE_PAY_MIN = 100;
 export const STORE_PAY_MAX = 200_000;
