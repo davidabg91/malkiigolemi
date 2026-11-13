@@ -44,6 +44,20 @@ export function confirmationHtml(w: WithdrawalStatement) {
   return mailLayout("Получихме отказа ти от договора", body);
 }
 
+/** The note to the shop about a new withdrawal; says so when the customer still needs a confirmation by hand. */
+export function shopWithdrawalMail(w: WithdrawalStatement, emailed: boolean) {
+  return {
+    subject: `Отказ от договор – поръчка ${w.orderNumber}`,
+    html: mailLayout(
+      "Нов отказ от договор",
+      `<p>${escapeHtml(statementText(w))}</p><p>Име: ${escapeHtml(w.name)}<br>Имейл: ${escapeHtml(w.email)}</p>${
+        emailed ? "" : "<p><strong>Потвърждението до клиента не е изпратено автоматично — изпрати го от Админ → Откази днес.</strong></p>"
+      }`,
+      { href: `${site.url}/admin/otkazi`, label: "Към отказите" },
+    ),
+  };
+}
+
 /** A ready "mailto:" link so the shop can send the confirmation from its own mailbox. */
 export function confirmationMailto(w: WithdrawalStatement) {
   return `mailto:${encodeURIComponent(w.email).replace("%40", "@")}?subject=${encodeURIComponent(confirmationSubject(w))}&body=${encodeURIComponent(confirmationText(w))}`;

@@ -5,6 +5,17 @@ import { products, stockAlerts } from "@/db/schema";
 import { escapeHtml, mailLayout, sendMail } from "./mail";
 import { site } from "./site";
 
+/** "… е отново наличен" to a customer who asked to be told. */
+export function backInStockMail(name: string, url: string) {
+  return {
+    subject: `${name} е отново наличен`,
+    html: mailLayout(`${name} е отново наличен`, `<p>Здравей! Продуктът, който чакаше, отново е в наличност: <strong>${escapeHtml(name)}</strong>.</p><p>Побързай, преди да свърши пак.</p>`, {
+      href: url,
+      label: "Виж продукта",
+    }),
+  };
+}
+
 /**
  * Tells everyone waiting for these products that they are back. E-mails go out when e-mail is set up;
  * an alert is marked done only once its e-mail was sent, so nothing is lost if sending is not configured yet.
@@ -21,14 +32,8 @@ export async function notifyRestocked(productIds: number[]) {
   for (const w of waiting) {
     const name = `${w.name} ${w.unit}`.trim();
     const url = `${site.url}/produkt/${w.slug}`;
-    const sent = await sendMail(
-      w.alert.email,
-      `${name} е отново наличен`,
-      mailLayout(`${name} е отново наличен`, `<p>Здравей! Продуктът, който чакаше, отново е в наличност: <strong>${escapeHtml(name)}</strong>.</p><p>Побързай, преди да свърши пак.</p>`, {
-        href: url,
-        label: "Виж продукта",
-      }),
-    );
+    const mail = backInStockMail(name, url);
+    const sent = await sendMail(w.alert.email, mail.subject, mail.html);
     if (sent) await db.update(stockAlerts).set({ notifiedAt: new Date() }).where(eq(stockAlerts.id, w.alert.id));
   }
 }

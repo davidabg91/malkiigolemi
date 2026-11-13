@@ -8,9 +8,9 @@ import { z } from "zod";
 import { db } from "@/db";
 import { orders, withdrawals } from "@/db/schema";
 import { assertAdmin, getSession, tooManyAttempts } from "@/lib/auth";
-import { escapeHtml, mailLayout, sendMail } from "@/lib/mail";
+import { sendMail } from "@/lib/mail";
 import { site } from "@/lib/site";
-import { confirmationHtml, confirmationSubject, statementText } from "@/lib/withdrawals";
+import { confirmationHtml, confirmationSubject, shopWithdrawalMail, statementText } from "@/lib/withdrawals";
 
 const schema = z.object({
   name: z.string().trim().min(3, "Въведи име и фамилия.").max(120),
@@ -64,20 +64,10 @@ export async function submitWithdrawal(input: WithdrawalInput): Promise<Withdraw
   if (emailed) await db.update(withdrawals).set({ confirmedAt: new Date() }).where(eq(withdrawals.id, row.id));
 
   // Let the shop know at once; the admin list shows it either way.
-  after(() =>
-    sendMail(
-      site.email,
-      `Отказ от договор – поръчка ${row.orderNumber}`,
-      mailLayout(
-        "Нов отказ от договор",
-        `<p>${escapeHtml(statement)}</p><p>Име: ${escapeHtml(row.name)}<br>Имейл: ${escapeHtml(row.email)}</p>${
-          emailed ? "" : "<p><strong>Потвърждението до клиента не е изпратено автоматично — изпрати го от Админ → Откази днес.</strong></p>"
-        }`,
-        { href: `${site.url}/admin/otkazi`, label: "Към отказите" },
-      ),
-      row.email,
-    ),
-  );
+  after(() => {
+    const notice = shopWithdrawalMail(row, emailed);
+    return sendMail(site.email, notice.subject, notice.html, row.email);
+  });
 
   return { ok: true, createdAt: row.createdAt.toISOString(), statement, emailed };
 }
