@@ -115,7 +115,7 @@ export function BuyBox({ product }: { product: ProductCardData }) {
           setTimeout(() => setDone(false), 1600);
           openCart(true);
         }}
-        className="inline-flex h-12 min-w-56 flex-1 items-center justify-center gap-2 rounded-full bg-lime px-6 font-semibold text-ink transition hover:bg-lime-deep active:scale-[.98]"
+        className="inline-flex h-12 min-w-56 flex-1 items-center justify-center gap-2 rounded-full bg-forest px-6 font-semibold text-white transition hover:bg-forest-deep active:scale-[.98]"
       >
         {done ? <Check className="h-5 w-5" /> : <ShoppingBag className="h-5 w-5" />}
         {done ? "Добавено" : "Добави в количката"}

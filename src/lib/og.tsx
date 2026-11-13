@@ -53,8 +53,8 @@ export async function productPhoto(src: string, box: number): Promise<string | n
 }
 
 /** `hex` mixed into the cream background, like the product cards' color-mix tint. */
-export function tint(hex: string, amount: number, base = "#f6f2e8") {
+export function tint(hex: string, amount: number, base = "#f5f5f4") {
   const rgb = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
-  const [a, b] = [rgb(/^#[0-9a-f]{6}$/i.test(hex) ? hex : "#1f5c3f"), rgb(base)];
+  const [a, b] = [rgb(/^#[0-9a-f]{6}$/i.test(hex) ? hex : "#33484b"), rgb(base)];
   return `rgb(${a.map((v, i) => Math.round(v * amount + b[i] * (1 - amount))).join(" ")})`;
 }

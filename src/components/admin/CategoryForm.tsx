@@ -77,7 +77,7 @@ export function CategoryForm({ category, roots }: { category?: Category; roots: 
             type="checkbox"
             name="active"
             defaultChecked={category?.active ?? true}
-            className="h-4 w-4 rounded accent-[#1f5c3f]"
+            className="h-4 w-4 rounded accent-[#33484b]"
           />
           <span>Активна</span>
         </label>

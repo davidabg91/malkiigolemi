@@ -73,7 +73,7 @@ export function SelectAllOrders() {
     <input
       type="checkbox"
       aria-label="Избери всички поръчки на страницата"
-      className="h-5 w-5 accent-[#1f5c3f]"
+      className="h-5 w-5 accent-[#33484b]"
       onChange={(e) => {
         for (const b of boxes()) b.checked = e.target.checked;
         document.dispatchEvent(new Event("change"));

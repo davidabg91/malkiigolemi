@@ -135,7 +135,7 @@ export function FbImport({ products }: { products: ProductOption[] }) {
           <div className="mt-1 space-y-1.5">
             {posts.map((p) => (
               <label key={p.key} className="flex cursor-pointer items-center gap-3 text-sm">
-                <input type="radio" name="fb-post" checked={post === p.key} onChange={() => setPickedPost(p.key)} className="h-4 w-4 accent-[#1f5c3f]" />
+                <input type="radio" name="fb-post" checked={post === p.key} onChange={() => setPickedPost(p.key)} className="h-4 w-4 accent-[#33484b]" />
                 <span className="min-w-0 flex-1 truncate font-medium">„{p.title}“</span>
                 <span className="shrink-0 tabular-nums text-ink-soft">
                   {p.count} коментара · {p.units} бр
@@ -168,7 +168,7 @@ export function FbImport({ products }: { products: ProductOption[] }) {
                   checked={r.include}
                   onChange={(e) => edit(r.index, { include: e.target.checked, qty: e.target.checked && r.qty === 0 ? 1 : r.qty })}
                   aria-label={`Включи ${r.name}`}
-                  className="h-5 w-5 accent-[#1f5c3f]"
+                  className="h-5 w-5 accent-[#33484b]"
                 />
                 <input value={r.name} onChange={(e) => edit(r.index, { name: e.target.value })} aria-label="Име" className="field h-10 text-sm" />
                 <p className="col-span-3 col-start-2 row-start-2 text-sm text-ink-soft sm:col-span-1 sm:col-start-3 sm:row-start-1">

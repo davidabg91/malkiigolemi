@@ -61,7 +61,7 @@ export function ProductForm({
 
   const check = (name: string, label: string, hint: string, defaultChecked: boolean) => (
     <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-line p-4 transition has-[:checked]:border-forest has-[:checked]:bg-lime/25">
-      <input type="checkbox" name={name} defaultChecked={defaultChecked} className="mt-0.5 h-5 w-5 accent-[#1f5c3f]" />
+      <input type="checkbox" name={name} defaultChecked={defaultChecked} className="mt-0.5 h-5 w-5 accent-[#33484b]" />
       <span>
         <span className="block font-medium">{label}</span>
         <span className="text-sm text-ink-soft">{hint}</span>
@@ -169,7 +169,7 @@ export function ProductForm({
       <div className="space-y-6 xl:sticky xl:top-8">
         <fieldset className="rounded-card bg-paper p-5 shadow-soft">
           <legend className="float-left mb-4 font-display text-lg font-semibold">Визия</legend>
-          <div className="clear-both grid place-items-center rounded-2xl p-4" style={{ background: `color-mix(in srgb, ${color} 12%, #f6f2e8)` }}>
+          <div className="clear-both grid place-items-center rounded-2xl p-4" style={{ background: `color-mix(in srgb, ${color} 12%, #f5f5f4)` }}>
             {product?.image ? (
               // eslint-disable-next-line @next/next/no-img-element -- admin uploads are served as-is
               <img src={product.image} alt="" className="h-44 w-44 object-contain" />
@@ -207,7 +207,7 @@ export function ProductForm({
               {(imageError || errors.image) && <p role="alert" className="mt-1.5 text-sm font-medium text-tomato">{imageError || errors.image}</p>}
               {product?.image && (
                 <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm">
-                  <input type="checkbox" name="removeImage" className="h-4 w-4 accent-[#1f5c3f]" />
+                  <input type="checkbox" name="removeImage" className="h-4 w-4 accent-[#33484b]" />
                   Премахни текущата снимка
                 </label>
               )}

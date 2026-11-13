@@ -213,7 +213,7 @@ export function ListingShell({
     <div className="grid gap-8 lg:grid-cols-[16.5rem_1fr]">
       <aside className="hidden lg:block" aria-label="Филтри">
         {/* Taller than the screen once categories, origins and brands add up: it scrolls on its own then. */}
-        <div className="sticky top-36 max-h-[calc(100dvh-10rem)] overflow-y-auto overscroll-contain rounded-card bg-paper p-5 shadow-soft">{filters}</div>
+        <div className="sticky top-44 max-h-[calc(100dvh-12rem)] overflow-y-auto overscroll-contain rounded-card bg-paper p-5 shadow-soft">{filters}</div>
       </aside>
 
       <div>

@@ -55,7 +55,7 @@ export function CartPage() {
         </div>
       </div>
 
-      <aside className="space-y-4 rounded-tile bg-paper p-6 shadow-soft lg:sticky lg:top-36" aria-label="Обобщение">
+      <aside className="space-y-4 rounded-tile bg-paper p-6 shadow-soft lg:sticky lg:top-44" aria-label="Обобщение">
         <h2 className="font-display text-lg font-semibold">Обобщение</h2>
         <dl className="space-y-2 text-[0.95rem]">
           <div className="flex justify-between">
@@ -77,7 +77,7 @@ export function CartPage() {
           <span className="font-semibold">Междинна сума</span>
           <span className="text-2xl font-bold tabular-nums">{formatPrice(subtotal)}</span>
         </div>
-        <Link href="/porachka" className={`${btn.lime} w-full`}>
+        <Link href="/porachka" className={`${btn.primary} w-full`}>
           Към поръчка
           <ArrowRight className="h-[18px] w-[18px]" />
         </Link>

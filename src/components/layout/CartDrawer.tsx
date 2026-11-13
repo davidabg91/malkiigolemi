@@ -20,7 +20,7 @@ export function CartLine({ item, onNavigate }: { item: CartItem; onNavigate?: ()
         href={`/produkt/${item.slug}`}
         onClick={onNavigate}
         className="grid h-20 w-20 shrink-0 place-items-center rounded-2xl"
-        style={{ background: `color-mix(in srgb, ${item.color} 11%, #f6f2e8)` }}
+        style={{ background: `color-mix(in srgb, ${item.color} 4%, #efefed)` }}
         tabIndex={-1}
         aria-hidden
       >
@@ -116,7 +116,7 @@ export function CartDrawer() {
                     <span className="text-ink-soft">Междинна сума</span>
                     <span className="text-2xl font-bold tabular-nums">{formatPrice(subtotal)}</span>
                   </div>
-                  <Link href="/porachka" onClick={close} className={`${btn.lime} w-full`}>
+                  <Link href="/porachka" onClick={close} className={`${btn.primary} w-full`}>
                     Към поръчка
                   </Link>
                   <Link href="/kolichka" onClick={close} className="block text-center text-sm font-medium text-ink-soft underline-offset-4 hover:text-ink hover:underline">

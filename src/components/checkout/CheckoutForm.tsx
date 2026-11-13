@@ -280,7 +280,7 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
                 type="checkbox"
                 checked={saveAsDefault}
                 onChange={(e) => setSaveAsDefault(e.target.checked)}
-                className="h-5 w-5 accent-[#1f5c3f]"
+                className="h-5 w-5 accent-[#33484b]"
               />
               Запази {pickup ? "вземането от магазина" : "този адрес"} като предпочитан за следващи поръчки
             </label>
@@ -353,7 +353,7 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
         </fieldset>
       </div>
 
-      <aside className="rounded-tile bg-paper p-6 shadow-soft lg:sticky lg:top-36" aria-label="Твоята поръчка">
+      <aside className="rounded-tile bg-paper p-6 shadow-soft lg:sticky lg:top-44" aria-label="Твоята поръчка">
         <h2 className="font-display text-lg font-semibold">Твоята поръчка</h2>
         <ul className="mt-4 max-h-72 divide-y divide-line overflow-y-auto">
           {items.map((i) => (
@@ -390,7 +390,7 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
           <div className="mt-4 rounded-2xl bg-lime/25 px-4 py-3 text-sm">
             {redeem.points > 0 ? (
               <label className="flex cursor-pointer items-start gap-3">
-                <input type="checkbox" checked={usePoints} onChange={(e) => setUsePoints(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-[#1f5c3f]" />
+                <input type="checkbox" checked={usePoints} onChange={(e) => setUsePoints(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-[#33484b]" />
                 <span>
                   Използвай <strong>{redeem.points} точки</strong> за <strong>−{formatPrice(redeem.discount)}</strong>
                   <span className="block text-ink-soft">Имаш {loyalty.balance} точки.</span>
@@ -414,7 +414,7 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
             {formError}
           </p>
         )}
-        <button type="submit" disabled={pending || placed} className={`${btn.lime} mt-5 w-full`}>
+        <button type="submit" disabled={pending || placed} className={`${btn.primary} mt-5 w-full`}>
           {pending || placed ? (
             <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
           ) : effectivePayment === "card" ? (

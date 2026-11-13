@@ -73,7 +73,7 @@ export function SearchBox({ className = "" }: { className?: string }) {
           onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
           placeholder="Търси кафе, зехтин, препарати…"
           autoComplete="off"
-          className="h-12 w-full rounded-full border border-transparent bg-sand pl-11 pr-11 text-[0.95rem] outline-none transition placeholder:text-ink-soft/80 focus:border-forest focus:bg-paper focus:shadow-[0_0_0_4px_rgb(212_242_90/0.55)] [&::-webkit-search-cancel-button]:hidden"
+          className="h-12 w-full rounded-full pl-11 pr-11 text-[0.95rem] outline-none transition sunken placeholder:text-ink-soft/80 focus:border-forest focus:bg-none focus:bg-paper focus:shadow-[0_0_0_4px_rgb(51_72_75/0.18)] [&::-webkit-search-cancel-button]:hidden"
         />
         {q && (
           <button
@@ -123,7 +123,7 @@ export function SearchBox({ className = "" }: { className?: string }) {
               <Link
                 href={`/tarsene?q=${encodeURIComponent(term)}`}
                 onClick={() => setOpen(false)}
-                className="mt-1 block rounded-2xl bg-sand px-4 py-3 text-center text-sm font-semibold hover:bg-lime"
+                className="mt-1 block rounded-2xl bg-sand px-4 py-3 text-center text-sm font-semibold hover:bg-lime-deep"
               >
                 Виж всички резултати
               </Link>

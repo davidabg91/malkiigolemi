@@ -1,10 +1,9 @@
-import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowRight, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { ProductVisual } from "@/components/product/PackShot";
 import { btn } from "@/components/ui";
 import { optimizedImage } from "@/lib/optimized-image";
 import type { CategoryNode, ProductCardData } from "@/lib/queries";
-import { TONES } from "@/lib/site";
 
 function plural(n: number) {
   return n === 1 ? "продукт" : "продукта";
@@ -136,16 +135,12 @@ const CATEGORY_SHOWCASES: Record<string, ShowcaseItem[]> = {
 };
 
 /** Category showcase art with realistic 3D isolated brand products */
-function CategoryArt({ slug, deep }: { slug: string; deep: string }) {
+function CategoryArt({ slug }: { slug: string }) {
   const items = CATEGORY_SHOWCASES[slug];
-  const fly = "absolute drop-shadow-[0_16px_20px_rgb(20_38_28/0.24)] transition-transform duration-500 ease-out-soft";
+  const fly = "absolute drop-shadow-[0_14px_16px_rgb(0_0_0/0.2)] transition-transform duration-500 ease-out-soft";
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-      <span
-        className="absolute -bottom-[30%] -right-[12%] aspect-square w-[80%] rounded-full opacity-65 transition-transform duration-700 ease-out-soft group-hover:scale-110"
-        style={{ background: deep }}
-      />
       {items?.map((item, i) => (
         // eslint-disable-next-line @next/next/no-img-element -- sized by the tile's classes; the file itself is resized by optimizedImage
         <img
@@ -162,15 +157,11 @@ function CategoryArt({ slug, deep }: { slug: string; deep: string }) {
 }
 
 /** Fallback three overlapping packs anchored to the bottom-right corner of a tile. */
-function TileArt({ products, deep }: { products: ProductCardData[]; deep: string }) {
+function TileArt({ products }: { products: ProductCardData[] }) {
   const [a, b, c] = products;
-  const fly = "absolute drop-shadow-[0_14px_14px_rgb(20_38_28/0.18)] transition-transform duration-500 ease-out-soft";
+  const fly = "absolute drop-shadow-[0_14px_14px_rgb(0_0_0/0.16)] transition-transform duration-500 ease-out-soft";
   return (
     <div className="pointer-events-none absolute inset-0" aria-hidden>
-      <span
-        className="absolute -bottom-[30%] -right-[12%] aspect-square w-[78%] rounded-full opacity-70 transition-transform duration-700 ease-out-soft group-hover:scale-110"
-        style={{ background: deep }}
-      />
       {c && (
         <ProductVisual product={c} className={`${fly} bottom-[4%] right-[44%] h-[46%] w-auto -rotate-12 group-hover:-translate-x-2 group-hover:-rotate-[16deg]`} />
       )}
@@ -195,22 +186,21 @@ function CategoryTile({
   area: string;
   index: number;
 }) {
-  const tone = TONES[category.tone] ?? TONES.cream;
   const hasShowcase = Boolean(CATEGORY_SHOWCASES[category.slug]);
 
   return (
     <Link
       href={`/kategoria/${category.slug}`}
-      className={`group relative isolate min-h-44 animate-rise overflow-hidden rounded-tile p-5 transition-shadow duration-300 hover:shadow-lift sm:p-6 ${area}`}
-      style={{ background: tone.bg, color: tone.ink, animationDelay: `${80 + index * 60}ms` }}
+      className={`group relative isolate min-h-44 animate-rise overflow-hidden rounded-tile p-5 text-ink transition-shadow duration-300 raised hover:shadow-lift sm:p-6 ${area}`}
+      style={{ animationDelay: `${80 + index * 60}ms` }}
     >
       {hasShowcase ? (
-        <CategoryArt slug={category.slug} deep={tone.deep} />
+        <CategoryArt slug={category.slug} />
       ) : (
-        <TileArt products={products} deep={tone.deep} />
+        <TileArt products={products} />
       )}
       <div className="relative z-10 flex h-full flex-col">
-        <h2 className="max-w-[11ch] font-display text-lg font-semibold leading-[1.15] tracking-tight sm:text-xl xl:text-[1.4rem]">
+        <h2 className="max-w-[12ch] font-display text-[1.3rem] font-bold leading-[1.1] sm:text-2xl">
           {category.name}
         </h2>
         {/* No room for the count on a phone-sized tile. */}
@@ -218,10 +208,10 @@ function CategoryTile({
           {category.count} {plural(category.count)}
         </p>
         <span
-          className="mt-auto grid h-11 w-11 place-items-center rounded-full bg-paper/80 backdrop-blur transition duration-300 group-hover:bg-ink group-hover:text-cream"
+          className="ml-auto mt-auto grid h-10 w-10 place-items-center rounded-full bg-paper shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_4px_10px_-2px_rgb(0_0_0/0.22)] transition duration-300 group-hover:bg-ink group-hover:text-cream"
           aria-hidden
         >
-          <ArrowUpRight className="h-5 w-5 transition-transform duration-300 group-hover:rotate-45" />
+          <ChevronRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-0.5" />
         </span>
       </div>
     </Link>
@@ -254,13 +244,13 @@ export function Bento({
       className="bento grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
     >
       <div className="relative isolate col-span-2 hidden animate-rise flex-col overflow-hidden rounded-tile bg-forest-deep p-7 text-cream sm:p-10 lg:flex lg:min-h-[24rem] lg:[grid-area:intro]">
-        <div className="absolute -right-12 -top-12 -z-10 h-72 w-72 rounded-full bg-cyan-500/10 p-8 blur-2xl" />
-        <span className="absolute -bottom-24 -left-20 -z-10 h-64 w-64 rounded-full bg-cyan-900/40" aria-hidden />
-        <p className="inline-flex w-fit items-center gap-2 rounded-full bg-cyan-400/15 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300 backdrop-blur">
+        <div className="absolute -right-12 -top-12 -z-10 h-72 w-72 rounded-full bg-white/10 p-8 blur-2xl" />
+        <span className="absolute -bottom-24 -left-20 -z-10 h-64 w-64 rounded-full bg-black/15" aria-hidden />
+        <p className="inline-flex w-fit items-center gap-2 rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-cream/90 backdrop-blur">
           Официален магазин на общността
         </p>
         <h1 className="mt-auto max-w-[14ch] pt-10 font-display text-[2.1rem] font-semibold leading-[1.05] tracking-tight sm:text-5xl xl:text-[3.2rem]">
-          Всичко за дома, <span className="text-cyan-300">за малки и големи</span>
+          Всичко за дома, <span className="text-cream/70">за малки и големи</span>
         </h1>
         <p className="mt-4 max-w-md text-cream/75 sm:text-lg">
           {total > 0 ? `${total} подбрани продукта` : "Подбрани качествени стоки"} — любими предложения от доверената Facebook общност с бърза доставка за 24 часа.

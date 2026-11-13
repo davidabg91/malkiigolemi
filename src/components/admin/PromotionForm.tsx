@@ -139,7 +139,7 @@ export function PromotionForm({
             {shown.map((p) => (
               <li key={p.id}>
                 <label className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm hover:bg-sand/50">
-                  <input type="checkbox" checked={picked.has(p.id)} onChange={() => toggle(p.id)} className="h-5 w-5 accent-[#1f5c3f]" />
+                  <input type="checkbox" checked={picked.has(p.id)} onChange={() => toggle(p.id)} className="h-5 w-5 accent-[#33484b]" />
                   <span className="min-w-0 flex-1 truncate">{p.label}</span>
                   <span className="shrink-0 tabular-nums text-ink-soft">
                     {formatPrice(p.price)}
@@ -157,7 +157,7 @@ export function PromotionForm({
       )}
 
       <label className="flex cursor-pointer items-center gap-3 text-sm font-medium">
-        <input type="checkbox" name="enabled" defaultChecked={initial.enabled} className="h-5 w-5 accent-[#1f5c3f]" />
+        <input type="checkbox" name="enabled" defaultChecked={initial.enabled} className="h-5 w-5 accent-[#33484b]" />
         Включена (изключи я, за да я спреш, без да я триеш)
       </label>
 

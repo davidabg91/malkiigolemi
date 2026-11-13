@@ -177,7 +177,7 @@ async function AdminOrders({ searchParams }: Pick<PageProps<"/admin/porachki">, 
                 {list.map((o) => (
                   <tr key={o.id} className="transition hover:bg-sand/60">
                     <td className={td}>
-                      <input type="checkbox" form={BULK_FORM} name="ids" value={o.id} aria-label={`Избери ${o.number}`} className="h-5 w-5 accent-[#1f5c3f]" />
+                      <input type="checkbox" form={BULK_FORM} name="ids" value={o.id} aria-label={`Избери ${o.number}`} className="h-5 w-5 accent-[#33484b]" />
                     </td>
                     <td className={td}>
                       <Link href={`/admin/porachki/${o.id}`} className="font-semibold hover:text-forest">

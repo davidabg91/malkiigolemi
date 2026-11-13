@@ -7,7 +7,7 @@ import { useEffect, useEffectEvent, useId, useRef, useState } from "react";
 import { adminAlertsAction } from "@/actions/admin-alerts";
 import type { AdminAlerts } from "@/lib/admin-alerts";
 
-const iconBtn = "relative grid h-11 w-11 place-items-center rounded-full transition";
+const iconBtn = "relative grid h-11 w-11 place-items-center rounded-full text-ink transition raised hover:brightness-[0.97] active:scale-95";
 
 /**
  * The header's profile icon. For an admin it also carries what is waiting in the admin panel: the icon
@@ -16,7 +16,7 @@ const iconBtn = "relative grid h-11 w-11 place-items-center rounded-full transit
 export function AccountButton({ alerts: initial }: { alerts: AdminAlerts | null }) {
   if (!initial) {
     return (
-      <Link href="/profil" className={`${iconBtn} text-ink hover:bg-sand`} aria-label="Моят профил">
+      <Link href="/profil" className={iconBtn} aria-label="Моят профил">
         <User className="h-[22px] w-[22px]" strokeWidth={1.75} />
       </Link>
     );
@@ -87,13 +87,13 @@ function AdminAccountButton({ initial }: { initial: AdminAlerts }) {
         aria-expanded={open}
         aria-controls={panelId}
         aria-label={hot ? `Профил и админ известия: ${alerts.total}` : "Профил и админ панел"}
-        className={`${iconBtn} ${hot ? "bg-tomato/10 text-tomato ring-1 ring-tomato/25 hover:bg-tomato/15" : "text-ink hover:bg-sand"}`}
+        className={iconBtn}
       >
         <UserRound className="h-[22px] w-[22px]" strokeWidth={1.9} />
         {hot && (
           <span className="pointer-events-none absolute -right-1 -top-1 grid place-items-center">
             <span className="absolute h-5 w-5 rounded-full bg-tomato/60 motion-safe:animate-ping" aria-hidden />
-            <span className="relative grid h-5 min-w-5 place-items-center rounded-full bg-tomato px-1 text-[0.68rem] font-bold leading-none text-white shadow-sm ring-2 ring-cream tabular-nums">
+            <span className="relative grid h-5 min-w-5 place-items-center rounded-full bg-tomato px-1 text-[0.68rem] font-bold leading-none text-white shadow-sm tabular-nums">
               {alerts.total > 99 ? "99+" : alerts.total}
             </span>
           </span>

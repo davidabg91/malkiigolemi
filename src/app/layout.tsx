@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Onest, Unbounded } from "next/font/google";
+import { Onest } from "next/font/google";
 import { Toaster } from "sonner";
 import { site } from "@/lib/site";
 import "./globals.css";
@@ -7,13 +7,6 @@ import "./globals.css";
 const onest = Onest({
   variable: "--font-onest",
   subsets: ["latin", "cyrillic"],
-  display: "swap",
-});
-
-const unbounded = Unbounded({
-  variable: "--font-unbounded",
-  subsets: ["latin", "cyrillic"],
-  weight: ["500", "600", "700"],
   display: "swap",
 });
 
@@ -35,12 +28,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#123a28",
+  themeColor: "#2b3f42",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="bg" className={`${onest.variable} ${unbounded.variable} h-full antialiased`}>
+    <html lang="bg" className={`${onest.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         {children}
         <Toaster
@@ -48,8 +41,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           toastOptions={{
             style: {
               borderRadius: "999px",
-              background: "#14261c",
-              color: "#fbf8f1",
+              background: "#171717",
+              color: "#f5f5f4",
               border: "none",
               fontFamily: "var(--font-onest)",
             },

@@ -132,7 +132,7 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
                         <div className="flex items-center gap-3">
                           <span
                             className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl"
-                            style={{ background: v ? `color-mix(in srgb, ${v.color} 12%, #f6f2e8)` : "#f1ede2" }}
+                            style={{ background: v ? `color-mix(in srgb, ${v.color} 12%, #f5f5f4)` : "#f1ede2" }}
                           >
                             {v ? <ProductVisual product={v} size={112} className="h-[88%] w-[88%]" /> : <Package className="h-6 w-6 text-ink-soft" aria-hidden />}
                           </span>

@@ -1,11 +1,10 @@
 "use client";
 
-import { Check, ChevronLeft, ChevronRight, Loader2, SlidersHorizontal } from "lucide-react";
+import { BadgePercent, Check, ChevronLeft, ChevronRight, Loader2, SlidersHorizontal, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useEffectEvent, useRef, useState, useTransition } from "react";
 import { reorderCategories } from "@/actions/admin";
 import { CategoryIcon } from "@/components/ui";
-import { TONES } from "@/lib/site";
 import type { MenuCategory } from "./HeaderClient";
 
 export interface CategoryNavProps {
@@ -16,6 +15,10 @@ export interface CategoryNavProps {
   setIsEditing?: (val: boolean) => void;
   isAdmin?: boolean;
 }
+
+/** A category button in the header row: a raised card with the icon above its name. */
+const chip =
+  "group flex h-[4.25rem] min-w-[5.25rem] max-w-[8rem] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl px-3 text-center text-[0.8rem] font-semibold leading-[1.15] text-ink transition raised hover:brightness-[0.97] active:scale-95";
 
 export function arrayMove<T>(list: T[], fromIndex: number, toIndex: number): T[] {
   if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= list.length || toIndex >= list.length) {
@@ -196,9 +199,8 @@ export function CategoryNav({
         </div>
       )}
 
-      <nav aria-label="Категории" className="no-scrollbar -mx-2 flex items-center gap-1.5 overflow-x-auto pb-2 px-2">
+      <nav aria-label="Категории" className="no-scrollbar -mx-2 flex items-center gap-2 overflow-x-auto px-2 pb-3 pt-1">
         {items.map((c, index) => {
-          const tone = TONES[c.tone] ?? TONES.cream;
           const isOdd = index % 2 !== 0;
           const isCurrentDragging = draggingId === c.id;
           const isOver = dragOverId === c.id && draggingId !== c.id;
@@ -247,10 +249,7 @@ export function CategoryNav({
                     <ChevronLeft className="h-3.5 w-3.5" />
                   </button>
 
-                  <span
-                    className="grid h-5 w-5 place-items-center rounded-md text-[10px]"
-                    style={{ background: tone.bg, color: tone.ink }}
-                  >
+                  <span className="grid h-5 w-5 place-items-center rounded-md bg-sand text-[10px] text-ink">
                     <CategoryIcon name={c.icon} className="h-3.5 w-3.5" />
                   </span>
                   <span className="cursor-grab active:cursor-grabbing font-medium">{c.name}</span>
@@ -279,14 +278,9 @@ export function CategoryNav({
                       hasTriggeredLongPress.current = false;
                     }
                   }}
-                  className="group inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium text-ink-soft transition hover:bg-sand hover:text-ink active:scale-95"
+                  className={chip}
                 >
-                  <span
-                    className="grid h-4 w-4 place-items-center rounded-md opacity-80 transition group-hover:opacity-100"
-                    style={{ color: tone.ink }}
-                  >
-                    <CategoryIcon name={c.icon} className="h-3.5 w-3.5" />
-                  </span>
+                  <CategoryIcon name={c.icon} className="h-6 w-6 shrink-0" />
                   <span>{c.name}</span>
                 </Link>
               )}
@@ -295,17 +289,12 @@ export function CategoryNav({
         })}
 
         {/* Static Special Links */}
-        <span className="mx-1 my-1.5 h-4 w-px shrink-0 bg-line" aria-hidden />
-        <Link
-          href="/promo"
-          className="shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold text-tomato transition hover:bg-tomato/10"
-        >
+        <Link href="/promo" className={`${chip} !text-tomato`}>
+          <BadgePercent className="h-6 w-6 shrink-0" strokeWidth={1.75} aria-hidden />
           Промоции
         </Link>
-        <Link
-          href="/novi"
-          className="shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold text-forest transition hover:bg-forest/10"
-        >
+        <Link href="/novi" className={chip}>
+          <Sparkles className="h-6 w-6 shrink-0" strokeWidth={1.75} aria-hidden />
           Нови продукти
         </Link>
 
