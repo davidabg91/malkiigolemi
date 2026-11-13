@@ -1,6 +1,7 @@
 import { and, desc, eq, like, or, sql, type SQL } from "drizzle-orm";
 import { Search, X } from "lucide-react";
 import type { Metadata } from "next";
+import { after } from "next/server";
 import Link from "next/link";
 import { Suspense } from "react";
 import { AdminSkeleton, PageTitle, Panel, td, th } from "@/components/admin/bits";
@@ -14,6 +15,7 @@ import { requireAdmin } from "@/lib/auth";
 import { findFlag, getFlagIndex } from "@/lib/flags";
 import { formatDate, formatPrice } from "@/lib/format";
 import { DELIVERY_METHODS, ORDER_STATUS_LABELS } from "@/lib/site";
+import { syncShipmentsIfStale } from "@/lib/shipments";
 import { searchVariants } from "@/lib/translit";
 
 export const metadata: Metadata = { title: "Поръчки" };
@@ -77,6 +79,8 @@ function searchWhere(q: string): SQL | undefined {
 
 async function AdminOrders({ searchParams }: Pick<PageProps<"/admin/porachki">, "searchParams">) {
   await requireAdmin();
+  // Bring Econt shipments up to date for the next look, without slowing this one down.
+  after(() => syncShipmentsIfStale());
   const sp = await searchParams;
   const status = ORDER_STATUSES.find((s) => s === sp.status) as OrderStatus | undefined;
   const q = (typeof sp.q === "string" ? sp.q : "").trim().slice(0, 80);
