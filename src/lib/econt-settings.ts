@@ -6,6 +6,13 @@ import { site } from "./site";
 
 /** How the shop sends with Econt. Kept in the settings table and edited under Админ → Куриери. */
 export type EcontSettings = {
+  /** The Econt client profile waybills are sent for (the company), from the profiles of the e-Econt login. */
+  senderClientId: number | null;
+  senderClientName: string;
+  senderClientCompany: boolean;
+  /** Authorised person named on the waybill; Econt requires one when sending for a company. */
+  senderAgent: string;
+  /** Sender name used only when no Econt profile is chosen. */
   senderName: string;
   senderPhone: string;
   /** Parcels are taken to an Econt office, or a courier collects them from the shop's address. */
@@ -26,6 +33,10 @@ export type EcontSettings = {
 };
 
 export const DEFAULT_ECONT_SETTINGS: EcontSettings = {
+  senderClientId: null,
+  senderClientName: "",
+  senderClientCompany: false,
+  senderAgent: "",
   senderName: site.name,
   senderPhone: site.phone,
   senderMode: "office",
@@ -63,7 +74,8 @@ export async function saveEcontSettings(value: EcontSettings) {
 /** What still has to be filled in before a waybill can be made; empty when ready. */
 export function missingSenderFields(s: EcontSettings): string[] {
   const missing: string[] = [];
-  if (!s.senderName.trim()) missing.push("име на подателя");
+  if (!s.senderClientId && !s.senderName.trim()) missing.push("име на подателя");
+  if (s.senderClientId && s.senderClientCompany && !s.senderAgent.trim()) missing.push("упълномощено лице на фирмата");
   if (!s.senderPhone.trim()) missing.push("телефон на подателя");
   if (s.senderMode === "office" && !s.senderOfficeCode.trim()) missing.push("офис на Еконт, от който изпращаш");
   if (s.senderMode === "address" && (!s.senderCity.trim() || !s.senderAddress.trim())) missing.push("адрес, от който куриерът взема пратките");

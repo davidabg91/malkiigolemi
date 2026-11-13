@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { assertAdmin } from "@/lib/auth";
-import { EcontError, econtMode, econtProfile, type EcontLabelResult } from "@/lib/econt";
+import { EcontError, econtMode, econtProfiles, type EcontLabelResult, type EcontProfile } from "@/lib/econt";
 import { saveEcontSettings, type EcontSettings } from "@/lib/econt-settings";
 import { createWaybill, deleteWaybill, quoteWaybill, syncShipments, type WaybillOptions } from "@/lib/shipments";
 
@@ -18,6 +18,9 @@ const decimal = (min: number, max: number, message: string) =>
 
 const settingsSchema = z
   .object({
+    senderClientId: z.string().trim().regex(/^\d*$/),
+    senderClientName: z.string().trim().max(160),
+    senderAgent: z.string().trim().max(80),
     senderName: z.string().trim().min(2, "Въведи име на подателя.").max(80),
     senderPhone: z.string().trim().regex(/^[+\d][\d\s-]{5,19}$/, "Въведи телефон."),
     senderMode: z.enum(["office", "address"]),
@@ -44,7 +47,18 @@ export async function saveEcontSettingsAction(_prev: EcontSettingsState, formDat
     for (const issue of parsed.error.issues) fieldErrors[String(issue.path[0])] ??= issue.message;
     return { error: "Провери отбелязаните полета.", fieldErrors };
   }
-  const value: EcontSettings = { ...parsed.data, inspectBeforePay: formData.get("inspectBeforePay") === "on", sms: formData.get("sms") === "on" };
+  const { senderClientId, ...rest } = parsed.data;
+  const company = formData.get("senderClientCompany") === "1";
+  if (senderClientId && company && rest.senderAgent.length < 3) {
+    return { error: "Провери отбелязаните полета.", fieldErrors: { senderAgent: "За фирма Еконт изисква упълномощено лице (име и фамилия)." } };
+  }
+  const value: EcontSettings = {
+    ...rest,
+    senderClientId: senderClientId ? Number(senderClientId) : null,
+    senderClientCompany: Boolean(senderClientId) && company,
+    inspectBeforePay: formData.get("inspectBeforePay") === "on",
+    sms: formData.get("sms") === "on",
+  };
   await saveEcontSettings(value);
   refresh();
   return { ok: true };
@@ -107,17 +121,14 @@ export async function deleteWaybillAction(orderId: number): Promise<{ ok: boolea
   }
 }
 
-export type EcontConnection =
-  | { ok: true; live: boolean; name: string; clientNumber: string | null; company: boolean }
-  | { ok: false; live: boolean; error: string };
+export type EcontConnection = { ok: true; live: boolean; profiles: EcontProfile[] } | { ok: false; live: boolean; error: string };
 
-/** Logs in to Econt with the configured user and reports which client profile it belongs to. */
+/** Logs in to Econt with the configured user and lists the client profiles it may send for. */
 export async function testEcontConnectionAction(): Promise<EcontConnection> {
   await assertAdmin();
   const { live } = econtMode();
   try {
-    const p = await econtProfile();
-    return { ok: true, live, name: p.name, clientNumber: p.clientNumber, company: p.company };
+    return { ok: true, live, profiles: await econtProfiles() };
   } catch (e) {
     return { ok: false, live, error: e instanceof EcontError ? e.message : "Неочаквана грешка при връзката с Еконт." };
   }
