@@ -359,6 +359,39 @@ export const withdrawals = sqliteTable(
   (t) => [index("withdrawals_order_idx").on(t.orderId)],
 );
 
+/**
+ * Anonymous visit statistics for the admin (Админ → Посетители): page views, time on page, clicks,
+ * cart adds and orders. No cookie or device storage is used: `visitor` is a hash of the day, the IP
+ * address and the browser, so it cannot be linked across days or back to a person. Rows are deleted after 90 days.
+ */
+export const EVENT_TYPES = ["view", "time", "click", "cart_add", "order"] as const;
+export const events = sqliteTable(
+  "events",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    /** Bulgarian calendar day, "2026-11-13". */
+    day: text("day").notNull(),
+    /** Hour of that day in Bulgarian time, 0–23. */
+    hour: integer("hour").notNull(),
+    visitor: text("visitor").notNull(),
+    type: text("type", { enum: EVENT_TYPES }).notNull(),
+    path: text("path").notNull(),
+    /** What kind of page the path is: home, product, category, search, cart, checkout… */
+    kind: text("kind").notNull(),
+    /** Clicks: "zone · what was clicked". Searches: the query. */
+    label: text("label"),
+    /** cart_add: the product. */
+    productId: integer("product_id"),
+    /** time: seconds the page was on screen. order: the order total in cents. */
+    value: integer("value"),
+    /** First view of a visit: where the visitor came from (a host name or utm_source). */
+    source: text("source"),
+    device: text("device"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("events_day_idx").on(t.day), index("events_type_day_idx").on(t.type, t.day)],
+);
+
 export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),

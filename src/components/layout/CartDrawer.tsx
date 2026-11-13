@@ -73,7 +73,7 @@ export function CartDrawer() {
   return (
     <AnimatePresence>
       {hydrated && open && (
-        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Количка">
+        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Количка" data-cart-drawer>
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-ink/50" onClick={close} />
           <motion.aside
             initial={{ x: "100%" }}

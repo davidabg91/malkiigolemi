@@ -3,12 +3,14 @@ import { CartDrawer } from "@/components/layout/CartDrawer";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { RouteScrollTop } from "@/components/layout/RouteScrollTop";
+import { Tracker } from "@/components/Tracker";
 
 export default function ShopLayout({ children }: LayoutProps<"/">) {
   return (
     <>
       <Suspense fallback={null}>
         <RouteScrollTop />
+        <Tracker />
       </Suspense>
       <a
         href="#main"

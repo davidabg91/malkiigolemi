@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgePercent, BarChart3, ClipboardPaste, ExternalLink, Gift, MessageSquareText, FolderTree, LayoutDashboard, LogOut, Package, ReceiptText, Truck, Undo2, Users } from "lucide-react";
+import { Activity, BadgePercent, BarChart3, ClipboardPaste, ExternalLink, Gift, MessageSquareText, FolderTree, LayoutDashboard, LogOut, Package, ReceiptText, Truck, Undo2, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/actions/auth";
@@ -19,6 +19,7 @@ const LINKS = [
   { href: "/admin/lojalnost", label: "Точки", icon: Gift },
   { href: "/admin/potrebiteli", label: "Потребители", icon: Users },
   { href: "/admin/statistika", label: "Статистика", icon: BarChart3 },
+  { href: "/admin/posetiteli", label: "Посетители", icon: Activity },
   { href: "/admin/kurieri", label: "Куриери", icon: Truck },
 ];
 

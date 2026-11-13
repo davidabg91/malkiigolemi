@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
+import { track } from "./track";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { unitPriceFor } from "./format";
@@ -28,7 +29,8 @@ export const useCart = create<CartState>()(
       items: [],
       open: false,
       setOpen: (open) => set({ open }),
-      add: (p, qty = 1) =>
+      add: (p, qty = 1) => {
+        track({ t: "cart_add", id: p.id });
         set((s) => {
           const existing = s.items.find((i) => i.id === p.id);
           if (existing) {
@@ -39,7 +41,8 @@ export const useCart = create<CartState>()(
             };
           }
           return { items: [...s.items, { ...p, qty: Math.min(MAX_QTY, qty) }] };
-        }),
+        });
+      },
       setQty: (id, qty) =>
         set((s) => ({
           items:
