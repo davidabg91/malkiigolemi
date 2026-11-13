@@ -2,7 +2,9 @@
 export const site = {
   name: "Поръчки за малки и големи",
   tagline: "онлайн магазин",
-  /** Public address used in e-mails. Set SITE_URL when the shop moves to its own domain. */
+  /** The shop's own domain, as shown to people (share images and the like). */
+  domain: "malkiigolemi.com",
+  /** Public address used in e-mails and links. Set SITE_URL when the shop moves to its own domain. */
   url: (process.env.SITE_URL || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "https://malkiigolemi.vercel.app")).replace(/\/$/, ""),
   title: "Поръчки за малки и големи — Онлайн магазин за цялото семейство",
   description:

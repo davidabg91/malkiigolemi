@@ -18,8 +18,12 @@ const unbounded = Unbounded({
 });
 
 export const metadata: Metadata = {
+  // Share images and links need absolute addresses.
+  metadataBase: new URL(site.url),
   title: { default: site.title, template: `%s · ${site.name}` },
   description: site.description,
+  openGraph: { type: "website", siteName: site.name, locale: "bg_BG", title: site.title, description: site.description },
+  twitter: { card: "summary_large_image" },
   icons: {
     icon: [
       { url: "/favicon.svg", type: "image/svg+xml" },
