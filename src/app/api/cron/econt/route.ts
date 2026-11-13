@@ -1,3 +1,4 @@
+import { pruneEvents } from "@/lib/analytics";
 import { syncShipments } from "@/lib/shipments";
 
 /**
@@ -9,6 +10,8 @@ export async function GET(request: Request) {
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
     return new Response("Unauthorized", { status: 401 });
   }
+  // The same daily run clears visit statistics older than 90 days.
+  await pruneEvents().catch((e) => console.error("pruneEvents failed:", e));
   try {
     const checked = await syncShipments();
     return Response.json({ ok: true, checked });

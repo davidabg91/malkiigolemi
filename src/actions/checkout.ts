@@ -2,10 +2,12 @@
 
 import { and, eq, getTableColumns, gte, inArray, sql } from "drizzle-orm";
 import { updateTag } from "next/cache";
+import { headers } from "next/headers";
 import { after } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { orderItems, orders, products, users } from "@/db/schema";
+import { recordOrder, visitorOf } from "@/lib/analytics";
 import { getSession } from "@/lib/auth";
 import { unitPriceFor } from "@/lib/format";
 import { sendOrderPlaced } from "@/lib/order-mail";
@@ -199,6 +201,9 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
       .catch(() => {});
   }
   if (soldOut) updateTag(CATALOG_TAG);
+  // For the visitor statistics: this visit ended in an order.
+  const visitor = session?.role === "admin" ? null : visitorOf(await headers());
+  if (visitor) after(() => recordOrder(visitor, subtotal + shipping));
   if (data.payment === "card" && stripeConfigured()) {
     // The "order received" e-mails wait for the payment (see recordPayment). If Stripe cannot open the
     // page now, the order page offers to pay again.
