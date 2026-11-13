@@ -1,10 +1,12 @@
 import { desc, eq } from "drizzle-orm";
-import { Package, Star, XCircle } from "lucide-react";
+import { Package, Star, Truck, XCircle } from "lucide-react";
 import type { Metadata } from "next";
+import { after } from "next/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { CancelOrderButton } from "@/components/account/CancelOrderButton";
+import { TrackingTimeline } from "@/components/TrackingTimeline";
 import { StockAlertsList } from "@/components/account/StockAlertsList";
 import { OrderProgress } from "@/components/account/OrderProgress";
 import { ReorderButton } from "@/components/account/Reorder";
@@ -14,7 +16,9 @@ import { btn } from "@/components/ui";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { getSession } from "@/lib/auth";
+import { econtTrackingUrl, parseEvents } from "@/lib/econt";
 import { formatDate, formatPrice } from "@/lib/format";
+import { syncShipmentsIfStale } from "@/lib/shipments";
 import { DELIVERY_METHODS } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Моите поръчки", robots: { index: false } };
@@ -22,6 +26,7 @@ export const metadata: Metadata = { title: "Моите поръчки", robots: 
 async function Orders() {
   const session = await getSession();
   if (!session) redirect("/vhod?next=/profil");
+  after(() => syncShipmentsIfStale());
 
   const list = await db.query.orders.findMany({
     where: eq(orders.userId, session.uid),
@@ -91,6 +96,26 @@ async function Orders() {
                 </div>
               ) : (
                 <OrderProgress status={o.status} pickup={pickup} />
+              )}
+
+              {/* The courier's own tracking, once the shop has made the waybill */}
+              {o.trackingNumber && o.status !== "cancelled" && (
+                <div className="mt-4 rounded-xl border border-line/60 bg-sand/30 p-3.5 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="flex items-center gap-2 font-semibold">
+                      <Truck className="h-4 w-4 text-forest" aria-hidden />
+                      {o.shipmentStatus ?? "Пратката е подготвена"}
+                    </p>
+                    {o.courier === "econt" ? (
+                      <a href={econtTrackingUrl(o.trackingNumber)} target="_blank" rel="noopener noreferrer" className="font-mono text-xs font-semibold text-forest hover:underline">
+                        Еконт № {o.trackingNumber} ↗
+                      </a>
+                    ) : (
+                      <span className="font-mono text-xs text-ink-soft">№ {o.trackingNumber}</span>
+                    )}
+                  </div>
+                  <TrackingTimeline events={parseEvents(o.trackingEvents).slice(-4)} />
+                </div>
               )}
 
               {/* Order Items with visual thumbnails */}

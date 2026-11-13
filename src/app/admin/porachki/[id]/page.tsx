@@ -7,6 +7,7 @@ import { Suspense } from "react";
 import { setOrderStatus } from "@/actions/admin";
 import { flagOrderContact, removeFlag } from "@/actions/customers";
 import { AdminSkeleton, Panel, td, th } from "@/components/admin/bits";
+import { EcontWaybill, type ExistingWaybill } from "@/components/admin/EcontWaybill";
 import { FlagBanner, FlagPanel } from "@/components/admin/Flag";
 import { ProductVisual } from "@/components/product/PackShot";
 import { StatusPill } from "@/components/StatusPill";
@@ -15,6 +16,9 @@ import { db } from "@/db";
 import { brands, ORDER_STATUSES, orders, products } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { courierName } from "@/lib/couriers";
+import { econtMode, econtTrackingUrl, parseEvents } from "@/lib/econt";
+import { getEcontSettings, missingSenderFields } from "@/lib/econt-settings";
+import { defaultWaybill, waybillBlocker } from "@/lib/shipments";
 import { findFlag, getFlagIndex } from "@/lib/flags";
 import { formatDate, formatPrice } from "@/lib/format";
 import { DELIVERY_METHODS, ORDER_STATUS_LABELS } from "@/lib/site";
@@ -39,6 +43,22 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
         .where(inArray(products.id, productIds))
     : [];
   const visualOf = new Map(visuals.map((v) => [v.id, v]));
+
+  // Econt waybill: either the one already made, or the suggested one for the form.
+  const isEcont = order.courier === "econt" && order.delivery !== "store";
+  const econtSettings = isEcont ? await getEcontSettings() : null;
+  const existing: ExistingWaybill | null =
+    isEcont && order.trackingNumber
+      ? {
+          number: order.trackingNumber,
+          pdfUrl: order.waybillUrl,
+          trackingUrl: econtTrackingUrl(order.trackingNumber),
+          status: order.shipmentStatus,
+          events: parseEvents(order.trackingEvents),
+          trackedAt: order.trackedAt?.toISOString() ?? null,
+          cost: order.shippingCost,
+        }
+      : null;
 
   return (
     <>
@@ -200,7 +220,17 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
                 </div>
               </div>
 
-              {order.trackingNumber ? (
+              {isEcont && econtSettings ? (
+                <EcontWaybill
+                  orderId={order.id}
+                  live={econtMode().live}
+                  existing={existing}
+                  blocker={waybillBlocker(order)}
+                  missingSettings={missingSenderFields(econtSettings)}
+                  defaults={defaultWaybill(order, econtSettings)}
+                  pickupPossible={econtSettings.senderMode === "address"}
+                />
+              ) : order.trackingNumber ? (
                 <div className="mt-4 rounded-xl border border-line bg-sand/40 p-3">
                   <p className="text-xs text-ink-soft">Номер на товарителница:</p>
                   <p className="font-mono text-base font-bold text-forest">{order.trackingNumber}</p>

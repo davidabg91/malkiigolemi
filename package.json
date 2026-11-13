@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "vercel-build": "npm run db:setup && next build",
+    "vercel-build": "npm run db:setup && (npm run sync:couriers || echo 'sync:couriers failed, keeping the saved office lists') && next build",
     "start": "next start",
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",

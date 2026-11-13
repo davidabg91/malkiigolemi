@@ -114,6 +114,14 @@ export const orders = sqliteTable(
     status: text("status", { enum: ORDER_STATUSES }).notNull().default("new"),
     trackingNumber: text("tracking_number"),
     waybillUrl: text("waybill_url"),
+    /** The courier's own short status for the shipment, e.g. "Пристигнала в офис". */
+    shipmentStatus: text("shipment_status"),
+    /** The shipment's tracking history as JSON (see TrackingEvent in lib/econt.ts). */
+    trackingEvents: text("tracking_events"),
+    /** When the courier was last asked about this shipment. */
+    trackedAt: integer("tracked_at", { mode: "timestamp" }),
+    /** What the courier charges the shop for the shipment, in cents (shown to the admin only). */
+    shippingCost: integer("shipping_cost"),
     /** "site" for checkout orders, "facebook" for orders made in the admin from a Facebook comment. */
     source: text("source").notNull().default("site"),
     createdAt: createdAt(),
