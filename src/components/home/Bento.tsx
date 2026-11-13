@@ -44,22 +44,22 @@ const CATEGORY_SHOWCASES: Record<string, ShowcaseItem[]> = {
     {
       src: "/igrachki-wood.png",
       alt: "Монтесори образователна дървена пирамида",
-      className: "bottom-[2%] right-[54%] h-[56%] w-auto -rotate-6 group-hover:-translate-x-3 group-hover:-rotate-[10deg]",
+      className: "-bottom-[11%] left-[2%] z-10 h-[73%] w-auto -rotate-3 group-hover:-translate-x-1 group-hover:-rotate-6",
     },
     {
       src: "/igrachki-bear.png",
       alt: "Плюшено мече с панделка",
-      className: "bottom-[3%] right-[36%] h-[68%] w-auto rotate-4 group-hover:-translate-y-2 group-hover:rotate-6",
+      className: "-bottom-[6%] left-[24%] z-20 h-[104%] w-auto group-hover:-translate-y-1.5 group-hover:rotate-2",
     },
     {
       src: "/igrachki-car.png",
       alt: "Спортна състезателна количка",
-      className: "bottom-[1%] right-[18%] h-[58%] w-auto -rotate-8 group-hover:-translate-x-1 group-hover:-rotate-[12deg]",
+      className: "-bottom-[19%] left-[50%] z-30 h-[66%] w-auto -rotate-2 group-hover:translate-x-2",
     },
     {
       src: "/igrachki-lego.png",
       alt: "LEGO строител и конструктор",
-      className: "-bottom-[3%] -right-[1%] h-[78%] w-auto rotate-8 group-hover:translate-x-2 group-hover:rotate-[12deg] group-hover:scale-105",
+      className: "-bottom-[13%] left-[54%] h-[115%] w-auto rotate-3 group-hover:translate-x-1 group-hover:rotate-6",
     },
   ],
   napitki: [
@@ -134,24 +134,34 @@ const CATEGORY_SHOWCASES: Record<string, ShowcaseItem[]> = {
   ],
 };
 
+/**
+ * Showcases laid out inside a box of a fixed shape in the tile's bottom-right corner, so a group of
+ * several products keeps its arrangement whatever the tile's width (the images are placed relative to the box).
+ */
+const SHOWCASE_FRAMES: Record<string, string> = {
+  igrachki: "absolute bottom-0 right-11 aspect-[2.3/1] h-[72%] max-w-[calc(100%-3.25rem)] lg:h-[82%]",
+};
+
 /** Category showcase art with realistic 3D isolated brand products */
 function CategoryArt({ slug }: { slug: string }) {
   const items = CATEGORY_SHOWCASES[slug];
-  const fly = "absolute drop-shadow-[0_14px_16px_rgb(0_0_0/0.2)] transition-transform duration-500 ease-out-soft";
+  const frame = SHOWCASE_FRAMES[slug];
+  const fly = "absolute max-w-none drop-shadow-[0_14px_16px_rgb(0_0_0/0.2)] transition-transform duration-500 ease-out-soft";
+  const art = items?.map((item, i) => (
+    // eslint-disable-next-line @next/next/no-img-element -- sized by the tile's classes; the file itself is resized by optimizedImage
+    <img
+      key={i}
+      {...optimizedImage(item.src, 384)}
+      alt={item.alt}
+      className={`${fly} ${item.className} object-contain`}
+      loading="lazy"
+      decoding="async"
+    />
+  ));
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-      {items?.map((item, i) => (
-        // eslint-disable-next-line @next/next/no-img-element -- sized by the tile's classes; the file itself is resized by optimizedImage
-        <img
-          key={i}
-          {...optimizedImage(item.src, 384)}
-          alt={item.alt}
-          className={`${fly} ${item.className} object-contain`}
-          loading="lazy"
-          decoding="async"
-        />
-      ))}
+      {frame ? <div className={frame}>{art}</div> : art}
     </div>
   );
 }

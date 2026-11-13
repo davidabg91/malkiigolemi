@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgePercent, Check, ChevronLeft, ChevronRight, Loader2, SlidersHorizontal, Sparkles } from "lucide-react";
+import { BadgePercent, Check, ChevronLeft, ChevronRight, Loader2, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useEffectEvent, useRef, useState, useTransition } from "react";
 import { reorderCategories } from "@/actions/admin";
@@ -19,6 +19,32 @@ export interface CategoryNavProps {
 /** A category button in the header row: a raised card with the icon above its name. */
 const chip =
   "group flex h-[4.25rem] min-w-[5.25rem] max-w-[8rem] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl px-3 text-center text-[0.8rem] font-semibold leading-[1.15] text-ink transition raised hover:brightness-[0.97] active:scale-95";
+
+// A 14-point starburst around the centre of a 48×48 box.
+const BURST = Array.from({ length: 28 }, (_, i) => {
+  const r = i % 2 ? 19.5 : 23.5;
+  const a = (i * Math.PI) / 14;
+  return `${(24 + r * Math.sin(a)).toFixed(2)},${(24 - r * Math.cos(a)).toFixed(2)}`;
+}).join(" ");
+
+/** The red "NEW" sticker shops put on fresh arrivals. */
+function NewSign({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 48 48" className={className} aria-hidden>
+      <polygon points={BURST} className="fill-tomato" />
+      <text
+        x="24"
+        y="29"
+        textAnchor="middle"
+        transform="rotate(-12 24 24)"
+        className="fill-white"
+        style={{ font: "900 14.5px var(--font-onest), sans-serif", letterSpacing: "0.02em" }}
+      >
+        NEW
+      </text>
+    </svg>
+  );
+}
 
 export function arrayMove<T>(list: T[], fromIndex: number, toIndex: number): T[] {
   if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= list.length || toIndex >= list.length) {
@@ -294,7 +320,7 @@ export function CategoryNav({
           Промоции
         </Link>
         <Link href="/novi" className={chip}>
-          <Sparkles className="h-6 w-6 shrink-0" strokeWidth={1.75} aria-hidden />
+          <NewSign className="-my-1 h-8 w-8 shrink-0" />
           Нови продукти
         </Link>
 
