@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { assertAdmin } from "@/lib/auth";
-import { EcontError, type EcontLabelResult } from "@/lib/econt";
+import { EcontError, econtMode, econtProfile, type EcontLabelResult } from "@/lib/econt";
 import { saveEcontSettings, type EcontSettings } from "@/lib/econt-settings";
 import { createWaybill, deleteWaybill, quoteWaybill, syncShipments, type WaybillOptions } from "@/lib/shipments";
 
@@ -104,6 +104,22 @@ export async function deleteWaybillAction(orderId: number): Promise<{ ok: boolea
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof EcontError ? e.message : "Неочаквана грешка при връзката с Еконт." };
+  }
+}
+
+export type EcontConnection =
+  | { ok: true; live: boolean; name: string; clientNumber: string | null; company: boolean }
+  | { ok: false; live: boolean; error: string };
+
+/** Logs in to Econt with the configured user and reports which client profile it belongs to. */
+export async function testEcontConnectionAction(): Promise<EcontConnection> {
+  await assertAdmin();
+  const { live } = econtMode();
+  try {
+    const p = await econtProfile();
+    return { ok: true, live, name: p.name, clientNumber: p.clientNumber, company: p.company };
+  } catch (e) {
+    return { ok: false, live, error: e instanceof EcontError ? e.message : "Неочаквана грешка при връзката с Еконт." };
   }
 }
 
