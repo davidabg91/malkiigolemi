@@ -60,7 +60,7 @@ ${legalFooter()}`;
 ${itemsTable(o)}
 <p>${escapeHtml(deliveryLine(o))}<br>Плащане: ${escapeHtml(paymentLine(o))}</p>
 ${o.note ? `<p>Бележка: ${escapeHtml(o.note)}</p>` : ""}`;
-  await sendMail(site.email, `Нова поръчка ${o.number} — ${formatPrice(o.total)}`, mailLayout("Нова поръчка", shop, { href: `${site.url}/admin/porachki/${o.id}`, label: "Отвори поръчката" }));
+  await sendMail(site.email, `Нова поръчка ${o.number} — ${formatPrice(o.total)}`, mailLayout("Нова поръчка", shop, { href: `${site.url}/admin/porachki/${o.id}`, label: "Отвори поръчката" }), o.email);
 }
 
 /** "Поръчката ти пътува", with the tracking link when there is one. Never throws. */

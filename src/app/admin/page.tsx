@@ -9,7 +9,7 @@ import { db } from "@/db";
 import { orders, products, stockAlerts } from "@/db/schema";
 import { MailTest } from "@/components/admin/MailTest";
 import { site } from "@/lib/site";
-import { mailConfigured } from "@/lib/mail";
+import { mailConfigured, mailSender } from "@/lib/mail";
 import { requireAdmin } from "@/lib/auth";
 import { findFlag, getFlagIndex } from "@/lib/flags";
 import { formatDate, formatPrice } from "@/lib/format";
@@ -123,7 +123,7 @@ async function AdminDashboard() {
         <div className="space-y-6">
         <Panel className="p-5">
           <h2 className="font-display text-lg font-semibold">Имейли</h2>
-          <MailTest configured={mailConfigured()} to={site.email} />
+          <MailTest configured={mailConfigured()} from={mailSender()} to={site.email} />
         </Panel>
         {awaited.length > 0 && (
           <Panel className="p-5">

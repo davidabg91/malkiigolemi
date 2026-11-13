@@ -5,13 +5,13 @@ import { useActionState } from "react";
 import { sendTestMailAction, type MailTestState } from "@/actions/mail";
 import { btn } from "@/components/ui";
 
-export function MailTest({ configured, to }: { configured: boolean; to: string }) {
+export function MailTest({ configured, from, to }: { configured: boolean; from: string; to: string }) {
   const [state, action, pending] = useActionState<MailTestState, FormData>(() => sendTestMailAction(), undefined);
   return (
     <form action={action}>
       <p className="mt-1 text-sm text-ink-soft">
         {configured
-          ? `Клиентите получават имейл при поръчка, изпращане и отказ от договора. Изпращач: ${to}.`
+          ? `Клиентите получават имейл при поръчка, изпращане и отказ от договора. Изпращач: ${from}; отговорите отиват на ${to}.`
           : "Не са настроени: клиентите не получават потвърждения по имейл."}
       </p>
       {configured && (

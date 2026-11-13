@@ -75,6 +75,7 @@ export async function submitWithdrawal(input: WithdrawalInput): Promise<Withdraw
         }`,
         { href: `${site.url}/admin/otkazi`, label: "Към отказите" },
       ),
+      row.email,
     ),
   );
 
