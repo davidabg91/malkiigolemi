@@ -1,10 +1,12 @@
 import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
+import { site } from "./site";
 
 /**
- * Mail goes out over SMTP — by default the shop's own Gmail with an app password, which is free up to
- * 500 messages a day (SMTP_USER + SMTP_PASS; SMTP_HOST/SMTP_PORT for any other provider). MAIL_FROM is
- * the sender shown to customers; with Gmail it must be the same mailbox. RESEND_API_KEY still works instead.
+ * Mail goes out over SMTP: SMTP_USER + SMTP_PASS, with SMTP_HOST/SMTP_PORT for the provider (Gmail when
+ * unset; Brevo's free relay is smtp-relay.brevo.com:587). MAIL_FROM is the sender shown to customers, e.g. an
+ * address on the shop's domain. Replies go to the shop's mailbox (site.email), since the domain itself has
+ * no inbox. RESEND_API_KEY still works instead of SMTP.
  */
 const smtp = () => {
   const user = process.env.SMTP_USER?.trim();
@@ -17,7 +19,7 @@ const smtp = () => {
 
 let transporter: Transporter | undefined;
 
-async function viaSmtp(from: string, to: string, subject: string, html: string) {
+async function viaSmtp(from: string, to: string, subject: string, html: string, replyTo: string) {
   const cfg = smtp()!;
   transporter ??= nodemailer.createTransport({
     host: cfg.host,
@@ -25,16 +27,16 @@ async function viaSmtp(from: string, to: string, subject: string, html: string) 
     secure: cfg.port === 465,
     auth: { user: cfg.user, pass: cfg.pass },
   });
-  await transporter.sendMail({ from, to, subject, html });
+  await transporter.sendMail({ from, to, subject, html, replyTo });
   return true;
 }
 
-async function viaResend(key: string, from: string, to: string, subject: string, html: string) {
+async function viaResend(key: string, from: string, to: string, subject: string, html: string, replyTo: string) {
   const send = () =>
     fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from, to, subject, html }),
+      body: JSON.stringify({ from, to, subject, html, reply_to: replyTo }),
     });
   let res = await send();
   // Resend allows a few requests a second; marking many orders shipped at once can hit that.
@@ -48,19 +50,22 @@ async function viaResend(key: string, from: string, to: string, subject: string,
 
 /**
  * Sends one e-mail. Returns false when e-mail is not configured or the send fails, so callers can
- * keep the message for later; never throws.
+ * keep the message for later; never throws. `replyTo` defaults to the shop's mailbox.
  */
-export async function sendMail(to: string, subject: string, html: string): Promise<boolean> {
+export async function sendMail(to: string, subject: string, html: string, replyTo: string = site.email): Promise<boolean> {
   const from = process.env.MAIL_FROM || process.env.SMTP_USER;
   const key = process.env.RESEND_API_KEY;
   if (!from || (!smtp() && !key)) return false;
   try {
-    return smtp() ? await viaSmtp(from, to, subject, html) : await viaResend(key!, from, to, subject, html);
+    return smtp() ? await viaSmtp(from, to, subject, html, replyTo) : await viaResend(key!, from, to, subject, html, replyTo);
   } catch (e) {
     console.error("sendMail failed", e);
     return false;
   }
 }
+
+/** The sender customers see, e.g. "Поръчки за малки и големи <porachki@malkiigolemi.com>". */
+export const mailSender = () => process.env.MAIL_FROM || process.env.SMTP_USER || "";
 
 export const mailConfigured = () => Boolean(smtp() || (process.env.RESEND_API_KEY && process.env.MAIL_FROM));
 
