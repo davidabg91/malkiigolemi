@@ -2,11 +2,13 @@
 
 import { and, eq, getTableColumns, gte, inArray, sql } from "drizzle-orm";
 import { updateTag } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { orderItems, orders, products, users } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { unitPriceFor } from "@/lib/format";
+import { sendOrderPlaced } from "@/lib/order-mail";
 import { orderNumber } from "@/lib/orders";
 import { getLoyaltySettings, pointsBalance, redeemable, syncOrderPoints } from "@/lib/loyalty";
 import { pricedColumns } from "@/lib/pricing";
@@ -118,6 +120,7 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
   const number = orderNumber();
 
   let soldOut = false;
+  let orderId = 0;
   try {
     await db.transaction(async (tx) => {
       // Points are counted inside the transaction, so two orders at once cannot spend the same points.
@@ -150,6 +153,7 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
           total: subtotal + shipping - discount,
         })
         .returning({ id: orders.id });
+      orderId = order.id;
       await tx.insert(orderItems).values(lines.map((l) => ({ ...l, orderId: order.id })));
       // Writes the "used points" line in the customer's history.
       if (pointsUsed > 0) await syncOrderPoints(tx, order.id);
@@ -194,5 +198,6 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
       .catch(() => {});
   }
   if (soldOut) updateTag(CATALOG_TAG);
+  after(() => sendOrderPlaced(orderId));
   return { ok: true, number };
 }

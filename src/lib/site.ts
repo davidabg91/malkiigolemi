@@ -29,7 +29,7 @@ export const COMPANY = {
   /** ДДС номер; null while the company is not VAT-registered. */
   vatNumber: null as string | null,
   manager: "Иванка Петкова",
-  address: "гр. Плевен 5800, бл. 13, ет. 5, ап. 26",
+  address: "гр. Плевен 5800, ж.к. Сторгозия, бл. 13, ет. 5, ап. 26",
 } as const;
 
 /** Public bodies a customer can turn to; named in the terms and the privacy policy. */
