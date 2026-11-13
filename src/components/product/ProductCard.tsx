@@ -47,7 +47,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
         tabIndex={-1}
         aria-hidden
         className="relative block aspect-square overflow-hidden rounded-2xl"
-        style={{ background: isFull ? "#14261c" : `color-mix(in srgb, ${product.color} 11%, #f6f2e8)` }}
+        style={{ background: isFull ? "#efefed" : `color-mix(in srgb, ${product.color} 4%, #efefed)` }}
       >
         <ProductVisual
           product={product}

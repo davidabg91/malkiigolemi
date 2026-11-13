@@ -18,8 +18,8 @@ export type Mail = { subject: string; html: string };
 
 const loadOrder = (id: number) => db.query.orders.findFirst({ where: eq(orders.id, id), with: { items: true } });
 
-const muted = "color:#5b6b60;font-size:13px";
-const link = (href: string, text: string) => `<a href="${escapeHtml(href)}" style="color:#1f5c3f">${escapeHtml(text)}</a>`;
+const muted = "color:#5c5f62;font-size:13px";
+const link = (href: string, text: string) => `<a href="${escapeHtml(href)}" style="color:#33484b">${escapeHtml(text)}</a>`;
 
 function deliveryLine(o: OrderWithItems) {
   if (o.delivery === "store") return `Вземане от магазина: ${STORE.address}`;

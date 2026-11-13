@@ -29,7 +29,7 @@ export function LoyaltyForm({ initial }: { initial: LoyaltySettings }) {
   return (
     <form action={action} className="space-y-5">
       <label className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl bg-sand/60 px-4 py-3 font-medium">
-        <input type="checkbox" name="enabled" defaultChecked={initial.enabled} className="h-5 w-5 accent-[#1f5c3f]" />
+        <input type="checkbox" name="enabled" defaultChecked={initial.enabled} className="h-5 w-5 accent-[#33484b]" />
         Програмата е включена
         <span className="text-sm font-normal text-ink-soft">Изключена: не се трупат и не се използват точки; събраните остават.</span>
       </label>

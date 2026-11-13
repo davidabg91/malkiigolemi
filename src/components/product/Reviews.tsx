@@ -21,7 +21,7 @@ export async function Reviews({ productId, slug }: { productId: number; slug: st
       <section
         id="otzivi"
         aria-labelledby="reviews-heading"
-        className="flex scroll-mt-32 flex-wrap items-center justify-between gap-x-6 gap-y-1 rounded-2xl bg-paper px-4 py-3 text-sm shadow-soft sm:px-5 sm:py-3.5"
+        className="flex scroll-mt-44 flex-wrap items-center justify-between gap-x-6 gap-y-1 rounded-2xl bg-paper px-4 py-3 text-sm shadow-soft sm:px-5 sm:py-3.5"
       >
         <div className="flex items-center gap-2 whitespace-nowrap">
           <Stars value={0} className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -48,7 +48,7 @@ export async function Reviews({ productId, slug }: { productId: number; slug: st
   }
 
   return (
-    <section id="otzivi" aria-labelledby="reviews-heading" className="scroll-mt-32">
+    <section id="otzivi" aria-labelledby="reviews-heading" className="scroll-mt-44">
       <h2 id="reviews-heading" className="font-display text-2xl font-semibold tracking-tight">
         Отзиви {data.count > 0 && <span className="text-ink-soft">({data.count})</span>}
       </h2>

@@ -9,7 +9,7 @@ import { reorderCategories } from "@/actions/admin";
 import type { AdminAlerts } from "@/lib/admin-alerts";
 import { CategoryIcon, FacebookIcon, Logo } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
-import { site, TONES } from "@/lib/site";
+import { site } from "@/lib/site";
 import { cartTotals, useCart, useHydrated, useWishlist } from "@/lib/store";
 import { AccountButton } from "./AccountButton";
 import { arrayMove, CategoryNav } from "./CategoryNav";
@@ -243,14 +243,14 @@ export function HeaderClient({ tree, isAdmin, adminAlerts = null }: { tree: Menu
     };
   }, [mega]);
 
-  const iconBtn =
-    "relative grid h-11 w-11 place-items-center rounded-full text-ink transition hover:bg-sand";
+  const plainBtn = "relative grid h-11 w-11 place-items-center rounded-full text-ink transition hover:bg-sand";
+  const iconBtn = "relative grid h-11 w-11 place-items-center rounded-full text-ink transition raised hover:brightness-[0.97] active:scale-95";
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line/80 bg-cream/90 backdrop-blur-md" ref={megaRef}>
+    <header className="sticky top-0 z-40 border-b border-line/60 bg-cream/90 backdrop-blur-md" ref={megaRef}>
       <div className="container-shop">
         <div className="flex h-[4.5rem] items-center gap-2 sm:gap-4">
-          <button type="button" className={`${iconBtn} -ml-2 lg:hidden`} onClick={() => setDrawer(true)} aria-label="Отвори менюто">
+          <button type="button" className={`${plainBtn} -ml-2 lg:hidden`} onClick={() => setDrawer(true)} aria-label="Отвори менюто">
             <Menu className="h-6 w-6" />
           </button>
 
@@ -292,7 +292,7 @@ export function HeaderClient({ tree, isAdmin, adminAlerts = null }: { tree: Menu
             {site.phone}
           </a>
 
-          <div className="ml-auto flex items-center gap-0.5 md:ml-0">
+          <div className="ml-auto flex items-center gap-2 md:ml-0">
             <AccountButton alerts={adminAlerts} />
             <Link href="/lyubimi" className={iconBtn} aria-label={`Любими продукти (${hydrated ? wishCount : 0})`}>
               <Heart className="h-[22px] w-[22px]" strokeWidth={1.75} />
@@ -301,12 +301,12 @@ export function HeaderClient({ tree, isAdmin, adminAlerts = null }: { tree: Menu
             <button
               type="button"
               onClick={() => openCart(true)}
-              className="relative ml-1 inline-flex h-12 items-center gap-2.5 rounded-full bg-lime pl-4 pr-4 font-semibold text-ink transition hover:bg-lime-deep sm:pr-5"
+              className="relative inline-flex h-11 min-w-11 items-center justify-center gap-2.5 rounded-full font-semibold text-ink transition raised hover:brightness-[0.97] active:scale-95 sm:h-12 sm:px-5"
               aria-label={`Количка, ${count} продукта`}
             >
               <span className="relative inline-flex">
                 <ShoppingBag className="h-[22px] w-[22px]" strokeWidth={1.75} />
-                <CountBadge n={count} className="-right-2.5 -top-2.5" />
+                <CountBadge n={count} className="-right-3 -top-3" />
               </span>
               <span className="hidden text-sm tabular-nums sm:inline">{formatPrice(subtotal)}</span>
             </button>
@@ -363,7 +363,6 @@ export function HeaderClient({ tree, isAdmin, adminAlerts = null }: { tree: Menu
 
               <div className="grid grid-cols-4 gap-x-8 gap-y-7">
                 {catItems.map((c, index) => {
-                  const tone = TONES[c.tone] ?? TONES.cream;
                   const isOdd = index % 2 !== 0;
                   const isCurrentDragging = draggingId === c.id;
                   const isOver = dragOverId === c.id && draggingId !== c.id;
@@ -436,10 +435,7 @@ export function HeaderClient({ tree, isAdmin, adminAlerts = null }: { tree: Menu
                             </button>
                           </div>
                           <div className="flex items-center gap-3">
-                            <span
-                              className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl"
-                              style={{ background: tone.bg, color: tone.ink }}
-                            >
+                            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-ink raised">
                               <CategoryIcon name={c.icon} className="h-5 w-5" />
                             </span>
                             <span className="font-semibold text-ink">{c.name}</span>
@@ -448,7 +444,7 @@ export function HeaderClient({ tree, isAdmin, adminAlerts = null }: { tree: Menu
                       ) : (
                         <>
                           <Link href={`/kategoria/${c.slug}`} onClick={() => setMega(false)} className="group flex items-center gap-3">
-                            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl transition group-hover:scale-105" style={{ background: tone.bg, color: tone.ink }}>
+                            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-ink transition raised group-hover:scale-105">
                               <CategoryIcon name={c.icon} className="h-5 w-5" />
                             </span>
                             <span className="font-semibold group-hover:text-forest">{c.name}</span>
@@ -472,7 +468,7 @@ export function HeaderClient({ tree, isAdmin, adminAlerts = null }: { tree: Menu
                     Промоции
                     <span className="mt-0.5 block text-sm font-normal text-white/85">Намаления и цени за количество</span>
                   </Link>
-                  <Link href="/novi" onClick={() => setMega(false)} className="rounded-2xl bg-lime px-5 py-4 font-semibold text-ink transition hover:bg-lime-deep">
+                  <Link href="/novi" onClick={() => setMega(false)} className="rounded-2xl px-5 py-4 font-semibold text-ink transition raised hover:brightness-[0.97]">
                     Нови продукти
                     <span className="mt-0.5 block text-sm font-normal text-ink/75">Току-що пристигнали</span>
                   </Link>
@@ -510,7 +506,7 @@ export function HeaderClient({ tree, isAdmin, adminAlerts = null }: { tree: Menu
                     <Logo />
                     <button
                       type="button"
-                      className={iconBtn}
+                      className={plainBtn}
                       onClick={() => {
                         if (mobileReordering) handleSaveMobileReorder();
                         setDrawer(false);
@@ -550,13 +546,12 @@ export function HeaderClient({ tree, isAdmin, adminAlerts = null }: { tree: Menu
                       <Link href="/promo" onClick={() => setDrawer(false)} className="rounded-2xl bg-tomato px-4 py-3 text-sm font-semibold text-white">
                         Промоции
                       </Link>
-                      <Link href="/novi" onClick={() => setDrawer(false)} className="rounded-2xl bg-lime px-4 py-3 text-sm font-semibold text-ink">
+                      <Link href="/novi" onClick={() => setDrawer(false)} className="rounded-2xl px-4 py-3 text-sm font-semibold text-ink raised">
                         Нови продукти
                       </Link>
                     </div>
                     <ul>
                       {catItems.map((c, index) => {
-                        const tone = TONES[c.tone] ?? TONES.cream;
                         const isOpen = expanded === c.id;
                         const isOdd = index % 2 !== 0;
                         const wiggleClass = mobileReordering
@@ -578,7 +573,7 @@ export function HeaderClient({ tree, isAdmin, adminAlerts = null }: { tree: Menu
                               <div className="flex min-h-14 items-center justify-between gap-2 px-2 py-2">
                                 <div className="flex items-center gap-2.5">
                                   <span className="text-xs font-mono font-bold text-ink-soft">#{index + 1}</span>
-                                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl" style={{ background: tone.bg, color: tone.ink }}>
+                                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-ink raised">
                                     <CategoryIcon name={c.icon} className="h-5 w-5" />
                                   </span>
                                   <span className="font-semibold text-ink text-sm">{c.name}</span>
@@ -620,14 +615,14 @@ export function HeaderClient({ tree, isAdmin, adminAlerts = null }: { tree: Menu
                                   }}
                                   className="flex min-h-14 flex-1 items-center gap-3 px-2 font-medium"
                                 >
-                                  <span className="grid h-10 w-10 place-items-center rounded-xl" style={{ background: tone.bg, color: tone.ink }}>
+                                  <span className="grid h-10 w-10 place-items-center rounded-xl text-ink raised">
                                     <CategoryIcon name={c.icon} className="h-5 w-5" />
                                   </span>
                                   {c.name}
                                 </Link>
                                 <button
                                   type="button"
-                                  className={iconBtn}
+                                  className={plainBtn}
                                   aria-expanded={isOpen}
                                   aria-label={`Подкатегории на ${c.name}`}
                                   onClick={() => setExpanded(isOpen ? null : c.id)}

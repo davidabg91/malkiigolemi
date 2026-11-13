@@ -37,10 +37,10 @@ export function confirmationText(w: WithdrawalStatement) {
 export function confirmationHtml(w: WithdrawalStatement) {
   const body = `<p>Здравейте, ${escapeHtml(w.name)},</p>
 <p>Потвърждаваме, че получихме Вашето изявление за отказ от договора на <strong>${escapeHtml(formatTimestamp(w.createdAt))} ч.</strong></p>
-<p style="background:#f6f2e8;border-radius:12px;padding:14px 16px;margin:16px 0"><strong>Съдържание на изявлението:</strong><br>${escapeHtml(statementText(w))}<br>Име: ${escapeHtml(w.name)}<br>Имейл: ${escapeHtml(w.email)}</p>
+<p style="background:#f5f5f4;border-radius:12px;padding:14px 16px;margin:16px 0"><strong>Съдържание на изявлението:</strong><br>${escapeHtml(statementText(w))}<br>Име: ${escapeHtml(w.name)}<br>Имейл: ${escapeHtml(w.email)}</p>
 <p>Моля, върнете стоките до ${WITHDRAWAL_DAYS} дни на адрес: ${escapeHtml(STORE.address)}, или се свържете с нас на ${escapeHtml(site.phone)} за друг начин на връщане.</p>
 <p>Ще възстановим платената сума до ${WITHDRAWAL_DAYS} дни от получаване на изявлението, след като получим стоките или доказателство, че са изпратени.</p>
-<p style="font-size:13px;color:#5b6b60">${escapeHtml(COMPANY.name)}, ЕИК ${escapeHtml(COMPANY.eik)}, ${escapeHtml(COMPANY.address)}</p>`;
+<p style="font-size:13px;color:#5c5f62">${escapeHtml(COMPANY.name)}, ЕИК ${escapeHtml(COMPANY.eik)}, ${escapeHtml(COMPANY.address)}</p>`;
   return mailLayout("Получихме отказа ти от договора", body);
 }
 

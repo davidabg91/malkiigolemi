@@ -194,7 +194,7 @@ export function EcontWaybill({
       {pickupPossible && (
         <div className="mt-3">
           <label className="flex items-center gap-2 text-sm font-medium">
-            <input type="checkbox" checked={pickup} onChange={(e) => setPickup(e.target.checked)} className="h-4 w-4 accent-[#1f5c3f]" />
+            <input type="checkbox" checked={pickup} onChange={(e) => setPickup(e.target.checked)} className="h-4 w-4 accent-[#33484b]" />
             Заяви куриер да вземе пратката
           </label>
           {pickup && (

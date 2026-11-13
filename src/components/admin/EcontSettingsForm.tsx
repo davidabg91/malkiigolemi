@@ -73,7 +73,7 @@ export function EcontSettingsForm({ initial, live }: { initial: EcontSettings; l
 
   const radio = (name: "senderMode" | "payer" | "senderPayment", value: string, label: string, hint: string, checked: boolean, onChange?: () => void) => (
     <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-line p-3.5 transition has-[:checked]:border-forest has-[:checked]:bg-lime/20">
-      <input type="radio" name={name} value={value} defaultChecked={checked} onChange={onChange} className="mt-1 h-4 w-4 accent-[#1f5c3f]" />
+      <input type="radio" name={name} value={value} defaultChecked={checked} onChange={onChange} className="mt-1 h-4 w-4 accent-[#33484b]" />
       <span>
         <span className="block font-medium">{label}</span>
         <span className="text-sm text-ink-soft">{hint}</span>
@@ -141,7 +141,7 @@ export function EcontSettingsForm({ initial, live }: { initial: EcontSettings; l
                   name="econtProfile"
                   checked={chosen.id === p.id}
                   onChange={() => setChosen({ id: p.id, name: p.name, company: p.company })}
-                  className="mt-1 h-4 w-4 accent-[#1f5c3f]"
+                  className="mt-1 h-4 w-4 accent-[#33484b]"
                 />
                 <span className="min-w-0">
                   <span className="flex items-center gap-1.5 font-medium">
@@ -254,14 +254,14 @@ export function EcontSettingsForm({ initial, live }: { initial: EcontSettings; l
           field("codTemplate", "Споразумение за наложен платеж (от Еконт)", { placeholder: "по желание", maxLength: 60 })
         )}
         <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-line p-3.5 has-[:checked]:border-forest has-[:checked]:bg-lime/20">
-          <input type="checkbox" name="inspectBeforePay" defaultChecked={initial.inspectBeforePay} className="mt-1 h-4 w-4 accent-[#1f5c3f]" />
+          <input type="checkbox" name="inspectBeforePay" defaultChecked={initial.inspectBeforePay} className="mt-1 h-4 w-4 accent-[#33484b]" />
           <span>
             <span className="block font-medium">Преглед преди плащане</span>
             <span className="text-sm text-ink-soft">Клиентът отваря пратката, преди да плати.</span>
           </span>
         </label>
         <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-line p-3.5 has-[:checked]:border-forest has-[:checked]:bg-lime/20">
-          <input type="checkbox" name="sms" defaultChecked={initial.sms} className="mt-1 h-4 w-4 accent-[#1f5c3f]" />
+          <input type="checkbox" name="sms" defaultChecked={initial.sms} className="mt-1 h-4 w-4 accent-[#33484b]" />
           <span>
             <span className="block font-medium">SMS известие до клиента</span>
             <span className="text-sm text-ink-soft">Допълнителна услуга на Еконт (таксува се).</span>

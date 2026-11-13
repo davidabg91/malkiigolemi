@@ -97,13 +97,13 @@ const escape = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<":
 
 /** A plain, readable e-mail in the shop's colours, with the logo on top; `footer` (small print) goes under the button. */
 export function mailLayout(title: string, body: string, cta?: { href: string; label: string }, footer = "") {
-  return `<!doctype html><html lang="bg"><body style="margin:0;background:#f6f2e8;font-family:Arial,sans-serif;color:#14261c">
+  return `<!doctype html><html lang="bg"><body style="margin:0;background:#f5f5f4;font-family:Arial,sans-serif;color:#171717">
 <div style="max-width:520px;margin:0 auto;padding:28px 20px 32px">
 <a href="${escape(site.url)}" style="display:inline-block;margin:0 0 20px"><img src="${escape(site.url)}/mail-logo.png" width="200" height="56" alt="Поръчки за малки и големи" style="display:block;border:0;height:auto;max-width:200px"></a>
 <div style="background:#ffffff;border-radius:20px;padding:28px">
 <h1 style="font-size:22px;margin:0 0 12px">${escape(title)}</h1>
 <div style="font-size:16px;line-height:1.6">${body}</div>
-${cta ? `<p style="margin:24px 0 0"><a href="${escape(cta.href)}" style="display:inline-block;background:#1f5c3f;color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:999px">${escape(cta.label)}</a></p>` : ""}
+${cta ? `<p style="margin:24px 0 0"><a href="${escape(cta.href)}" style="display:inline-block;background:#33484b;color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:999px">${escape(cta.label)}</a></p>` : ""}
 ${footer}
 </div></div></body></html>`;
 }
