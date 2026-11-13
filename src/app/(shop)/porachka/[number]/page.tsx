@@ -1,9 +1,10 @@
 import { eq } from "drizzle-orm";
-import { Check } from "lucide-react";
+import { Check, CreditCard, Loader2 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { payOrder } from "@/actions/payment";
 import { StoreLocation } from "@/components/StoreLocation";
 import { btn } from "@/components/ui";
 import { db } from "@/db";
@@ -11,15 +12,20 @@ import { orders } from "@/db/schema";
 import { courierName } from "@/lib/couriers";
 import { formatPrice } from "@/lib/format";
 import { DELIVERY_METHODS, site } from "@/lib/site";
+import { awaitsCardPayment, syncPayment } from "@/lib/stripe";
 
 export const metadata: Metadata = { title: "Благодарим за поръчката", robots: { index: false } };
 
 type Props = PageProps<"/porachka/[number]">;
 
-async function Confirmation({ params }: Pick<Props, "params">) {
-  const { number } = await params;
+async function Confirmation({ params, searchParams }: Props) {
+  const [{ number }, { plashtane }] = await Promise.all([params, searchParams]);
   const order = await db.query.orders.findFirst({ where: eq(orders.number, number), with: { items: true } });
   if (!order) notFound();
+  // Back from Stripe before its webhook arrived: ask Stripe directly.
+  const justPaid = await syncPayment(order);
+  const paid = Boolean(order.paidAt) || justPaid;
+  const unpaid = awaitsCardPayment(order) && !justPaid;
   const delivery = DELIVERY_METHODS.find((d) => d.id === order.delivery);
   const pickup = order.delivery === "store";
 
@@ -32,9 +38,43 @@ async function Confirmation({ params }: Pick<Props, "params">) {
         </span>
         <h1 className="mt-6 font-display text-3xl font-semibold tracking-tight">Благодарим, {order.name.split(" ")[0]}!</h1>
         <p className="mt-3 text-cream/75">
-          Поръчка <strong className="text-lime">{order.number}</strong> е приета. Ще ти се обадим на {order.phone} за потвърждение.
+          {unpaid ? (
+            <>
+              Поръчка <strong className="text-lime">{order.number}</strong> е записана и чака плащане с карта.
+            </>
+          ) : (
+            <>
+              Поръчка <strong className="text-lime">{order.number}</strong> е {paid ? "платена и " : ""}приета. Ще ти се обадим на {order.phone} за потвърждение.
+            </>
+          )}
         </p>
       </div>
+
+      {unpaid && (
+        <div className="mt-6 rounded-tile border border-line bg-paper p-6 shadow-soft sm:p-8">
+          {plashtane === "uspeshno" ? (
+            <p role="status" className="flex items-center gap-2 font-medium">
+              <Loader2 className="h-5 w-5 animate-spin text-forest" aria-hidden />
+              Плащането се потвърждава… Обнови страницата след малко.
+            </p>
+          ) : (
+            <>
+              <h2 className="font-display text-lg font-semibold">Плащането не е завършено</h2>
+              <p className="mt-1 text-ink-soft">
+                {plashtane === "greshka"
+                  ? "Страницата за плащане не можа да се отвори. Опитай отново или ни се обади."
+                  : "Плати сега, за да изпратим поръчката. Ако не платиш до час, поръчката се отказва автоматично."}
+              </p>
+              <form action={payOrder.bind(null, order.number)} className="mt-4">
+                <button type="submit" className={btn.primary}>
+                  <CreditCard className="h-5 w-5" aria-hidden />
+                  Плати с карта {formatPrice(order.total)}
+                </button>
+              </form>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="mt-6 rounded-tile bg-paper p-6 shadow-soft sm:p-8">
         <h2 className="font-display text-lg font-semibold">Детайли</h2>
@@ -64,7 +104,9 @@ async function Confirmation({ params }: Pick<Props, "params">) {
               {pickup
                 ? "Общо (плащане в магазина)"
                 : order.payment === "card"
-                ? "Общо (плащане с карта)"
+                ? paid
+                  ? "Общо (платено с карта)"
+                  : "Общо (плащане с карта)"
                 : "Общо (наложен платеж)"}
             </dt>
             <dd className="font-bold tabular-nums">{formatPrice(order.total)}</dd>
@@ -111,11 +153,11 @@ async function Confirmation({ params }: Pick<Props, "params">) {
   );
 }
 
-export default function Page({ params }: Props) {
+export default function Page({ params, searchParams }: Props) {
   return (
     <div className="container-shop pt-8 sm:pt-12">
       <Suspense fallback={<div className="mx-auto h-96 max-w-2xl animate-pulse rounded-tile bg-sand" aria-hidden />}>
-        <Confirmation params={params} />
+        <Confirmation params={params} searchParams={searchParams} />
       </Suspense>
     </div>
   );

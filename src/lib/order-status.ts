@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { orderItems, orders, products, type OrderStatus } from "@/db/schema";
 import { syncOrderPoints } from "./loyalty";
 import { sendOrderShipped } from "./order-mail";
+import { refundOrder } from "./stripe";
 import { notifyRestocked } from "./stock-alerts";
 
 /**
@@ -51,6 +52,13 @@ export async function changeOrderStatus(
   });
   if (restocked.length) await notifyRestocked(restocked);
   if (result === "changed" && to === "shipped") await sendOrderShipped(orderId);
+  // A cancelled order paid by card gets its money back; if Stripe refuses, the admin sees a note to do it by hand.
+  if (result === "changed" && to === "cancelled" && !(await refundOrder(orderId))) {
+    await db
+      .update(orders)
+      .set({ note: sql`trim(coalesce(${orders.note}, '') || char(10) || 'Връщането на сумата в Stripe не успя — направи го ръчно от Stripe.')` })
+      .where(eq(orders.id, orderId));
+  }
   return result;
 }
 

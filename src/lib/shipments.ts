@@ -5,6 +5,7 @@ import { orders, settings, type Order } from "@/db/schema";
 import { deleteEcontLabels, EcontError, econtLabel, econtStatuses, type EcontLabelInput, type EcontLabelResult } from "./econt";
 import { getEcontSettings, missingSenderFields, type EcontSettings } from "./econt-settings";
 import { changeOrderStatus } from "./order-status";
+import { awaitsCardPayment } from "./stripe";
 
 /** Per-waybill choices the admin can change before creating it. */
 export type WaybillOptions = {
@@ -22,6 +23,7 @@ type OrderWithItems = Order & { items: { name: string; qty: number }[] };
 export function waybillBlocker(order: Order): string | null {
   if (order.courier !== "econt" || order.delivery === "store") return "Поръчката не е с доставка чрез Еконт.";
   if (order.status === "cancelled") return "Поръчката е отказана.";
+  if (awaitsCardPayment(order)) return "Поръчката още не е платена с карта.";
   if ((order.delivery === "office" || order.delivery === "box") && !order.officeCode) return "В поръчката няма избран офис на Еконт.";
   if (order.delivery === "address" && (!order.city.trim() || !order.address.trim())) return "В поръчката няма пълен адрес за доставка.";
   return null;

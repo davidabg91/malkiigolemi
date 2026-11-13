@@ -124,6 +124,14 @@ export const orders = sqliteTable(
     shippingCost: integer("shipping_cost"),
     /** "site" for checkout orders, "facebook" for orders made in the admin from a Facebook comment. */
     source: text("source").notNull().default("site"),
+    /** Card orders: the Stripe Checkout session last opened for paying it. */
+    stripeSessionId: text("stripe_session_id"),
+    /** Card orders: the Stripe payment, for refunds and the link to the Stripe dashboard. */
+    stripePaymentIntent: text("stripe_payment_intent"),
+    /** When the card payment came through; null while unpaid (and for cash on delivery). */
+    paidAt: integer("paid_at", { mode: "timestamp" }),
+    /** When a card payment was refunded in full, e.g. after the order was cancelled. */
+    refundedAt: integer("refunded_at", { mode: "timestamp" }),
     createdAt: createdAt(),
   },
   (t) => [index("orders_user_idx").on(t.userId)],
