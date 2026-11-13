@@ -52,9 +52,27 @@ async function call<T>(method: string, body: unknown, timeoutMs = 20_000): Promi
   }
   if (res.status === 401 || res.status === 403) throw new EcontError("Еконт отказа достъп: провери потребителя и паролата за e-Econt.");
   if (!res.ok || !json || (json.type && /Exception|Ex[A-Z]/.test(json.type))) {
-    throw new EcontError(json ? faultText(json) || "Еконт върна грешка." : `Еконт върна грешка (${res.status}).`);
+    const text = json ? faultText(json) || "Еконт върна грешка." : `Еконт върна грешка (${res.status}).`;
+    // Econt answers a wrong login like any other bad request; say where the login comes from.
+    if (/потребителско име|парола/i.test(text)) {
+      throw new EcontError(
+        `${text} Провери ECONT_USERNAME и ECONT_PASSWORD във Vercel: с тях трябва да можеш да влезеш в ee.econt.com. След промяна направи Redeploy.`,
+      );
+    }
+    throw new EcontError(text);
   }
   return json;
+}
+
+/** Who the site is logged in to Econt as: proves the username/password and shows the client number. */
+export async function econtProfile(): Promise<{ name: string; clientNumber: string | null; company: boolean; email: string | null }> {
+  const res = await call<{ profiles?: { client?: { name?: string; clientNumber?: string | null; juridicalEntity?: boolean; email?: string | null } }[] }>(
+    "Profile/ProfileService.getClientProfiles",
+    {},
+  );
+  const c = res.profiles?.[0]?.client;
+  if (!c) throw new EcontError("Входът в Еконт е успешен, но към потребителя няма клиентски профил.");
+  return { name: c.name ?? "—", clientNumber: c.clientNumber || null, company: Boolean(c.juridicalEntity), email: c.email ?? null };
 }
 
 // ---------------------------------------------------------------------------------------------- labels

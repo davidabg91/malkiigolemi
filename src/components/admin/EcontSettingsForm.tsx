@@ -1,8 +1,8 @@
 "use client";
 
-import { Check, FlaskConical, Loader2, ShieldCheck } from "lucide-react";
-import { useActionState, useEffect, useId, useState } from "react";
-import { saveEcontSettingsAction } from "@/actions/econt";
+import { Check, FlaskConical, Loader2, PlugZap, ShieldCheck, XCircle } from "lucide-react";
+import { useActionState, useEffect, useId, useState, useTransition } from "react";
+import { saveEcontSettingsAction, testEcontConnectionAction, type EcontConnection } from "@/actions/econt";
 import { btn } from "@/components/ui";
 import type { EcontSettings } from "@/lib/econt-settings";
 
@@ -16,6 +16,8 @@ export function EcontSettingsForm({ initial, live }: { initial: EcontSettings; l
   const [offices, setOffices] = useState<Office[] | null>(null);
   const uid = useId();
   const err = state?.fieldErrors ?? {};
+  const [checking, startCheck] = useTransition();
+  const [connection, setConnection] = useState<EcontConnection | null>(null);
 
   // The Econt offices in the chosen town, to pick the one parcels are taken to.
   useEffect(() => {
@@ -72,6 +74,34 @@ export function EcontSettingsForm({ initial, live }: { initial: EcontSettings; l
           </span>
         </p>
       )}
+
+      <div className="flex flex-wrap items-start gap-3">
+        <button
+          type="button"
+          disabled={checking}
+          onClick={() => startCheck(async () => setConnection(await testEcontConnectionAction()))}
+          className={btn.sm}
+        >
+          {checking ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <PlugZap className="h-4 w-4" aria-hidden />}
+          Провери връзката с Еконт
+        </button>
+        {connection &&
+          (connection.ok ? (
+            <p role="status" className="flex items-start gap-2 text-sm text-forest">
+              <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+              <span>
+                Свързан{connection.live ? "" : " (тестова система)"} като <strong>{connection.name}</strong>
+                {connection.clientNumber && <> · клиентски № {connection.clientNumber}</>}
+                {connection.live && !connection.company && <> · профилът е на физическо лице, не на фирма</>}
+              </span>
+            </p>
+          ) : (
+            <p role="alert" className="flex max-w-xl items-start gap-2 text-sm font-medium text-tomato">
+              <XCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+              <span>{connection.error}</span>
+            </p>
+          ))}
+      </div>
 
       <fieldset className="grid gap-4 sm:grid-cols-2">
         <legend className="mb-3 font-semibold">Подател</legend>
