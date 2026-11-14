@@ -13,9 +13,10 @@ async function Shell({ children }: { children: React.ReactNode }) {
   const session = await requireAdmin();
   const alerts = await getAdminAlerts();
   return (
-    <div className="flex min-h-dvh flex-col lg:flex-row">
+    <div className="flex min-h-dvh flex-col overflow-x-clip lg:flex-row">
       <AdminNav name={session.name} alerts={alerts} />
-      <main className="min-w-0 flex-1 px-4 py-6 sm:px-8 sm:py-8">{children}</main>
+      {/* Grid cells may shrink below their content, so a wide table scrolls inside its panel instead of widening the page on a phone. */}
+      <main className="min-w-0 flex-1 px-4 py-6 sm:px-8 sm:py-8 [&_.grid>*]:min-w-0">{children}</main>
     </div>
   );
 }
