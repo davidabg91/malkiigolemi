@@ -87,8 +87,8 @@ export default async function HomePage() {
               </Link>
             }
           />
-          {/* With enough new products for two full rows on a computer, they stand two high. */}
-          <Carousel label="Нови продукти" autoplay rows={home.fresh.length >= 10 ? 2 : 1}>
+          {/* More new products than one row holds on a computer: they stand two high. */}
+          <Carousel label="Нови продукти" autoplay rows={home.fresh.length > 5 ? 2 : 1}>
             {home.fresh.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}

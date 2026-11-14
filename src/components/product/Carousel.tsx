@@ -16,7 +16,13 @@ const AUTOPLAY_MS = 5500;
 export function Carousel({ children, label, autoplay = false, rows = 1 }: { children: ReactNode; label: string; autoplay?: boolean; rows?: 1 | 2 }) {
   // Two rows are built from columns of two cards: a column is what slides.
   const cards = Children.toArray(children);
-  const columns = rows === 2 ? Array.from({ length: Math.ceil(cards.length / 2) }, (_, i) => cards.slice(i * 2, i * 2 + 2)) : cards.map((c) => [c]);
+  const columns =
+    rows === 1
+      ? cards.map((c) => [c])
+      : cards.length < 10
+        ? // Not enough for two full rows on a computer: the top row is filled first, the rest go under it.
+          Array.from({ length: Math.min(5, cards.length) }, (_, i) => [cards[i], cards[i + 5]].filter((c) => c !== undefined))
+        : Array.from({ length: Math.ceil(cards.length / 2) }, (_, i) => cards.slice(i * 2, i * 2 + 2));
   const [ref, api] = useEmblaCarousel(
     autoplay ? { align: "start", slidesToScroll: "auto", containScroll: "trimSnaps" } : { align: "start", dragFree: true, containScroll: "trimSnaps" },
   );
