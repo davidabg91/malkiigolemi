@@ -267,7 +267,8 @@ export function CategoryNav({
       <nav
         ref={rowRef}
         aria-label="Категории"
-        className="cat-row no-scrollbar -mx-2 flex items-center gap-2 overflow-x-auto px-2 pb-3 pt-1"
+        // Centred on a computer; "safe" keeps the first buttons reachable when the row is wider than the screen.
+        className="cat-row no-scrollbar -mx-2 flex items-center gap-2 overflow-x-auto px-2 pb-3 pt-1 md:justify-center-safe"
       >
         {items.map((c, index) => {
           const isOdd = index % 2 !== 0;
@@ -373,7 +374,7 @@ export function CategoryNav({
             type="button"
             onClick={() => setIsEditing(true)}
             title="Задръж с мишката/пръста или натисни тук за пренареждане на категориите"
-            className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full border border-dashed border-forest/40 bg-forest/5 px-2.5 py-1 text-xs font-semibold text-forest transition hover:bg-forest hover:text-white"
+            className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full border border-dashed border-forest/40 md:ml-0 bg-forest/5 px-2.5 py-1 text-xs font-semibold text-forest transition hover:bg-forest hover:text-white"
           >
             <SlidersHorizontal className="h-3 w-3" />
             <span className="hidden sm:inline">Подреди</span>
