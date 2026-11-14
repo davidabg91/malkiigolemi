@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { storePayments, type StorePayment } from "@/db/schema";
 import { formatPrice, formatTimestamp } from "./format";
 import { escapeHtml, mailLayout, sendMail } from "./mail";
+import { notifyAdminsStorePayment } from "./push";
 import { site } from "./site";
 import { stripe } from "./stripe";
 
@@ -55,6 +56,7 @@ export async function recordStorePayment(session: Stripe.Checkout.Session): Prom
     const [existing] = await db.select().from(storePayments).where(eq(storePayments.stripeSessionId, session.id)).limit(1);
     return existing ?? null;
   }
+  after(() => notifyAdminsStorePayment(added.amount, added.id, added.note));
   after(() =>
     sendMail(
       site.email,

@@ -9,6 +9,7 @@ import { db } from "@/db";
 import { orderItems, orders, products, users } from "@/db/schema";
 import { recordOrder, visitorOf } from "@/lib/analytics";
 import { getSession } from "@/lib/auth";
+import { currentPushDeviceId } from "@/lib/push";
 import { unitPriceFor } from "@/lib/format";
 import { sendOrderPlaced } from "@/lib/order-mail";
 import { orderNumber } from "@/lib/orders";
@@ -120,6 +121,8 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
   const subtotal = lines.reduce((sum, l) => sum + l.price * l.qty, 0);
   const shipping = shippingFor(data.delivery, subtotal, data.courier);
   const session = await getSession();
+  // The phone the order comes from, when it has notifications on, hears about this order too.
+  const pushDeviceId = await currentPushDeviceId();
   const number = orderNumber();
 
   let soldOut = false;
@@ -138,6 +141,7 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
         .values({
           number,
           userId: session?.uid ?? null,
+          pushSubscriptionId: pushDeviceId,
           name: data.name,
           phone: data.phone,
           email: data.email,
