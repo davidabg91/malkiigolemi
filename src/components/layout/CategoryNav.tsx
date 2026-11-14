@@ -17,22 +17,31 @@ export interface CategoryNavProps {
 }
 
 /**
- * A category button in the header row: a raised card with the icon above its name. On a phone it shrinks
- * (`compact:`) once the page is scrolled, so the sticky header leaves more of the screen to the products.
+ * A category button in the header row: a raised card with the icon above its name. On a phone its size
+ * follows the scroll position (`.cat-chip` and `--p` in globals.css), so the sticky header leaves more of
+ * the screen to the products.
  */
 const chip =
-  "group flex h-[4.25rem] min-w-[5.25rem] max-w-[8rem] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl px-3 text-center text-[0.8rem] font-semibold leading-[1.15] text-ink transition-all duration-300 ease-out-soft raised hover:brightness-[0.97] active:scale-95 compact:h-[2.6rem] compact:min-w-[3.75rem] compact:max-w-none compact:gap-0.5 compact:whitespace-nowrap compact:rounded-xl compact:px-2.5 compact:text-[0.68rem]";
-const chipIcon = "h-6 w-6 shrink-0 transition-all duration-300 ease-out-soft compact:h-4 compact:w-4";
+  "cat-chip group flex h-[4.25rem] min-w-[5.25rem] max-w-[8rem] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl px-3 text-center text-[0.8rem] font-semibold leading-[1.15] text-ink transition-[filter,scale] duration-200 raised hover:brightness-[0.97] active:scale-95";
+const chipIcon = "cat-chip-icon h-6 w-6 shrink-0";
 
-/** True once the page is scrolled down a little; goes back near the top. The gap between the two stops flicker. */
-function useScrolledDown() {
-  const [down, setDown] = useState(false);
+/** How far the page must be scrolled for the buttons to reach their small size, in pixels. */
+const SHRINK_OVER = 150;
+
+/**
+ * Keeps `--p` on the row in step with the scroll position: 0 at the top of the page, 1 once it is scrolled
+ * `SHRINK_OVER` pixels. It is written straight to the element, once per frame, so scrolling re-renders nothing.
+ */
+function useScrollProgress(row: React.RefObject<HTMLElement | null>, frozen: boolean) {
   useEffect(() => {
+    const el = row.current;
+    if (!el) return;
     let frame = 0;
     const update = () => {
       frame = 0;
-      const y = window.scrollY;
-      setDown((was) => (was ? y > 40 : y > 120));
+      const t = frozen ? 0 : Math.min(1, Math.max(0, window.scrollY / SHRINK_OVER));
+      // Eased at both ends, so the shrinking starts and settles gently.
+      el.style.setProperty("--p", (t * t * (3 - 2 * t)).toFixed(4));
     };
     const onScroll = () => {
       frame ||= requestAnimationFrame(update);
@@ -43,8 +52,7 @@ function useScrolledDown() {
       window.removeEventListener("scroll", onScroll);
       cancelAnimationFrame(frame);
     };
-  }, []);
-  return down;
+  }, [row, frozen]);
 }
 
 // A 14-point starburst around the centre of a 48×48 box.
@@ -110,7 +118,7 @@ export function CategoryNav({
   const [dragOverId, setDragOverId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
   const [savedToast, setSavedToast] = useState(false);
-  const scrolled = useScrolledDown();
+  const rowRef = useRef<HTMLElement>(null);
 
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startPos = useRef<{ x: number; y: number } | null>(null);
@@ -222,6 +230,9 @@ export function CategoryNav({
     setDragOverId(null);
   };
 
+  // While the admin is arranging the buttons they keep their full size.
+  useScrollProgress(rowRef, isEditing);
+
   return (
     <div className="relative">
       {/* Admin wiggle mode active banner */}
@@ -254,10 +265,9 @@ export function CategoryNav({
       )}
 
       <nav
+        ref={rowRef}
         aria-label="Категории"
-        // While the admin is arranging the buttons they keep their full size.
-        data-compact={scrolled && !isEditing}
-        className="no-scrollbar -mx-2 flex items-center gap-2 overflow-x-auto px-2 pb-3 pt-1 transition-all duration-300 ease-out-soft compact:gap-1.5 compact:pb-2"
+        className="cat-row no-scrollbar -mx-2 flex items-center gap-2 overflow-x-auto px-2 pb-3 pt-1"
       >
         {items.map((c, index) => {
           const isOdd = index % 2 !== 0;
@@ -353,7 +363,7 @@ export function CategoryNav({
           Промоции
         </Link>
         <Link href="/novi" className={chip}>
-          <NewSign className="-my-1 h-8 w-8 shrink-0 transition-all duration-300 ease-out-soft compact:my-0 compact:h-[1.15rem] compact:w-[1.15rem]" />
+          <NewSign className="cat-chip-sign -my-1 h-8 w-8 shrink-0" />
           Нови продукти
         </Link>
 

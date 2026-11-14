@@ -143,12 +143,32 @@
   letter-spacing: -0.015em;
 }
 
-/* On a phone, inside the header's category row once the page is scrolled (see CategoryNav). */
-@custom-variant compact {
-  @media (width < 48rem) {
-    [data-compact="true"] & {
-      @slot;
-    }
+/*
+ * The header's category buttons on a phone shrink as the page is scrolled. `--p` goes from 0 (top of the
+ * page) to 1 (scrolled) and is set from the scroll position itself (see CategoryNav), so every size follows
+ * the finger instead of jumping from one state to the other.
+ */
+@media (width < 48rem) {
+  .cat-row {
+    gap: calc(0.5rem - var(--p, 0) * 0.125rem);
+    padding-bottom: calc(0.75rem - var(--p, 0) * 0.25rem);
+  }
+  .cat-chip {
+    height: calc(4.25rem - var(--p, 0) * 1.5rem);
+    min-width: calc(5.25rem - var(--p, 0) * 1.25rem);
+    padding-inline: calc(0.75rem - var(--p, 0) * 0.125rem);
+    gap: calc(0.25rem - var(--p, 0) * 0.125rem);
+    border-radius: calc(1rem - var(--p, 0) * 0.25rem);
+    font-size: calc(0.8rem - var(--p, 0) * 0.11rem);
+  }
+  .cat-chip-icon {
+    width: calc(1.5rem - var(--p, 0) * 0.5rem);
+    height: calc(1.5rem - var(--p, 0) * 0.5rem);
+  }
+  .cat-chip-sign {
+    width: calc(2rem - var(--p, 0) * 0.85rem);
+    height: calc(2rem - var(--p, 0) * 0.85rem);
+    margin-block: calc(-0.25rem + var(--p, 0) * 0.25rem);
   }
 }
 
