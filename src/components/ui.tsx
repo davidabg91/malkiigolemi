@@ -70,7 +70,7 @@ export function Logo({ className = "", light = false }: { className?: string; li
       aria-label={`${site.name} — начало`}
       className={`group/logo inline-flex items-center transition-transform duration-300 hover:scale-[1.02] ${className}`}
     >
-      <LogoArt className="h-9 w-auto min-[400px]:h-10 sm:h-11" />
+      <LogoArt className="h-10 w-auto min-[400px]:h-11 sm:h-14" />
     </Link>
   );
 }
