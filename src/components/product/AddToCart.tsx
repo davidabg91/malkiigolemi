@@ -104,7 +104,7 @@ export function WishlistButton({ product, className = "" }: { product: ProductCa
       }}
       aria-pressed={on}
       aria-label={on ? `Премахни от любими: ${product.name}` : `Добави в любими: ${product.name}`}
-      className={`grid h-10 w-10 place-items-center rounded-full bg-paper/90 text-ink shadow-soft backdrop-blur transition hover:scale-110 ${className}`}
+      className={`grid h-10 w-10 place-items-center rounded-full bg-paper/95 text-ink shadow-soft transition hover:scale-110 ${className}`}
     >
       <Heart key={String(on)} className={`h-[18px] w-[18px] ${on ? "animate-pop fill-tomato text-tomato" : ""}`} />
     </button>
