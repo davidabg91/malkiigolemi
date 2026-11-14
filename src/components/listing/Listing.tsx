@@ -30,6 +30,7 @@ export function parseFilters(sp: SearchParams): Current & { page: number } {
     origins: list(sp.origin).map((o) => o.toUpperCase()),
     min: euros(sp.min),
     max: euros(sp.max),
+    only: list(sp.only).filter((k) => k === "promo" || k === "new" || k === "stock"),
     sort: (sort in SORTS ? sort : "popular") as SortKey,
     page: Math.max(1, Math.floor(Number(one(sp.page))) || 1),
   };
@@ -101,13 +102,14 @@ export async function Listing({
     origins: f.origins,
     min: f.min != null ? f.min * 100 : undefined,
     max: f.max != null ? f.max * 100 : undefined,
+    only: f.only,
     sort: f.sort,
     page: f.page,
   });
 
   const hrefFor = (p: number) => {
     const qs = new URLSearchParams(preserve);
-    for (const key of ["cat", "brand", "origin", "min", "max", "sort"] as const) {
+    for (const key of ["cat", "brand", "origin", "min", "max", "only", "sort"] as const) {
       const v = one(searchParams[key]);
       if (v) qs.set(key, v);
     }
@@ -121,9 +123,21 @@ export async function Listing({
       basePath={basePath}
       preserve={preserve}
       total={result.total}
-      current={{ categories: f.categories, brands: f.brands, origins: f.origins, min: f.min, max: f.max, sort: f.sort }}
+      current={{ categories: f.categories, brands: f.brands, origins: f.origins, min: f.min, max: f.max, only: f.only, sort: f.sort }}
       facets={{
         categories: result.facets.categories,
+        subcategories: result.facets.subcategories,
+        scopeTotal: result.facets.scopeTotal,
+        // A filter that would keep everything, or nothing, is not offered.
+        only: (
+          [
+            ["promo", "С намаление", result.facets.promo],
+            ["new", "Нови", result.facets.fresh],
+            ["stock", "В наличност", result.facets.stock],
+          ] as const
+        )
+          .filter(([key, , n]) => (n > 0 && n < result.facets.scopeTotal) || f.only.includes(key))
+          .map(([key, label, n]) => ({ key, label, n })),
         brands: result.facets.brands,
         origins: result.facets.origins,
         priceMin: Math.floor(result.facets.priceMin / 100),

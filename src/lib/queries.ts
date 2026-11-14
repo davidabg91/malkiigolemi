@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, gte, inArray, isNotNull, like, lte, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, isNotNull, like, lte, or, sql, type SQL } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/db";
 import { brands, categories, categoryRedirects, products, type Category } from "@/db/schema";
@@ -226,6 +226,8 @@ export type ListingFilters = {
   origins?: string[];
   min?: number;
   max?: number;
+  /** "promo", "new", "stock": show only discounted, new, or in-stock products. */
+  only?: string[];
   sort?: SortKey;
   page?: number;
 };
@@ -252,9 +254,18 @@ export async function listProducts(scope: ListingScope, f: ListingFilters) {
   const base = scopeWhere(scope);
   // A category page is already one category; elsewhere (new, promo, search) the shopper can narrow by it.
   const tree = scope.categoryIds?.length ? [] : await getCategoryTree();
+  // On a main category's page the shopper narrows by its subcategories instead.
+  const subs =
+    (scope.categoryIds?.length ?? 0) > 1
+      ? await db
+          .select({ id: categories.id, slug: categories.slug, name: categories.name })
+          .from(categories)
+          .where(and(inArray(categories.id, scope.categoryIds!), isNotNull(categories.parentId)))
+          .orderBy(asc(categories.sort), asc(categories.id))
+      : [];
 
   // Facets are computed on the scope only, so picking one brand does not hide the others.
-  const [brandFacet, originFacet, [range], perCategory] = await Promise.all([
+  const [brandFacet, originFacet, [range], perCategory, [counts]] = await Promise.all([
     db
       .select({ slug: brands.slug, name: brands.name, n: sql<number>`count(*)` })
       .from(products)
@@ -271,26 +282,43 @@ export async function listProducts(scope: ListingScope, f: ListingFilters) {
       .select({ min: sql<number>`coalesce(min(${effectivePrice}), 0)`, max: sql<number>`coalesce(max(${effectivePrice}), 0)` })
       .from(products)
       .where(and(...base)),
-    tree.length
+    tree.length || subs.length
       ? db
           .select({ categoryId: products.categoryId, n: sql<number>`count(*)` })
           .from(products)
           .where(and(...base))
           .groupBy(products.categoryId)
       : Promise.resolve([]),
+    // How many products in the scope are discounted, new and in stock, for the "show only" filters.
+    db
+      .select({
+        total: sql<number>`count(*)`,
+        promo: sql<number>`coalesce(sum(case when ${isPromo} then 1 else 0 end), 0)`,
+        fresh: sql<number>`coalesce(sum(case when ${products.isNew} then 1 else 0 end), 0)`,
+        stock: sql<number>`coalesce(sum(case when ${products.stock} > 0 then 1 else 0 end), 0)`,
+      })
+      .from(products)
+      .where(and(...base)),
   ]);
 
   // Subcategories roll up into their main category, in menu order.
   const countOf = new Map(perCategory.map((c) => [c.categoryId, c.n]));
-  const categoryFacet = tree
-    .map((root) => ({ slug: root.slug, name: root.name, n: [root, ...root.children].reduce((sum, c) => sum + (countOf.get(c.id) ?? 0), 0) }))
-    .filter((c) => c.n > 0);
+  const categoryFacet = (
+    subs.length
+      ? subs.map((s) => ({ slug: s.slug, name: s.name, n: countOf.get(s.id) ?? 0 }))
+      : tree.map((root) => ({ slug: root.slug, name: root.name, n: [root, ...root.children].reduce((sum, c) => sum + (countOf.get(c.id) ?? 0), 0) }))
+  ).filter((c) => c.n > 0);
 
   const where = [...base];
-  if (f.categories?.length && tree.length) {
-    const ids = tree.filter((r) => f.categories!.includes(r.slug)).flatMap((r) => [r.id, ...r.children.map((c) => c.id)]);
+  if (f.categories?.length && (tree.length || subs.length)) {
+    const ids = subs.length
+      ? subs.filter((s) => f.categories!.includes(s.slug)).map((s) => s.id)
+      : tree.filter((r) => f.categories!.includes(r.slug)).flatMap((r) => [r.id, ...r.children.map((c) => c.id)]);
     where.push(inArray(products.categoryId, ids.length ? ids : [-1]));
   }
+  if (f.only?.includes("promo")) where.push(isPromo);
+  if (f.only?.includes("new")) where.push(eq(products.isNew, true));
+  if (f.only?.includes("stock")) where.push(gt(products.stock, 0));
   if (f.brands?.length) {
     const ids = await db.select({ id: brands.id }).from(brands).where(inArray(brands.slug, f.brands));
     where.push(inArray(products.brandId, ids.length ? ids.map((b) => b.id) : [-1]));
@@ -322,7 +350,20 @@ export async function listProducts(scope: ListingScope, f: ListingFilters) {
     total,
     page,
     pages: Math.max(1, Math.ceil(total / PER_PAGE)),
-    facets: { categories: categoryFacet, brands: brandFacet, origins: originFacet, priceMin: range.min, priceMax: range.max },
+    facets: {
+      categories: categoryFacet,
+      /** Whether `categories` are the subcategories of the page's own category. */
+      subcategories: subs.length > 0,
+      brands: brandFacet,
+      origins: originFacet,
+      priceMin: range.min,
+      priceMax: range.max,
+      /** Products in the scope before any filter, and how many of them are discounted, new and in stock. */
+      scopeTotal: Number(counts.total),
+      promo: Number(counts.promo),
+      fresh: Number(counts.fresh),
+      stock: Number(counts.stock),
+    },
   };
 }
 
