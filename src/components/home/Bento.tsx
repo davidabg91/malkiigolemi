@@ -4,148 +4,16 @@ import { ProductVisual } from "@/components/product/PackShot";
 import { btn } from "@/components/ui";
 import { optimizedImage } from "@/lib/optimized-image";
 import type { CategoryNode, ProductCardData } from "@/lib/queries";
+import { isTileImage, TILE_FRAMES, TILE_PRESETS } from "@/lib/tile-art";
 
 function plural(n: number) {
   return n === 1 ? "продукт" : "продукта";
 }
 
-interface ShowcaseItem {
-  src: string;
-  alt: string;
-  className: string;
-}
-
-const CATEGORY_SHOWCASES: Record<string, ShowcaseItem[]> = {
-  hrani: [
-    {
-      src: "/dececco-isolated.png",
-      alt: "De Cecco Спагети",
-      className: "bottom-[6%] right-[36%] h-[66%] w-auto -rotate-12 group-hover:-translate-x-2 group-hover:-rotate-[16deg]",
-    },
-    {
-      src: "/food-isolated.png",
-      alt: "Гурме паста с босилек",
-      className: "-bottom-[3%] -right-[3%] h-[66%] w-auto rotate-3 group-hover:translate-x-1 group-hover:rotate-6 group-hover:scale-105",
-    },
-  ],
-  "kafe-i-chai": [
-    {
-      src: "/kafe-2.png",
-      alt: "Illy Espresso кафе",
-      className: "bottom-[6%] right-[34%] h-[52%] w-auto -rotate-10 group-hover:-translate-x-2 group-hover:-rotate-[14deg]",
-    },
-    {
-      src: "/kafe-1.png",
-      alt: "Lavazza Qualità Oro кафе",
-      className: "-bottom-[2%] -right-[2%] h-[72%] w-auto rotate-6 group-hover:translate-x-1 group-hover:rotate-[10deg] group-hover:scale-105",
-    },
-  ],
-  igrachki: [
-    {
-      src: "/igrachki-wood.png",
-      alt: "Монтесори образователна дървена пирамида",
-      className: "-bottom-[11%] left-[2%] z-10 h-[73%] w-auto -rotate-3 group-hover:-translate-x-1 group-hover:-rotate-6",
-    },
-    {
-      src: "/igrachki-bear.png",
-      alt: "Плюшено мече с панделка",
-      className: "-bottom-[6%] left-[24%] z-20 h-[104%] w-auto group-hover:-translate-y-1.5 group-hover:rotate-2",
-    },
-    {
-      src: "/igrachki-car.png",
-      alt: "Спортна състезателна количка",
-      className: "-bottom-[19%] left-[50%] z-30 h-[66%] w-auto -rotate-2 group-hover:translate-x-2",
-    },
-    {
-      src: "/igrachki-lego.png",
-      alt: "LEGO строител и конструктор",
-      className: "-bottom-[13%] left-[54%] h-[115%] w-auto rotate-3 group-hover:translate-x-1 group-hover:rotate-6",
-    },
-  ],
-  napitki: [
-    {
-      src: "/napitki-juice.png",
-      alt: "Натурален портокалов фреш с плодове",
-      className: "bottom-[2%] right-[52%] h-[54%] w-auto -rotate-6 group-hover:-translate-x-3 group-hover:-rotate-[10deg]",
-    },
-    {
-      src: "/napitki-evian.png",
-      alt: "Evian натурална минерална вода",
-      className: "bottom-[4%] right-[35%] h-[68%] w-auto rotate-3 group-hover:-translate-y-2 group-hover:rotate-6",
-    },
-    {
-      src: "/napitki-1.png",
-      alt: "San Pellegrino газирана вода",
-      className: "bottom-[1%] right-[18%] h-[72%] w-auto -rotate-6 group-hover:-translate-x-1 group-hover:-rotate-[10deg]",
-    },
-    {
-      src: "/napitki-2.png",
-      alt: "Coca-Cola Classic бутилка",
-      className: "-bottom-[3%] -right-[1%] h-[78%] w-auto rotate-8 group-hover:translate-x-2 group-hover:rotate-[12deg] group-hover:scale-105",
-    },
-  ],
-  "pochistvane-i-prane": [
-    {
-      src: "/pochistvane-1.png",
-      alt: "Ariel All-in-1 Pods капсули",
-      className: "bottom-[6%] right-[32%] h-[52%] w-auto -rotate-8 group-hover:-translate-x-2 group-hover:-rotate-[12deg]",
-    },
-    {
-      src: "/pochistvane-2.png",
-      alt: "Lenor Gold Orchid омекотител",
-      className: "-bottom-[2%] -right-[2%] h-[74%] w-auto rotate-6 group-hover:translate-x-1 group-hover:rotate-[10deg] group-hover:scale-105",
-    },
-  ],
-  kozmetika: [
-    {
-      src: "/kozmetika-1.png",
-      alt: "Nivea Creme крем",
-      className: "bottom-[6%] right-[38%] h-[50%] w-auto -rotate-12 group-hover:-translate-x-2 group-hover:-rotate-[16deg]",
-    },
-    {
-      src: "/kozmetika-2.png",
-      alt: "L'Oréal Revitalift серум",
-      className: "-bottom-[2%] -right-[1%] h-[70%] w-auto rotate-6 group-hover:translate-x-1 group-hover:rotate-[10deg] group-hover:scale-105",
-    },
-  ],
-  "bebe-i-dete": [
-    {
-      src: "/bebe-1.png",
-      alt: "Pampers Premium Care пелени",
-      className: "bottom-[5%] right-[32%] h-[58%] w-auto -rotate-8 group-hover:-translate-x-2 group-hover:-rotate-[12deg]",
-    },
-    {
-      src: "/bebe-2.png",
-      alt: "Hipp Organic бебешко пюре",
-      className: "-bottom-[1%] -right-[1%] h-[60%] w-auto rotate-6 group-hover:translate-x-1 group-hover:rotate-[10deg] group-hover:scale-105",
-    },
-  ],
-  "dom-i-ofis": [
-    {
-      src: "/dom-2.png",
-      alt: "Moleskine тефтер и Parker химикалка",
-      className: "bottom-[5%] right-[32%] h-[58%] w-auto -rotate-8 group-hover:-translate-x-2 group-hover:-rotate-[12deg]",
-    },
-    {
-      src: "/dom-1.png",
-      alt: "Yankee Candle ароматна свещ",
-      className: "-bottom-[2%] -right-[1%] h-[68%] w-auto rotate-4 group-hover:translate-x-1 group-hover:rotate-[8deg] group-hover:scale-105",
-    },
-  ],
-};
-
-/**
- * Showcases laid out inside a box of a fixed shape in the tile's bottom-right corner, so a group of
- * several products keeps its arrangement whatever the tile's width (the images are placed relative to the box).
- */
-const SHOWCASE_FRAMES: Record<string, string> = {
-  igrachki: "absolute bottom-0 right-11 aspect-[2.3/1] h-[72%] max-w-[calc(100%-3.25rem)] lg:h-[82%]",
-};
-
-/** Category showcase art with realistic 3D isolated brand products */
-function CategoryArt({ slug }: { slug: string }) {
-  const items = CATEGORY_SHOWCASES[slug];
-  const frame = SHOWCASE_FRAMES[slug];
+/** One of the ready-made illustrations: realistic isolated products in the tile's corner. */
+function CategoryArt({ preset }: { preset: string }) {
+  const items = TILE_PRESETS[preset];
+  const frame = TILE_FRAMES[preset];
   const fly = "absolute max-w-none drop-shadow-[0_14px_16px_rgb(0_0_0/0.2)] transition-transform duration-500 ease-out-soft";
   const art = items?.map((item, i) => (
     // eslint-disable-next-line @next/next/no-img-element -- sized by the tile's classes; the file itself is resized by optimizedImage
@@ -166,7 +34,23 @@ function CategoryArt({ slug }: { slug: string }) {
   );
 }
 
-/** Fallback three overlapping packs anchored to the bottom-right corner of a tile. */
+/** A picture the admin uploaded for the tile, in its bottom-right corner. */
+function UploadedArt({ src }: { src: string }) {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+      {/* eslint-disable-next-line @next/next/no-img-element -- sized by the tile's classes; the file itself is resized by optimizedImage */}
+      <img
+        {...optimizedImage(src, 640)}
+        alt=""
+        className="absolute -bottom-[2%] -right-[2%] h-[76%] w-auto max-w-[72%] object-contain object-right-bottom drop-shadow-[0_14px_16px_rgb(0_0_0/0.2)] transition-transform duration-500 ease-out-soft group-hover:scale-105"
+        loading="lazy"
+        decoding="async"
+      />
+    </div>
+  );
+}
+
+/** "Automatic": three of the category's own products, overlapping in the bottom-right corner of a tile. */
 function TileArt({ products }: { products: ProductCardData[] }) {
   const [a, b, c] = products;
   const fly = "absolute drop-shadow-[0_14px_14px_rgb(0_0_0/0.16)] transition-transform duration-500 ease-out-soft";
@@ -196,7 +80,7 @@ function CategoryTile({
   area: string;
   index: number;
 }) {
-  const hasShowcase = Boolean(CATEGORY_SHOWCASES[category.slug]);
+  const tile = category.tile;
 
   return (
     <Link
@@ -204,11 +88,7 @@ function CategoryTile({
       className={`group relative isolate min-h-44 animate-rise overflow-hidden rounded-tile p-5 text-ink transition-shadow duration-300 raised hover:shadow-lift sm:p-6 ${area}`}
       style={{ animationDelay: `${80 + index * 60}ms` }}
     >
-      {hasShowcase ? (
-        <CategoryArt slug={category.slug} />
-      ) : (
-        <TileArt products={products} />
-      )}
+      {isTileImage(tile) ? <UploadedArt src={tile} /> : tile && TILE_PRESETS[tile] ? <CategoryArt preset={tile} /> : <TileArt products={products} />}
       <div className="relative z-10 flex h-full flex-col">
         <h2 className="max-w-[12ch] font-display text-[1.3rem] font-bold leading-[1.1] sm:text-2xl">
           {category.name}

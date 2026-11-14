@@ -120,6 +120,13 @@
       "when": 1794649493786,
       "tag": "0016_push_subscriptions",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1794653546472,
+      "tag": "0017_category_tile_redirects",
+      "breakpoints": true
     }
   ]
 }

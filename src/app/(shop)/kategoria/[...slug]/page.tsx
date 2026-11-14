@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { Suspense } from "react";
 import { Listing, ListingHeader, ListingSkeleton } from "@/components/listing/Listing";
-import { getCategoryPath } from "@/lib/queries";
+import { getCategoryPath, getRenamedCategoryPath } from "@/lib/queries";
 
 type Props = PageProps<"/kategoria/[...slug]">;
 
@@ -21,7 +21,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 async function Content({ params, searchParams }: Props) {
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const path = await getCategoryPath(slug);
-  if (!path) notFound();
+  if (!path) {
+    // A renamed category: send the old address on to the new one.
+    const moved = await getRenamedCategoryPath(slug);
+    if (moved && moved !== `/kategoria/${slug.join("/")}`) permanentRedirect(moved);
+    notFound();
+  }
   const { root, sub } = path;
   const base = `/kategoria/${root.slug}`;
   const pill = "inline-flex h-10 items-center rounded-full px-4 text-sm font-medium transition";
