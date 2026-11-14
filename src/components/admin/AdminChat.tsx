@@ -2,8 +2,11 @@
 
 import { Loader2, SendHorizontal } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { chatAdminLoad, chatReply } from "@/actions/chat";
+import { chatAdminLoad, chatReply, chatSuggest } from "@/actions/chat";
+import { ChatProductCard } from "@/components/chat/ChatProductCard";
 import type { ChatLine } from "@/lib/chat";
+import type { ProductCardData } from "@/lib/queries";
+import { SuggestProduct } from "./SuggestProduct";
 
 const stamp = (iso: string) => new Date(iso).toLocaleString("bg-BG", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
@@ -48,11 +51,29 @@ export function AdminChat({ threadId, initial }: { threadId: number; initial: Ch
     setLines((old) => [...old, res.line]);
   };
 
+  const suggest = async (product: ProductCardData) => {
+    setSending(true);
+    setError(null);
+    const res = await chatSuggest(threadId, product.id).catch(() => ({ ok: false as const, error: "Няма връзка. Опитай отново." }));
+    setSending(false);
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
+    setLines((old) => [...old, res.line]);
+  };
+
   return (
     <div className="flex h-[calc(100dvh-15rem)] min-h-80 flex-col overflow-hidden rounded-card bg-paper shadow-soft lg:h-[calc(100dvh-12rem)]">
       <div ref={listRef} className="flex-1 space-y-2 overflow-y-auto overscroll-contain bg-cream px-4 py-4" aria-live="polite">
         {lines.map((m) => (
           <div key={m.id} className={`flex ${m.from === "admin" ? "justify-end" : "justify-start"}`}>
+            {m.product ? (
+              <div>
+                <ChatProductCard product={m.product} />
+                <span className="mt-1 block text-right text-[0.65rem] text-ink-soft">Предложен продукт · {stamp(m.at)}</span>
+              </div>
+            ) : (
             <div
               className={`max-w-[82%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-[0.95rem] leading-snug ${
                 m.from === "admin" ? "rounded-br-md bg-forest text-white" : "rounded-bl-md bg-paper text-ink shadow-soft"
@@ -61,6 +82,7 @@ export function AdminChat({ threadId, initial }: { threadId: number; initial: Ch
               {m.body}
               <span className={`mt-0.5 block text-right text-[0.65rem] ${m.from === "admin" ? "text-white/70" : "text-ink-soft"}`}>{stamp(m.at)}</span>
             </div>
+            )}
           </div>
         ))}
       </div>
@@ -72,6 +94,7 @@ export function AdminChat({ threadId, initial }: { threadId: number; initial: Ch
         className="border-t border-line p-3"
       >
         <div className="flex items-end gap-2">
+          <SuggestProduct disabled={sending} onPick={suggest} />
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}

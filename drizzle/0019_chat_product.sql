@@ -1,0 +1,1 @@
+ALTER TABLE `chat_messages` ADD `product_id` integer REFERENCES products(id) ON DELETE set null;

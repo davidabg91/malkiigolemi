@@ -5,7 +5,9 @@ import { AnimatePresence, motion } from "motion/react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { chatLoad, chatSend } from "@/actions/chat";
+import { CardAddButton } from "@/components/product/AddToCart";
 import { PushToggle } from "@/components/PushToggle";
+import { ChatProductCard } from "./ChatProductCard";
 import type { ChatLine } from "@/lib/chat";
 
 /** Set once the visitor has written: only then does the closed button ask the server about answers. */
@@ -183,6 +185,12 @@ export function ChatWidget({ publicKey, signedIn }: { publicKey: string; signedI
                 ) : (
                   lines.map((m) => (
                     <div key={m.id} className={`flex ${m.from === "customer" ? "justify-end" : "justify-start"}`}>
+                      {m.product ? (
+                        <div>
+                          <ChatProductCard product={m.product} action={<CardAddButton product={m.product} />} onOpen={() => setOpen(false)} />
+                          <span className="mt-1 block text-[0.65rem] text-ink-soft">Предложение от магазина · {timeOf(m.at)}</span>
+                        </div>
+                      ) : (
                       <div
                         className={`max-w-[82%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-[0.95rem] leading-snug ${
                           m.from === "customer" ? "rounded-br-md bg-forest text-white" : "rounded-bl-md bg-paper text-ink shadow-soft"
@@ -191,6 +199,7 @@ export function ChatWidget({ publicKey, signedIn }: { publicKey: string; signedI
                         {m.body}
                         <span className={`mt-0.5 block text-right text-[0.65rem] ${m.from === "customer" ? "text-white/70" : "text-ink-soft"}`}>{timeOf(m.at)}</span>
                       </div>
+                      )}
                     </div>
                   ))
                 )}

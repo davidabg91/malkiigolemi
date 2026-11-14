@@ -162,6 +162,8 @@ export const chatMessages = sqliteTable(
       .references(() => chatThreads.id, { onDelete: "cascade" }),
     sender: text("sender", { enum: ["customer", "admin"] }).notNull(),
     body: text("body").notNull(),
+    /** A product the shop suggests with this message; the chat shows it as a card. */
+    productId: integer("product_id").references(() => products.id, { onDelete: "set null" }),
     createdAt: createdAt(),
   },
   (t) => [index("chat_messages_thread_idx").on(t.threadId)],
