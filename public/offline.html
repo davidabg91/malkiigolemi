@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="bg">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#2b3f42" />
+    <title>Няма интернет · Поръчки за малки и големи</title>
+    <style>
+      /* Self-contained on purpose: this page is shown when nothing else can be downloaded. */
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: #f5f5f4;
+        color: #171717;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        text-align: center;
+      }
+      main { max-width: 22rem; }
+      img { width: 220px; max-width: 70%; height: auto; }
+      h1 { margin: 28px 0 8px; font-size: 1.6rem; line-height: 1.2; }
+      p { margin: 0; color: #5c5f62; font-size: 1.05rem; line-height: 1.5; }
+      button {
+        margin-top: 24px;
+        height: 48px;
+        padding: 0 28px;
+        border: 0;
+        border-radius: 999px;
+        background: #33484b;
+        color: #fff;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/logo.png" width="1036" height="291" alt="Поръчки за малки и големи" />
+      <h1>Няма връзка с интернет</h1>
+      <p>Провери мобилните данни или Wi-Fi и опитай отново. Количката ти е запазена.</p>
+      <button type="button" onclick="location.reload()">Опитай отново</button>
+    </main>
+    <script>
+      // Back online: load the page the customer wanted.
+      window.addEventListener("online", () => location.reload());
+    </script>
+  </body>
+</html>

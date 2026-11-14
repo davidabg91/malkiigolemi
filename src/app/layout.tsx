@@ -23,8 +23,10 @@ export const metadata: Metadata = {
       { url: "/favicon.png", sizes: "512x512", type: "image/png" },
     ],
     shortcut: "/favicon.png",
-    apple: "/favicon.png",
+    apple: "/apple-touch-icon.png",
   },
+  // On an iPhone's home screen the shop opens full screen under this name.
+  appleWebApp: { capable: true, title: "Малки и големи", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
