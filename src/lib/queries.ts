@@ -6,6 +6,12 @@ import { brands, categories, products, type Category } from "@/db/schema";
 import { PER_PAGE, type SortKey } from "./listing";
 import { catalogCacheLife, effectiveOldPrice, effectivePrice, pricedColumns, promoPercent } from "./pricing";
 
+/**
+ * The shop's order: products the admin arranged by hand keep their place, the rest go newest first
+ * (see `rank` in the schema).
+ */
+const shopOrder = [sql`coalesce(${products.rank}, -${products.createdAt})`, desc(products.id)];
+
 /** Every catalogue read is tagged so admin edits can invalidate it in one call. */
 export const CATALOG_TAG = "catalog";
 
@@ -105,7 +111,7 @@ export async function getCategoryShowcase() {
     const ids = [root.id, ...root.children.map((c) => c.id)];
     const rows = await cards()
       .where(and(sellable, inArray(products.categoryId, ids)))
-      .orderBy(desc(products.isFeatured), asc(products.id))
+      .orderBy(...shopOrder)
       .limit(12);
     // Prefer visually different packs so the tile does not show three identical boxes.
     const picked: ProductCardData[] = [];
@@ -127,10 +133,10 @@ export async function getHomeData() {
 
   const active = sellable;
   const [promo, fresh, bulk, origins, brandList] = await Promise.all([
-    cards().where(and(active, sql`${effectiveOldPrice} is not null`)).orderBy(desc(products.isFeatured), asc(products.id)).limit(12),
+    cards().where(and(active, sql`${effectiveOldPrice} is not null`)).orderBy(...shopOrder).limit(12),
     // Enough for a few pages of the auto-advancing shelf.
     cards().where(and(active, eq(products.isNew, true))).orderBy(desc(products.createdAt)).limit(20),
-    cards().where(and(active, isNotNull(products.bulkPrice))).orderBy(desc(products.isFeatured), asc(products.id)).limit(4),
+    cards().where(and(active, isNotNull(products.bulkPrice))).orderBy(...shopOrder).limit(4),
     // The countries the shop actually sells most products from, for the "by origin" tabs.
     db
       .select({ origin: products.origin, n: sql<number>`count(*)` })
@@ -154,7 +160,7 @@ export async function getHomeData() {
       .map(async (o) => ({
         origin: o.origin!,
         count: o.n,
-        products: await cards().where(and(active, eq(products.origin, o.origin!))).orderBy(desc(products.isFeatured), asc(products.id)).limit(20),
+        products: await cards().where(and(active, eq(products.origin, o.origin!))).orderBy(...shopOrder).limit(20),
       })),
   );
   return { promo, fresh, bulk, byOrigin, brands: brandList };
@@ -273,10 +279,9 @@ export async function listProducts(scope: ListingScope, f: ListingFilters) {
   if (f.max != null) where.push(lte(effectivePrice, f.max));
 
   const order = {
-    popular: [desc(products.isFeatured), asc(products.id)],
+    popular: shopOrder,
     "price-asc": [asc(effectivePrice)],
     "price-desc": [desc(effectivePrice)],
-    new: [desc(products.createdAt)],
     discount: [sql`(case when ${effectiveOldPrice} is null then 0 else 1.0 - 1.0 * ${effectivePrice} / ${effectiveOldPrice} end) desc`],
     name: [asc(products.name)],
   }[f.sort ?? "popular"];
@@ -320,7 +325,7 @@ export async function getProduct(slug: string) {
 
   const related = await cards()
     .where(and(sellable, eq(products.categoryId, row.categoryId), sql`${products.id} != ${row.id}`))
-    .orderBy(desc(products.isFeatured), asc(products.id))
+    .orderBy(...shopOrder)
     .limit(10);
 
   return { product: row, category: category ?? null, parent: parent ?? null, related };
@@ -334,7 +339,7 @@ export async function searchSuggestions(q: string) {
   const where = scopeWhere({ q });
   return cards()
     .where(and(...where))
-    .orderBy(desc(products.isFeatured), asc(products.id))
+    .orderBy(...shopOrder)
     .limit(6);
 }
 

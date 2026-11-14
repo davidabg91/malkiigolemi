@@ -9,6 +9,7 @@ import { reorderCategories } from "@/actions/admin";
 import type { AdminAlerts } from "@/lib/admin-alerts";
 import { CategoryIcon, FacebookIcon, Logo } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
+import { setIsAdmin } from "@/lib/admin-flag";
 import { site } from "@/lib/site";
 import { cartTotals, useCart, useHydrated, useWishlist } from "@/lib/store";
 import { AccountButton } from "./AccountButton";
@@ -71,6 +72,9 @@ export function HeaderClient({ tree, isAdmin, adminAlerts = null }: { tree: Menu
   const { count, subtotal } = cartTotals(hydrated ? items : []);
 
   useLockScroll(drawer);
+
+  // Shop pages with admin tools (arranging products) learn from here that an admin is looking.
+  useEffect(() => setIsAdmin(isAdmin), [isAdmin]);
 
   // Long-press detection on the desktop "Категории" button
   const catLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
