@@ -1,8 +1,8 @@
 export const SORTS = {
-  popular: "Препоръчани",
+  // The default: the admin's own arrangement where there is one, otherwise the newest first.
+  popular: "Най-нови",
   "price-asc": "Цена: ниска към висока",
   "price-desc": "Цена: висока към ниска",
-  new: "Най-нови",
   discount: "Най-голяма отстъпка",
   name: "Име (А–Я)",
 } as const;

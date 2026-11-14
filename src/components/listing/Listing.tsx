@@ -1,11 +1,12 @@
 import { SearchX } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ProductGrid } from "@/components/product/ProductCard";
+import { ProductCard } from "@/components/product/ProductCard";
 import { Breadcrumbs, btn } from "@/components/ui";
 import { SORTS, type SortKey } from "@/lib/listing";
 import { listProducts, type ListingScope } from "@/lib/queries";
 import { ListingShell, type Current } from "./ListingShell";
+import { SortableGrid } from "./SortableGrid";
 
 export type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -143,7 +144,14 @@ export async function Listing({
         </div>
       ) : (
         <>
-          <ProductGrid products={result.items} />
+          <SortableGrid
+            ids={result.items.map((p) => p.id)}
+            cards={result.items.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+            // Arranging by hand makes sense in a category, in the shop's own order.
+            sortable={Boolean(scope.categoryIds?.length) && f.sort === "popular"}
+          />
           <Pagination page={result.page} pages={result.pages} hrefFor={hrefFor} />
         </>
       )}

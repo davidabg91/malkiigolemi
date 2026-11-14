@@ -210,6 +210,55 @@ export async function deleteProducts(_prev: BulkDeleteState, formData: FormData)
   return { ok: true, deleted: rows.length };
 }
 
+/** A product's place before a change, so the change can be taken back. */
+export type ProductRank = { id: number; rank: number | null };
+
+const orderIds = z.array(z.number().int().positive()).min(1).max(100);
+
+/**
+ * The admin dragged the products of a listing into a new order. The products swap the places they already
+ * hold among themselves, so everything that is not on the page stays where it was. Returns the old places.
+ */
+export async function saveProductOrder(ids: number[]): Promise<ProductRank[]> {
+  await assertAdmin();
+  const wanted = [...new Set(orderIds.parse(ids))];
+  const rows = await db.select({ id: products.id, rank: products.rank, createdAt: products.createdAt }).from(products).where(inArray(products.id, wanted));
+  const known = new Set(rows.map((r) => r.id));
+  const order = wanted.filter((id) => known.has(id));
+  // A product without a place counts as minus its creation time (see `rank` in the schema).
+  const places = rows.map((r) => r.rank ?? -Math.floor(r.createdAt.getTime() / 1000)).sort((a, b) => a - b);
+  // Products added together share a creation time; places must differ for the order to hold.
+  for (let i = 1; i < places.length; i++) places[i] = Math.max(places[i], places[i - 1] + 1);
+  await db.transaction(async (tx) => {
+    for (const [i, id] of order.entries()) await tx.update(products).set({ rank: places[i] }).where(eq(products.id, id));
+  });
+  updateTag(CATALOG_TAG);
+  refresh();
+  return rows.map((r) => ({ id: r.id, rank: r.rank }));
+}
+
+/** Puts products back where they were before `saveProductOrder` or `resetProductOrder`. */
+export async function restoreProductOrder(previous: ProductRank[]): Promise<void> {
+  await assertAdmin();
+  const rows = z.array(z.object({ id: z.number().int().positive(), rank: z.number().int().nullable() })).min(1).max(100).parse(previous);
+  await db.transaction(async (tx) => {
+    for (const r of rows) await tx.update(products).set({ rank: r.rank }).where(eq(products.id, r.id));
+  });
+  updateTag(CATALOG_TAG);
+  refresh();
+}
+
+/** Drops the hand-made order of these products: they go back to "newest first". Returns the old places. */
+export async function resetProductOrder(ids: number[]): Promise<ProductRank[]> {
+  await assertAdmin();
+  const wanted = orderIds.parse(ids);
+  const rows = await db.select({ id: products.id, rank: products.rank }).from(products).where(inArray(products.id, wanted));
+  await db.update(products).set({ rank: null }).where(inArray(products.id, wanted));
+  updateTag(CATALOG_TAG);
+  refresh();
+  return rows;
+}
+
 export async function toggleProduct(id: number) {
   await assertAdmin();
   await db

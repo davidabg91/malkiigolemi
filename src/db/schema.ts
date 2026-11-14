@@ -60,6 +60,12 @@ export const products = sqliteTable(
     isNew: integer("is_new", { mode: "boolean" }).notNull().default(false),
     isFeatured: integer("is_featured", { mode: "boolean" }).notNull().default(false),
     active: integer("active", { mode: "boolean" }).notNull().default(true),
+    /**
+     * Place in the shop's own order, set when the admin arranges products by hand; smaller comes first.
+     * Null means "by date": the product then counts as minus its creation time, so the newest come first
+     * and ahead of anything arranged earlier.
+     */
+    rank: integer("rank"),
     createdAt: createdAt(),
   },
   (t) => [
