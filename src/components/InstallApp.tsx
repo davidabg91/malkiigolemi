@@ -47,7 +47,8 @@ export function InstallBanner() {
   return (
     <aside
       aria-label="Приложение за телефона"
-      className="fixed inset-x-3 bottom-3 z-30 animate-rise rounded-3xl bg-paper p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-lift md:hidden"
+      // The dark border sets the card apart from the white product cards behind it.
+      className="fixed inset-x-3 bottom-3 z-30 animate-rise rounded-3xl border-2 border-forest bg-paper p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-lift md:hidden"
     >
       <div className="flex items-start gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element -- a small fixed icon */}
