@@ -5,7 +5,7 @@ import { refresh, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
-import { brands, categories, categoryRedirects, ORDER_STATUSES, products, type OrderStatus } from "@/db/schema";
+import { brands, categories, categoryRedirects, chatMessages, ORDER_STATUSES, products, type OrderStatus } from "@/db/schema";
 import { assertAdmin } from "@/lib/auth";
 import { photoIfOpaque, removeImage, saveImage } from "@/lib/images";
 import { PACKS } from "@/lib/listing";
@@ -193,6 +193,7 @@ export async function saveProduct(id: number | null, _prev: AdminFormState, form
 
 export async function deleteProduct(id: number) {
   await assertAdmin();
+  await db.update(chatMessages).set({ productId: null }).where(eq(chatMessages.productId, id));
   const [row] = await db.delete(products).where(eq(products.id, id)).returning({ image: products.image });
   await removeImage(row?.image ?? null);
   updateTag(CATALOG_TAG);
@@ -206,6 +207,7 @@ export async function deleteProducts(_prev: BulkDeleteState, formData: FormData)
   await assertAdmin();
   const ids = [...new Set(formData.getAll("ids").map(Number))].filter((n) => Number.isInteger(n) && n > 0).slice(0, 200);
   if (ids.length === 0) return { error: "Не са избрани продукти." };
+  await db.update(chatMessages).set({ productId: null }).where(inArray(chatMessages.productId, ids));
   const rows = await db.delete(products).where(inArray(products.id, ids)).returning({ image: products.image });
   await Promise.all(rows.map((r) => removeImage(r.image ?? null)));
   updateTag(CATALOG_TAG);

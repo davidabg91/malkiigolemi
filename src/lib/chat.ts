@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { chatMessages, chatThreads, pushSubscriptions, users, type ChatThread } from "@/db/schema";
 import { getSession } from "./auth";
 import { currentPushDeviceId, notifyAdmins, sendPush } from "./push";
+import { getLiveCards, type ProductCardData } from "./queries";
 
 /**
  * The live chat: a visitor writes from the button on any shop page, the shop answers from Админ → Чат.
@@ -15,10 +16,19 @@ import { currentPushDeviceId, notifyAdmins, sendPush } from "./push";
 const COOKIE = "chat_id";
 export const CHAT_MAX_LENGTH = 1000;
 
-/** A message as both sides see it. */
-export type ChatLine = { id: number; from: "customer" | "admin"; body: string; at: string };
+/** A message as both sides see it. `product` is set when the shop suggested one (and it is still on sale). */
+export type ChatLine = { id: number; from: "customer" | "admin"; body: string; at: string; product?: ProductCardData };
 
-const line = (m: { id: number; sender: "customer" | "admin"; body: string; createdAt: Date }): ChatLine => ({ id: m.id, from: m.sender, body: m.body, at: m.createdAt.toISOString() });
+type Row = { id: number; sender: "customer" | "admin"; body: string; createdAt: Date; productId: number | null };
+
+const line = (m: Row, product?: ProductCardData): ChatLine => ({ id: m.id, from: m.sender, body: m.body, at: m.createdAt.toISOString(), ...(product ? { product } : {}) });
+
+/** Messages with the suggested products' current name, price and photo. */
+async function lines(rows: Row[]): Promise<ChatLine[]> {
+  const ids = [...new Set(rows.map((r) => r.productId).filter((id): id is number => id !== null))];
+  const cards = new Map((await getLiveCards(ids)).map((p) => [p.id, p]));
+  return rows.map((r) => line(r, r.productId ? cards.get(r.productId) : undefined));
+}
 
 const excerpt = (body: string) => (body.length > 120 ? `${body.slice(0, 117)}…` : body);
 
@@ -46,7 +56,7 @@ export async function loadOwnChat(markSeen: boolean): Promise<{ lines: ChatLine[
   if (!thread) return { lines: [], unread: 0 };
   const rows = await db.select().from(chatMessages).where(eq(chatMessages.threadId, thread.id)).orderBy(asc(chatMessages.id)).limit(300);
   if (markSeen && thread.customerUnread > 0) await db.update(chatThreads).set({ customerUnread: 0 }).where(eq(chatThreads.id, thread.id));
-  return { lines: rows.map(line), unread: markSeen ? 0 : thread.customerUnread };
+  return { lines: await lines(rows), unread: markSeen ? 0 : thread.customerUnread };
 }
 
 /** The visitor sends a message; the first one opens the thread. The shop's phones are told. */
@@ -103,14 +113,21 @@ export async function loadChatThread(id: number, markRead: boolean): Promise<{ t
   if (!row) return null;
   const rows = await db.select().from(chatMessages).where(eq(chatMessages.threadId, id)).orderBy(asc(chatMessages.id)).limit(500);
   if (markRead && row.thread.adminUnread > 0) await db.update(chatThreads).set({ adminUnread: 0 }).where(eq(chatThreads.id, id));
-  return { thread: { ...row.thread, userName: row.userName, userEmail: row.userEmail }, lines: rows.map(line) };
+  return { thread: { ...row.thread, userName: row.userName, userEmail: row.userEmail }, lines: await lines(rows) };
 }
 
-/** The shop answers. The customer's devices with notifications on are told; a tap opens the chat. */
-export async function replyToThread(id: number, body: string): Promise<ChatLine | null> {
+/**
+ * The shop answers, with words or by suggesting a product (then `body` is the product's name, which is what
+ * the notification and the list of conversations show). The customer's devices with notifications on are
+ * told; a tap opens the chat.
+ */
+export async function replyToThread(id: number, body: string, productId: number | null = null): Promise<ChatLine | null> {
   const [thread] = await db.select().from(chatThreads).where(eq(chatThreads.id, id)).limit(1);
   if (!thread) return null;
-  const [message] = await db.insert(chatMessages).values({ threadId: id, sender: "admin", body }).returning();
+  const [product] = productId ? await getLiveCards([productId]) : [];
+  if (productId && !product) return null;
+  if (product) body = product.name;
+  const [message] = await db.insert(chatMessages).values({ threadId: id, sender: "admin", body, productId: product?.id ?? null }).returning();
   await db
     .update(chatThreads)
     .set({ customerUnread: sql`${chatThreads.customerUnread} + 1`, adminUnread: 0, lastBody: body, lastFrom: "admin", lastMessageAt: message.createdAt })
@@ -120,9 +137,9 @@ export async function replyToThread(id: number, body: string): Promise<ChatLine 
     const where = [thread.pushSubscriptionId ? eq(pushSubscriptions.id, thread.pushSubscriptionId) : undefined, thread.userId ? eq(pushSubscriptions.userId, thread.userId) : undefined].filter((c) => c !== undefined);
     if (where.length === 0) return;
     const devices = await db.select().from(pushSubscriptions).where(or(...where));
-    await sendPush(devices, { title: "Отговор от магазина", body: excerpt(body), url: "/?chat=1", tag: "chat-reply" });
+    await sendPush(devices, { title: product ? "Магазинът ти предлага" : "Отговор от магазина", body: excerpt(body), url: "/?chat=1", tag: "chat-reply" });
   });
-  return line(message);
+  return line(message, product);
 }
 
 export async function deleteChatThread(id: number) {

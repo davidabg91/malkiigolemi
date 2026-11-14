@@ -46,6 +46,14 @@ export async function chatReply(threadId: number, body: string): Promise<ChatSen
   return sent ? { ok: true, line: sent } : { ok: false, error: "Разговорът вече не съществува." };
 }
 
+/** Admin: suggests a product to the customer; it appears in the chat as a card. */
+export async function chatSuggest(threadId: number, productId: number): Promise<ChatSendResult> {
+  await assertAdmin();
+  if (!Number.isInteger(productId) || productId <= 0) return { ok: false, error: "Избери продукт." };
+  const sent = await replyToThread(threadId, "", productId);
+  return sent ? { ok: true, line: sent } : { ok: false, error: "Продуктът не се продава в момента или разговорът вече не съществува." };
+}
+
 export async function chatDelete(threadId: number): Promise<void> {
   await assertAdmin();
   await deleteChatThread(threadId);
