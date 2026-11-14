@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { ChatMount } from "@/components/chat/ChatMount";
 import { CartDrawer } from "@/components/layout/CartDrawer";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
@@ -26,6 +27,9 @@ export default function ShopLayout({ children }: LayoutProps<"/">) {
       </main>
       <Footer />
       <CartDrawer />
+      <Suspense fallback={null}>
+        <ChatMount />
+      </Suspense>
     </>
   );
 }

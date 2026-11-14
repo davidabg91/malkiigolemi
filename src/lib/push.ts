@@ -4,9 +4,10 @@ import { eq, inArray, or } from "drizzle-orm";
 import { cookies } from "next/headers";
 import webpush from "web-push";
 import { db } from "@/db";
-import { orders, pushSubscriptions, users, type OrderStatus, type PushSubscriptionRow } from "@/db/schema";
+import { orders, pushSubscriptions, settings, users, type OrderStatus, type PushSubscriptionRow } from "@/db/schema";
 import { courierName } from "./couriers";
 import { formatPrice } from "./format";
+import { ADMIN_NOTICES, type AdminNoticeKey, type AdminNoticePrefs } from "./notices";
 import { site } from "./site";
 
 /**
@@ -139,7 +140,7 @@ export async function notifyOrderStatus(orderId: number) {
   }
 }
 
-async function adminDevices() {
+export async function adminDevices() {
   return db
     .select({ d: pushSubscriptions })
     .from(pushSubscriptions)
@@ -148,24 +149,50 @@ async function adminDevices() {
     .then((rows) => rows.map((r) => r.d));
 }
 
-/** Tells the shop's own phones (admins with notifications on) about a new order. Never throws. */
-export async function notifyAdminsNewOrder(orderId: number) {
+const NOTICES_KEY = "admin_notices";
+
+/** Which notifications the shop's phones get (Админ → Известия); anything never chosen keeps its default. */
+export async function getAdminNoticePrefs(): Promise<AdminNoticePrefs> {
+  const [row] = await db.select().from(settings).where(eq(settings.key, NOTICES_KEY)).limit(1);
+  let saved: Partial<AdminNoticePrefs> = {};
+  try {
+    saved = row?.value ? JSON.parse(row.value) : {};
+  } catch {}
+  return Object.fromEntries(ADMIN_NOTICES.map((n) => [n.key, typeof saved[n.key] === "boolean" ? saved[n.key] : n.on])) as AdminNoticePrefs;
+}
+
+export async function setAdminNoticePrefs(prefs: AdminNoticePrefs) {
+  const value = JSON.stringify(prefs);
+  await db.insert(settings).values({ key: NOTICES_KEY, value }).onConflictDoUpdate({ target: settings.key, set: { value } });
+}
+
+/**
+ * Tells the shop's own phones (admins with notifications on) about something, unless that kind of
+ * notification is switched off. Never throws.
+ */
+export async function notifyAdmins(kind: AdminNoticeKey, message: PushMessage) {
   if (!pushConfigured()) return;
   try {
-    const [o] = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
-    if (!o) return;
-    await sendPush(await adminDevices(), { title: `Нова поръчка ${formatPrice(o.total)}`, body: `${o.number} · ${o.name}`, url: `/admin/porachki/${o.id}`, tag: `admin-order-${o.id}` });
+    if (!(await getAdminNoticePrefs())[kind]) return;
+    await sendPush(await adminDevices(), message);
   } catch (e) {
-    console.error("Admin push failed", orderId, e);
+    console.error("Admin push failed", kind, e);
   }
+}
+
+/** Tells the shop's own phones (admins with notifications on) about a new order. Never throws. */
+export async function notifyAdminsNewOrder(orderId: number) {
+  const [o] = await db
+    .select()
+    .from(orders)
+    .where(eq(orders.id, orderId))
+    .limit(1)
+    .catch(() => []);
+  if (!o) return;
+  await notifyAdmins("order", { title: `Нова поръчка ${formatPrice(o.total)}`, body: `${o.number} · ${o.name}`, url: `/admin/porachki/${o.id}`, tag: `admin-order-${o.id}` });
 }
 
 /** Tells the shop's own phones about a payment made through the QR code at the till. Never throws. */
 export async function notifyAdminsStorePayment(amount: number, id: number, note: string | null) {
-  if (!pushConfigured()) return;
-  try {
-    await sendPush(await adminDevices(), { title: `Плащане в магазина ${formatPrice(amount)}`, body: `Плащане № ${id}${note ? ` · ${note}` : ""}`, url: "/admin/plashtaniya", tag: `store-pay-${id}` });
-  } catch (e) {
-    console.error("Admin push failed", e);
-  }
+  await notifyAdmins("storePayment", { title: `Плащане в магазина ${formatPrice(amount)}`, body: `Плащане № ${id}${note ? ` · ${note}` : ""}`, url: "/admin/plashtaniya", tag: `store-pay-${id}` });
 }

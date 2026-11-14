@@ -1,5 +1,7 @@
 "use server";
 
+import { after } from "next/server";
+import { notifyAdmins } from "@/lib/push";
 import bcrypt from "bcryptjs";
 import { and, eq } from "drizzle-orm";
 import { refresh, updateTag } from "next/cache";
@@ -220,6 +222,7 @@ export async function cancelOrder(orderId: number): Promise<CancelOrderResult> {
   // Only while still open: the shop may be changing it at the same moment. Stock and used points come back.
   const result = await changeOrderStatus(order.id, "cancelled", { allowedFrom: ["new", "confirmed"], note: cancellationNote });
   if (result !== "changed") return { ok: false, error: "Статусът на поръчката току-що се промени. Обнови страницата." };
+  after(() => notifyAdmins("cancel", { title: "Клиент отказа поръчка", body: `${order.number} · ${order.name}`, url: `/admin/porachki/${order.id}`, tag: `admin-order-${order.id}` }));
 
   updateTag(CATALOG_TAG);
   refresh();

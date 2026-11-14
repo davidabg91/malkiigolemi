@@ -1,5 +1,7 @@
 "use server";
 
+import { after } from "next/server";
+import { notifyAdmins } from "@/lib/push";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
@@ -68,6 +70,7 @@ export async function register(_prev: FormState, formData: FormData): Promise<Fo
   const passwordHash = await bcrypt.hash(password, 10);
   const [user] = await db.insert(users).values({ name, email, phone, passwordHash }).returning();
   await createSession({ uid: user.id, role: "customer", name: user.name, email: user.email });
+  after(() => notifyAdmins("signup", { title: "Нова регистрация", body: `${user.name} · ${user.email}`, url: "/admin/potrebiteli", tag: "signup" }));
   redirect(safeNext(formData.get("next")));
 }
 

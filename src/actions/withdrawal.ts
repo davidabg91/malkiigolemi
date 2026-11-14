@@ -4,6 +4,7 @@ import { eq, sql } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { headers } from "next/headers";
 import { after } from "next/server";
+import { notifyAdmins } from "@/lib/push";
 import { z } from "zod";
 import { db } from "@/db";
 import { orders, withdrawals } from "@/db/schema";
@@ -63,6 +64,7 @@ export async function submitWithdrawal(input: WithdrawalInput): Promise<Withdraw
   const emailed = await sendMail(row.email, confirmationSubject(row), confirmationHtml(row));
   if (emailed) await db.update(withdrawals).set({ confirmedAt: new Date() }).where(eq(withdrawals.id, row.id));
 
+  after(() => notifyAdmins("withdrawal", { title: "Отказ от договор", body: `${row.name} · поръчка ${row.orderNumber}`, url: "/admin/otkazi", tag: `withdrawal-${row.id}` }));
   // Let the shop know at once; the admin list shows it either way.
   after(() => {
     const notice = shopWithdrawalMail(row, emailed);
