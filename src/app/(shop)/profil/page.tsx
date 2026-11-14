@@ -23,6 +23,7 @@ import { pushConfigured, vapidPublicKey } from "@/lib/push";
 import { syncShipmentsIfStale } from "@/lib/shipments";
 import { withdrawalOpen } from "@/lib/withdrawals";
 import { DELIVERY_METHODS } from "@/lib/site";
+import { ColorTag } from "@/components/product/ColorTag";
 
 export const metadata: Metadata = { title: "Моите поръчки", robots: { index: false } };
 
@@ -181,6 +182,7 @@ async function Orders() {
                               {i.name}
                             </p>
                           )}
+                          {i.color && <ColorTag name={i.color} className="mt-1" />}
 
                           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-soft">
                             {p?.brand?.name && <span>{p.brand.name}</span>}

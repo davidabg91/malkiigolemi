@@ -15,6 +15,7 @@ import { formatPrice } from "@/lib/format";
 import { DELIVERY_METHODS, site } from "@/lib/site";
 import { pushConfigured, vapidPublicKey } from "@/lib/push";
 import { awaitsCardPayment, syncPayment } from "@/lib/stripe";
+import { lineName } from "@/lib/product-colors";
 
 export const metadata: Metadata = { title: "Благодарим за поръчката", robots: { index: false } };
 
@@ -88,7 +89,7 @@ async function Confirmation({ params, searchParams }: Props) {
           {order.items.map((i) => (
             <li key={i.id} className="flex justify-between gap-4 py-3 text-[0.95rem]">
               <span>
-                {i.name} <span className="text-ink-soft">× {i.qty}</span>
+                {lineName(i.name, i.color)} <span className="text-ink-soft">× {i.qty}</span>
               </span>
               <span className="font-medium tabular-nums">{formatPrice(i.price * i.qty)}</span>
             </li>

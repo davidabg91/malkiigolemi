@@ -8,12 +8,13 @@ import { formatPrice } from "./format";
 import { escapeHtml, mailLayout, sendMail } from "./mail";
 import { notifyAdminsNewOrder } from "./push";
 import { COMPANY, DELIVERY_METHODS, site, STORE, WITHDRAWAL_DAYS } from "./site";
+import { lineName } from "./product-colors";
 
 /** An order as the e-mails need it; real ones come from the database, samples are made up. */
 export type MailOrder = Pick<
   Order,
   "id" | "number" | "name" | "phone" | "email" | "delivery" | "courier" | "officeName" | "city" | "address" | "note" | "payment" | "shipping" | "discount" | "pointsUsed" | "total" | "trackingNumber"
-> & { items: Pick<OrderItem, "name" | "qty" | "price">[] };
+> & { items: (Pick<OrderItem, "name" | "qty" | "price"> & { color?: string | null })[] };
 type OrderWithItems = MailOrder;
 export type Mail = { subject: string; html: string };
 
@@ -39,7 +40,7 @@ function itemsTable(o: OrderWithItems) {
   const row = (left: string, right: string, strong = false) =>
     `<tr><td style="padding:6px 0;${strong ? "font-weight:bold" : ""}">${left}</td><td style="padding:6px 0;text-align:right;white-space:nowrap;${strong ? "font-weight:bold" : ""}">${right}</td></tr>`;
   return `<table style="width:100%;border-collapse:collapse;font-size:15px;margin:12px 0">
-${o.items.map((i) => row(`${escapeHtml(i.name)} × ${i.qty}`, formatPrice(i.price * i.qty))).join("")}
+${o.items.map((i) => row(`${escapeHtml(lineName(i.name, i.color))} × ${i.qty}`, formatPrice(i.price * i.qty))).join("")}
 ${row("Доставка", o.shipping === 0 ? "Безплатно" : formatPrice(o.shipping))}
 ${o.discount > 0 ? row(`Отстъпка с ${o.pointsUsed} точки`, `−${formatPrice(o.discount)}`) : ""}
 ${row("Общо", formatPrice(o.total), true)}

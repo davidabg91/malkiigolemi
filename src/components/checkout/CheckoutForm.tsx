@@ -14,7 +14,7 @@ import { btn } from "@/components/ui";
 import { formatPrice, unitPriceFor } from "@/lib/format";
 import { DELIVERY_METHODS, shippingFor, STORE, type DeliveryId } from "@/lib/site";
 import { liveCartData } from "@/actions/cart";
-import { cartTotals, useCart, useFreshCartPrices, useHydrated } from "@/lib/store";
+import { cartTotals, lineKey, productQty, useCart, useFreshCartPrices, useHydrated } from "@/lib/store";
 import type { CourierId, CourierOffice } from "@/lib/couriers";
 import { pointsForGoods, redeemable, type LoyaltySettings } from "@/lib/loyalty-math";
 
@@ -156,6 +156,7 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
   // "До автомат" is card only; the choice made for other deliveries is kept for when the customer switches back.
   const effectivePayment = delivery === "box" ? "card" : payment;
   const { subtotal } = cartTotals(items);
+  const perProduct = productQty(items);
   const loyalty = defaults.loyalty;
   const redeem = loyalty ? redeemable(loyalty.balance, subtotal, loyalty.settings) : { points: 0, discount: 0 };
   const discount = usePoints ? redeem.discount : 0;
@@ -205,7 +206,7 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
         saveAsDefault: defaults.signedIn && saveAsDefault,
         usePoints: Boolean(defaults.loyalty) && usePoints,
         payment: effectivePayment,
-        items: items.map((i) => ({ id: i.id, qty: i.qty })),
+        items: items.map((i) => ({ id: i.id, qty: i.qty, color: i.chosenColor ?? null })),
       });
       if (result.ok) {
         setPlaced(true);
@@ -357,16 +358,16 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
         <h2 className="font-display text-lg font-semibold">Твоята поръчка</h2>
         <ul className="mt-4 max-h-72 divide-y divide-line overflow-y-auto">
           {items.map((i) => (
-            <li key={i.id} className="flex items-center gap-3 py-3">
+            <li key={lineKey(i)} className="flex items-center gap-3 py-3">
               <span className="relative grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-sand">
                 <ProductVisual product={i} size={96} className="h-11 w-11" />
                 <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-ink px-1 text-[0.68rem] font-bold text-cream">{i.qty}</span>
               </span>
               <span className="min-w-0 flex-1 text-sm leading-snug">
                 <span className="line-clamp-2 font-medium">{i.name}</span>
-                <span className="text-ink-soft">{i.unit}</span>
+                <span className="text-ink-soft">{[i.unit, i.chosenColor].filter(Boolean).join(" · ")}</span>
               </span>
-              <span className="text-sm font-semibold tabular-nums">{formatPrice(unitPriceFor(i, i.qty) * i.qty)}</span>
+              <span className="text-sm font-semibold tabular-nums">{formatPrice(unitPriceFor(i, perProduct.get(i.id) ?? i.qty) * i.qty)}</span>
             </li>
           ))}
         </ul>

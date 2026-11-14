@@ -14,6 +14,7 @@ import { savedOffice } from "@/lib/courier-offices";
 import { isCourierId } from "@/lib/couriers";
 import { CATALOG_TAG, getLiveCards, type ProductCardData } from "@/lib/queries";
 import { DELIVERY_METHODS } from "@/lib/site";
+import { lineName, matchColor } from "@/lib/product-colors";
 
 export type AccountFormState = { ok?: boolean; error?: string; fieldErrors?: Record<string, string> } | undefined;
 
@@ -150,7 +151,7 @@ export async function changePassword(_prev: AccountFormState, formData: FormData
 }
 
 export type ReorderResult =
-  | { ok: true; items: (ProductCardData & { qty: number })[]; missing: string[]; reduced: string[] }
+  | { ok: true; items: (ProductCardData & { qty: number; chosenColor: string | null })[]; missing: string[]; reduced: string[] }
   | { ok: false; error: string };
 
 /** Looks up a past order's products at today's prices and stock; the client then adds them to the cart. */
@@ -169,18 +170,20 @@ export async function reorder(orderId: number): Promise<ReorderResult> {
   const live = await getLiveCards(lines.flatMap((l) => (l.productId == null ? [] : [l.productId])));
   const byId = new Map(live.map((p) => [p.id, p]));
 
-  const items: (ProductCardData & { qty: number })[] = [];
+  const items: (ProductCardData & { qty: number; chosenColor: string | null })[] = [];
   const missing: string[] = [];
   const reduced: string[] = [];
   for (const l of lines) {
     const p = l.productId == null ? undefined : byId.get(l.productId);
-    if (!p || p.stock <= 0) {
-      missing.push(l.name);
+    // A colour the product is no longer sold in cannot be ordered again.
+    const chosenColor = p?.colors?.length ? matchColor(p.colors, l.color) : null;
+    if (!p || p.stock <= 0 || (p.colors?.length && !chosenColor)) {
+      missing.push(lineName(l.name, l.color));
       continue;
     }
     const qty = Math.min(l.qty, p.stock);
     if (qty < l.qty) reduced.push(p.name);
-    items.push({ ...p, qty });
+    items.push({ ...p, qty, chosenColor });
   }
   return { ok: true, items, missing, reduced };
 }

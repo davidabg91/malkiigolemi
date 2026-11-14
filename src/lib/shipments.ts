@@ -6,6 +6,7 @@ import { deleteEcontLabels, EcontError, econtLabel, econtStatuses, type EcontLab
 import { getEcontSettings, missingSenderFields, type EcontSettings } from "./econt-settings";
 import { changeOrderStatus } from "./order-status";
 import { awaitsCardPayment } from "./stripe";
+import { lineName } from "./product-colors";
 
 /** Per-waybill choices the admin can change before creating it. */
 export type WaybillOptions = {
@@ -17,7 +18,7 @@ export type WaybillOptions = {
   pickup?: { from: string; to: string } | null;
 };
 
-type OrderWithItems = Order & { items: { name: string; qty: number }[] };
+type OrderWithItems = Order & { items: { name: string; qty: number; color?: string | null }[] };
 
 /** Why an order cannot get an Econt waybill, or null when it can. */
 export function waybillBlocker(order: Order): string | null {
@@ -32,7 +33,7 @@ export function waybillBlocker(order: Order): string | null {
 /** The suggested waybill for an order: cash on delivery for the amount the customer still owes. */
 export function defaultWaybill(order: OrderWithItems, s: EcontSettings): WaybillOptions {
   const owed = order.payment === "cod" ? order.total - (s.payer === "receiver" ? order.shipping : 0) : 0;
-  const goods = order.items.map((i) => `${i.name}${i.qty > 1 ? ` ×${i.qty}` : ""}`).join(", ");
+  const goods = order.items.map((i) => `${lineName(i.name, i.color)}${i.qty > 1 ? ` ×${i.qty}` : ""}`).join(", ");
   return {
     weight: s.defaultWeight,
     packCount: 1,

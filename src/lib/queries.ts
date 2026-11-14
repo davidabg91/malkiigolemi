@@ -26,6 +26,7 @@ const card = {
   image: products.image,
   pack: products.pack,
   color: products.color,
+  colors: products.colorOptions,
   origin: products.origin,
   isNew: products.isNew,
   stock: products.stock,
@@ -47,6 +48,8 @@ export type ProductCardData = {
   image: string | null;
   pack: string;
   color: string;
+  /** Colours to choose from; empty or missing when the product has no choice of colour. */
+  colors?: string[];
   origin: string | null;
   isNew: boolean;
   stock: number;

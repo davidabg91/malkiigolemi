@@ -6,6 +6,7 @@ import { startTransition, useActionState, useId, useState, type ReactNode } from
 import { saveProduct } from "@/actions/admin";
 import { PackShot } from "@/components/product/PackShot";
 import { btn } from "@/components/ui";
+import { ColorOptions } from "./ColorOptions";
 import type { Brand, Product } from "@/db/schema";
 import { MAX_IMAGE_MB, PACKS } from "@/lib/listing";
 import { ORIGIN_LABELS } from "@/lib/site";
@@ -157,6 +158,10 @@ export function ProductForm({
           {input("bulkMinQty", "Цена за количество — от брой", { inputMode: "numeric", defaultValue: product?.bulkMinQty ?? "", placeholder: "напр. 3" })}
           {input("bulkPrice", "Цена за количество (€/бр)", { inputMode: "decimal", defaultValue: euros(product?.bulkPrice) })}
           {input("stock", "Наличност (бр)", { inputMode: "numeric", defaultValue: product?.stock ?? 100 })}
+        </Group>
+
+        <Group title="Цветове">
+          <ColorOptions initial={product?.colorOptions ?? []} />
         </Group>
 
         <Group title="Видимост">

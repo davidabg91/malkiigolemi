@@ -7,15 +7,20 @@ import { persist } from "zustand/middleware";
 import { unitPriceFor } from "./format";
 import type { ProductCardData } from "./queries";
 
-export type CartItem = ProductCardData & { qty: number };
+/** `chosenColor` is set for a product sold in several colours: each colour is its own line in the cart. */
+export type CartItem = ProductCardData & { qty: number; chosenColor?: string | null };
+
+/** What tells cart lines apart: the product and, when it has colours, the one chosen. */
+export const lineKey = (i: { id: number; chosenColor?: string | null }) => `${i.id}|${i.chosenColor ?? ""}`;
 
 type CartState = {
   items: CartItem[];
   open: boolean;
   setOpen: (open: boolean) => void;
-  add: (p: ProductCardData, qty?: number) => void;
-  setQty: (id: number, qty: number) => void;
-  remove: (id: number) => void;
+  add: (p: ProductCardData, qty?: number, color?: string | null) => void;
+  /** `key` is the line's `lineKey`. */
+  setQty: (key: string, qty: number) => void;
+  remove: (key: string) => void;
   clear: () => void;
   /** Replaces the remembered price and stock of items with fresh data; quantities stay. */
   refresh: (fresh: ProductCardData[]) => void;
@@ -29,28 +34,29 @@ export const useCart = create<CartState>()(
       items: [],
       open: false,
       setOpen: (open) => set({ open }),
-      add: (p, qty = 1) => {
+      add: (p, qty = 1, color = null) => {
         track({ t: "cart_add", id: p.id });
         set((s) => {
-          const existing = s.items.find((i) => i.id === p.id);
+          const key = lineKey({ id: p.id, chosenColor: color });
+          const existing = s.items.find((i) => lineKey(i) === key);
           if (existing) {
             return {
               items: s.items.map((i) =>
-                i.id === p.id ? { ...i, ...p, qty: Math.min(MAX_QTY, i.qty + qty) } : i,
+                lineKey(i) === key ? { ...i, ...p, qty: Math.min(MAX_QTY, i.qty + qty) } : i,
               ),
             };
           }
-          return { items: [...s.items, { ...p, qty: Math.min(MAX_QTY, qty) }] };
+          return { items: [...s.items, { ...p, chosenColor: color, qty: Math.min(MAX_QTY, qty) }] };
         });
       },
-      setQty: (id, qty) =>
+      setQty: (key, qty) =>
         set((s) => ({
           items:
             qty <= 0
-              ? s.items.filter((i) => i.id !== id)
-              : s.items.map((i) => (i.id === id ? { ...i, qty: Math.min(MAX_QTY, qty) } : i)),
+              ? s.items.filter((i) => lineKey(i) !== key)
+              : s.items.map((i) => (lineKey(i) === key ? { ...i, qty: Math.min(MAX_QTY, qty) } : i)),
         })),
-      remove: (id) => set((s) => ({ items: s.items.filter((i) => i.id !== id) })),
+      remove: (key) => set((s) => ({ items: s.items.filter((i) => lineKey(i) !== key) })),
       clear: () => set({ items: [] }),
       refresh: (fresh) =>
         set((s) => ({
@@ -64,12 +70,21 @@ export const useCart = create<CartState>()(
   ),
 );
 
+/** How many of each product the cart holds, all its colours together. */
+export function productQty(items: CartItem[]) {
+  const qty = new Map<number, number>();
+  for (const i of items) qty.set(i.id, (qty.get(i.id) ?? 0) + i.qty);
+  return qty;
+}
+
 export function cartTotals(items: CartItem[]) {
   let subtotal = 0;
   let count = 0;
   let savings = 0;
+  // The price for quantity counts every colour of a product together, as the order does.
+  const perProduct = productQty(items);
   for (const i of items) {
-    const unit = unitPriceFor(i, i.qty);
+    const unit = unitPriceFor(i, perProduct.get(i.id)!);
     subtotal += unit * i.qty;
     count += i.qty;
     savings += ((i.oldPrice && i.oldPrice > i.price ? i.oldPrice : i.price) - unit) * i.qty;
