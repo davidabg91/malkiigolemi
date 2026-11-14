@@ -1,4 +1,4 @@
-import { ArrowUpRight, Clock, Mail, MapPin, Phone } from "lucide-react";
+import { ArrowUpRight, Clock, Mail, MapPin, Phone, Smartphone } from "lucide-react";
 import Link from "next/link";
 import { FacebookIcon, Logo } from "@/components/ui";
 import { getCategoryTree } from "@/lib/queries";
@@ -9,7 +9,6 @@ export const INFO_PAGES = [
   { href: "/za-nas", label: "За нас" },
   { href: "/kontakti", label: "Контакти" },
   { href: "/dostavka", label: "Доставка и плащане" },
-  { href: "/prilozhenie", label: "Приложение за телефона" },
   { href: "/usloviya", label: "Общи условия" },
   { href: "/poveritelnost", label: "Поверителност" },
   { href: "/otkaz", label: "Откажете се от договора тук" },
@@ -97,6 +96,27 @@ export async function Footer() {
           </ul>
         </div>
       </div>
+      {/* The app: its own section, so people who want the shop on their phone find how to do it. */}
+      <section aria-labelledby="footer-app" className="container-shop pb-12">
+        <div className="flex flex-col gap-5 rounded-3xl bg-white/[0.06] p-5 ring-1 ring-cream/10 sm:flex-row sm:items-center sm:p-6">
+          {/* eslint-disable-next-line @next/next/no-img-element -- a small fixed icon */}
+          <img src="/icon-192.png" alt="" width={64} height={64} loading="lazy" className="h-16 w-16 shrink-0 rounded-2xl shadow-soft" />
+          <div className="min-w-0 flex-1">
+            <h2 id="footer-app" className="text-sm font-semibold uppercase tracking-[0.16em] text-cyan-300">
+              Приложение
+            </h2>
+            <p className="mt-1.5 font-display text-lg font-semibold leading-snug">Магазинът на телефона ти, с едно докосване</p>
+            <p className="mt-1 text-sm text-cream/70">Добавя се на началния екран за минута, без App Store и Google Play. Работи на iPhone и Android.</p>
+          </div>
+          <Link
+            href="/prilozhenie"
+            className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-cream px-6 font-semibold text-ink transition hover:bg-white active:scale-[.98]"
+          >
+            <Smartphone className="h-5 w-5" aria-hidden />
+            Как да го инсталирам
+          </Link>
+        </div>
+      </section>
       <div className="border-t border-cream/10">
         <div className="container-shop flex flex-col gap-1.5 py-5 text-sm text-cream/50 sm:flex-row sm:items-center sm:justify-between">
           <div>
