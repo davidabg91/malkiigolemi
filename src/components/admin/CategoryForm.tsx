@@ -31,16 +31,25 @@ export function CategoryForm({ category, roots }: { category?: Category; roots: 
         <label htmlFor={`parent-${uid}`} className={label}>
           Родител
         </label>
-        <select id={`parent-${uid}`} name="parentId" defaultValue={category?.parentId ?? ""} className="field">
-          <option value="">— основна категория —</option>
+        {/* Typed by hand, with the existing main categories as suggestions; a new name makes a new main category. */}
+        <input
+          id={`parent-${uid}`}
+          name="parent"
+          list={`parents-${uid}`}
+          maxLength={80}
+          autoComplete="off"
+          defaultValue={roots.find((r) => r.id === category?.parentId)?.name ?? ""}
+          placeholder="празно = основна категория"
+          className="field"
+        />
+        <datalist id={`parents-${uid}`}>
           {roots
             .filter((r) => r.id !== category?.id)
             .map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
+              <option key={r.id} value={r.name} />
             ))}
-        </select>
+        </datalist>
+        <p className="mt-1 text-xs text-ink-soft">Напиши име на основна категория. Ако още я няма, се създава.</p>
       </div>
       <div>
         <label htmlFor={`tone-${uid}`} className={label}>

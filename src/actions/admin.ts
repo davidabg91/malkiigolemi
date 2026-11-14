@@ -297,7 +297,7 @@ export async function setOrdersStatus(_prev: BulkStatusState, formData: FormData
 const categorySchema = z.object({
   name: z.string().trim().min(2, "Въведи име.").max(80),
   description: z.string().trim().max(300),
-  parentId: z.string().trim(),
+  parent: z.string().trim().max(80),
   tone: z.string().refine((v) => v in TONES, "Невалиден цвят."),
   icon: z.string().refine((v) => CATEGORY_ICON_NAMES.includes(v), "Невалидна икона."),
 });
@@ -316,23 +316,33 @@ export async function saveCategory(id: number | null, _prev: AdminFormState, for
   const parsed = categorySchema.safeParse({
     name: text("name"),
     description: text("description"),
-    parentId: text("parentId"),
+    parent: text("parent"),
     tone: text("tone") || "butter",
     icon: text("icon") || "ShoppingBasket",
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const d = parsed.data;
 
+  // The parent is typed by name. Empty means a main category; a name nobody has yet becomes a new main category.
   let parentId: number | null = null;
-  if (d.parentId) {
-    const [parent] = await db.select().from(categories).where(eq(categories.id, Number(d.parentId))).limit(1);
-    // Only two levels are supported, and a category cannot become its own child.
-    if (!parent || parent.parentId !== null || parent.id === id) return { error: "Невалидна родителска категория." };
+  if (d.parent) {
+    const same = (a: string) => a.trim().toLocaleLowerCase("bg") === d.parent.toLocaleLowerCase("bg");
+    if (same(d.name)) return { error: "Категорията не може да е родител на себе си." };
     if (id) {
       const [child] = await db.select({ id: categories.id }).from(categories).where(eq(categories.parentId, id)).limit(1);
       if (child) return { error: "Категория с подкатегории не може да стане подкатегория." };
     }
-    parentId = parent.id;
+    const roots = await db.select().from(categories).where(isNull(categories.parentId));
+    // Only two levels are supported, and a category cannot become its own child.
+    const parent = roots.find((r) => same(r.name) && r.id !== id);
+    if (parent) parentId = parent.id;
+    else {
+      const [made] = await db
+        .insert(categories)
+        .values({ name: d.parent, slug: await freeCategorySlug(slugify(d.parent) || `kategoria-${Date.now()}`), sort: roots.length, tile: TILE_AUTO })
+        .returning({ id: categories.id });
+      parentId = made.id;
+    }
   }
 
   const [current] = id ? await db.select().from(categories).where(eq(categories.id, id)).limit(1) : [];
