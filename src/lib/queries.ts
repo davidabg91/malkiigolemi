@@ -135,7 +135,7 @@ export async function getHomeData() {
   const [promo, fresh, bulk, origins, brandList] = await Promise.all([
     cards().where(and(active, sql`${effectiveOldPrice} is not null`)).orderBy(...shopOrder).limit(12),
     // Enough for a few pages of the auto-advancing shelf.
-    cards().where(and(active, eq(products.isNew, true))).orderBy(desc(products.createdAt)).limit(20),
+    cards().where(and(active, eq(products.isNew, true))).orderBy(desc(products.createdAt)).limit(30),
     cards().where(and(active, isNotNull(products.bulkPrice))).orderBy(...shopOrder).limit(4),
     // The countries the shop actually sells most products from, for the "by origin" tabs.
     db
