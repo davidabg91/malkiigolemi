@@ -9,8 +9,13 @@ import { SORTS, type SortKey } from "@/lib/listing";
 import { ORIGIN_LABELS } from "@/lib/site";
 
 export type Facets = {
-  /** Main categories; empty on a category page. */
+  /** Main categories, or on a main category's page its subcategories (`subcategories`). */
   categories: { slug: string; name: string; n: number }[];
+  subcategories: boolean;
+  /** Products on the page before any filter. */
+  scopeTotal: number;
+  /** "Show only" switches worth offering: discounted, new, in stock. */
+  only: { key: string; label: string; n: number }[];
   brands: { slug: string; name: string; n: number }[];
   origins: { origin: string | null; n: number }[];
   /** Whole euros. */
@@ -24,6 +29,7 @@ export type Current = {
   origins: string[];
   min: number | null;
   max: number | null;
+  only: string[];
   sort: SortKey;
 };
 
@@ -127,21 +133,29 @@ export function ListingShell({
     if (c.origins.length) qs.set("origin", c.origins.join(","));
     if (c.min != null && c.min > facets.priceMin) qs.set("min", String(c.min));
     if (c.max != null && c.max < facets.priceMax) qs.set("max", String(c.max));
+    if (c.only.length) qs.set("only", c.only.join(","));
     if (c.sort !== "popular") qs.set("sort", c.sort);
     const s = qs.toString();
     start(() => router.push(s ? `${basePath}?${s}` : basePath, { scroll: false }));
   };
 
   const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
-  const activeCount = current.categories.length + current.brands.length + current.origins.length + (current.min != null || current.max != null ? 1 : 0);
+  const activeCount = current.categories.length + current.brands.length + current.origins.length + current.only.length + (current.min != null || current.max != null ? 1 : 0);
   const hasPrice = facets.priceMax > facets.priceMin;
+  // One brand or origin is still a filter when some products have none.
+  const worth = (list: { n: number }[]) => list.length > 1 || (list.length === 1 && list[0].n < facets.scopeTotal);
+  const hasCategories = facets.categories.length > 1 || current.categories.length > 0;
+  const hasOrigins = worth(facets.origins) || current.origins.length > 0;
+  const hasBrands = worth(facets.brands) || current.brands.length > 0;
+  // With nothing to filter by, the panel and its button are not shown at all.
+  const hasFilters = Boolean(nav) || hasCategories || facets.only.length > 0 || hasPrice || hasOrigins || hasBrands;
 
   const filters = (
     <div className="space-y-7">
       {nav}
-      {(facets.categories.length > 1 || current.categories.length > 0) && (
+      {hasCategories && (
         <fieldset>
-          <legend className="mb-2 text-sm font-semibold uppercase tracking-[0.14em]">Категория</legend>
+          <legend className="mb-2 text-sm font-semibold uppercase tracking-[0.14em]">{facets.subcategories ? "Подкатегория" : "Категория"}</legend>
           {facets.categories.map((c) => (
             <CheckRow
               key={c.slug}
@@ -150,6 +164,14 @@ export function ListingShell({
               checked={current.categories.includes(c.slug)}
               onChange={() => go({ categories: toggle(current.categories, c.slug) })}
             />
+          ))}
+        </fieldset>
+      )}
+      {facets.only.length > 0 && (
+        <fieldset>
+          <legend className="mb-2 text-sm font-semibold uppercase tracking-[0.14em]">Покажи само</legend>
+          {facets.only.map((o) => (
+            <CheckRow key={o.key} label={o.label} count={o.n} checked={current.only.includes(o.key)} onChange={() => go({ only: toggle(current.only, o.key) })} />
           ))}
         </fieldset>
       )}
@@ -167,7 +189,7 @@ export function ListingShell({
           />
         </fieldset>
       )}
-      {facets.origins.length > 1 && (
+      {hasOrigins && (
         <fieldset>
           <legend className="mb-2 text-sm font-semibold uppercase tracking-[0.14em]">Произход</legend>
           {facets.origins.map(
@@ -184,7 +206,7 @@ export function ListingShell({
           )}
         </fieldset>
       )}
-      {facets.brands.length > 1 && (
+      {hasBrands && (
         <fieldset>
           <legend className="mb-2 text-sm font-semibold uppercase tracking-[0.14em]">Марка</legend>
           <div>
@@ -201,7 +223,7 @@ export function ListingShell({
         </fieldset>
       )}
       {activeCount > 0 && (
-        <button type="button" onClick={() => go({ categories: [], brands: [], origins: [], min: null, max: null })} className={`${btn.sm} w-full`}>
+        <button type="button" onClick={() => go({ categories: [], brands: [], origins: [], only: [], min: null, max: null })} className={`${btn.sm} w-full`}>
           <X className="h-4 w-4" />
           Изчисти филтрите
         </button>
@@ -210,11 +232,13 @@ export function ListingShell({
   );
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[16.5rem_1fr]">
-      <aside className="hidden lg:block" aria-label="Филтри">
-        {/* Taller than the screen once categories, origins and brands add up: it scrolls on its own then. */}
-        <div className="sticky top-44 max-h-[calc(100dvh-12rem)] overflow-y-auto overscroll-contain rounded-card bg-paper p-5 shadow-soft">{filters}</div>
-      </aside>
+    <div className={`grid gap-8 ${hasFilters ? "lg:grid-cols-[16.5rem_1fr]" : ""}`}>
+      {hasFilters && (
+        <aside className="hidden lg:block" aria-label="Филтри">
+          {/* Taller than the screen once categories, origins and brands add up: it scrolls on its own then. */}
+          <div className="sticky top-44 max-h-[calc(100dvh-12rem)] overflow-y-auto overscroll-contain rounded-card bg-paper p-5 shadow-soft">{filters}</div>
+        </aside>
+      )}
 
       <div>
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -222,11 +246,13 @@ export function ListingShell({
             <strong className="font-semibold text-ink tabular-nums">{total}</strong> {total === 1 ? "продукт" : "продукта"}
           </p>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => setSheet(true)} className={`${btn.sm} lg:hidden`}>
-              <SlidersHorizontal className="h-4 w-4" />
-              Филтри
-              {activeCount > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-forest px-1 text-xs text-white">{activeCount}</span>}
-            </button>
+            {hasFilters && (
+              <button type="button" onClick={() => setSheet(true)} className={`${btn.sm} lg:hidden`}>
+                <SlidersHorizontal className="h-4 w-4" />
+                Филтри
+                {activeCount > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-forest px-1 text-xs text-white">{activeCount}</span>}
+              </button>
+            )}
             <label className="sr-only" htmlFor={sortId}>
               Подреждане
             </label>
