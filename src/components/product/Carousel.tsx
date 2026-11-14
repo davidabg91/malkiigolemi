@@ -11,8 +11,12 @@ const AUTOPLAY_MS = 5500;
  * With `autoplay` it pages through a screenful at a time, shows a dot per page (the current one fills up
  * until the next page) and moves on by itself. It pauses while the mouse or keyboard focus is on it,
  * while it is off screen or the tab is hidden, and never runs for people who prefer reduced motion.
+ * With `rows={2}` the cards stand two high, so twice as many are on screen at once.
  */
-export function Carousel({ children, label, autoplay = false }: { children: ReactNode; label: string; autoplay?: boolean }) {
+export function Carousel({ children, label, autoplay = false, rows = 1 }: { children: ReactNode; label: string; autoplay?: boolean; rows?: 1 | 2 }) {
+  // Two rows are built from columns of two cards: a column is what slides.
+  const cards = Children.toArray(children);
+  const columns = rows === 2 ? Array.from({ length: Math.ceil(cards.length / 2) }, (_, i) => cards.slice(i * 2, i * 2 + 2)) : cards.map((c) => [c]);
   const [ref, api] = useEmblaCarousel(
     autoplay ? { align: "start", slidesToScroll: "auto", containScroll: "trimSnaps" } : { align: "start", dragFree: true, containScroll: "trimSnaps" },
   );
@@ -76,7 +80,7 @@ export function Carousel({ children, label, autoplay = false }: { children: Reac
   };
 
   const arrow =
-    "absolute top-[38%] z-10 hidden h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-paper text-ink shadow-lift transition hover:bg-ink hover:text-cream disabled:pointer-events-none disabled:opacity-0 md:grid";
+    "absolute z-10 hidden h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-paper text-ink shadow-lift transition hover:bg-ink hover:text-cream disabled:pointer-events-none disabled:opacity-0 md:grid";
 
   return (
     <div
@@ -92,15 +96,18 @@ export function Carousel({ children, label, autoplay = false }: { children: Reac
     >
       <div ref={ref} className="-mx-4 overflow-hidden px-4 py-2 sm:-mx-6 sm:px-6 xl:-mx-2 xl:px-2">
         <ul className="flex touch-pan-y gap-3 sm:gap-4">
-          {Children.map(children, (child) => (
-            <li className="w-[46%] shrink-0 sm:w-[31%] md:w-[23.5%] xl:w-[19%]">{child}</li>
+          {columns.map((column, i) => (
+            <li key={i} className="w-[46%] shrink-0 sm:w-[31%] md:w-[23.5%] xl:w-[19%]">
+              {/* Equal rows, so the cards line up across columns whatever their own height. */}
+              {rows === 2 ? <div className="grid h-full grid-rows-2 gap-3 sm:gap-4">{column}</div> : column}
+            </li>
           ))}
         </ul>
       </div>
-      <button type="button" className={`${arrow} -left-4`} onClick={() => (autoplay ? goTo(page - 1) : api?.scrollPrev())} disabled={!canPrev} aria-label="Назад">
+      <button type="button" className={`${arrow} ${rows === 2 ? "top-1/2" : "top-[38%]"} -left-4`} onClick={() => (autoplay ? goTo(page - 1) : api?.scrollPrev())} disabled={!canPrev} aria-label="Назад">
         <ChevronLeft className="h-5 w-5" />
       </button>
-      <button type="button" className={`${arrow} -right-4`} onClick={() => (autoplay ? goTo(page + 1) : api?.scrollNext())} disabled={!canNext} aria-label="Напред">
+      <button type="button" className={`${arrow} ${rows === 2 ? "top-1/2" : "top-[38%]"} -right-4`} onClick={() => (autoplay ? goTo(page + 1) : api?.scrollNext())} disabled={!canNext} aria-label="Напред">
         <ChevronRight className="h-5 w-5" />
       </button>
 
