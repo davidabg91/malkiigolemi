@@ -20,9 +20,25 @@ export const categories = sqliteTable(
     icon: text("icon").notNull().default("ShoppingBasket"),
     sort: integer("sort").notNull().default(0),
     active: integer("active", { mode: "boolean" }).notNull().default(true),
+    /**
+     * The picture on the category's home-page tile: a key of TILE_PRESETS, "auto" (its own newest products),
+     * or the address of a picture the admin uploaded. Null counts as "auto".
+     */
+    tile: text("tile"),
   },
   (t) => [index("categories_parent_idx").on(t.parentId)],
 );
+
+/**
+ * Addresses a category used to have. Renaming a category changes its slug; the old one is kept here so
+ * links shared earlier still lead to it.
+ */
+export const categoryRedirects = sqliteTable("category_redirects", {
+  slug: text("slug").primaryKey(),
+  categoryId: integer("category_id")
+    .notNull()
+    .references(() => categories.id, { onDelete: "cascade" }),
+});
 
 export const brands = sqliteTable("brands", {
   id: integer("id").primaryKey({ autoIncrement: true }),

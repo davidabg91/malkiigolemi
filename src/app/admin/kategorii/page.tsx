@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { CategoryForm } from "@/components/admin/CategoryForm";
 import { IconPicker } from "@/components/admin/IconPicker";
 import { AdminSkeleton, PageTitle, Panel } from "@/components/admin/bits";
-import { DeleteButton, ToggleCategoryActive } from "@/components/admin/RowActions";
+import { DeleteButton, MoveCategory, ToggleCategoryActive } from "@/components/admin/RowActions";
 import { db } from "@/db";
 import { categories, products, type Category } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
@@ -26,6 +26,8 @@ async function AdminCategories() {
     const n = countOf(c.id);
     const hasChildren = all.some((x) => x.parentId === c.id);
     const isActive = c.active !== false;
+    // The categories shown next to this one, in order: the arrows swap it with its neighbours.
+    const siblings = all.filter((x) => x.parentId === c.parentId).map((x) => x.id);
     return (
       <details className={`group border-line ${child ? "border-t" : ""}`}>
         <summary className={`flex min-h-14 list-none items-center gap-3 px-4 py-2 transition hover:bg-sand/60 [&::-webkit-details-marker]:hidden ${child ? "pl-12" : ""}`}>
@@ -36,6 +38,7 @@ async function AdminCategories() {
             {c.name}
             {!isActive && <span className="ml-2 text-xs font-normal text-tomato">(неактивна)</span>}
           </span>
+          <MoveCategory ids={siblings} index={siblings.indexOf(c.id)} name={c.name} />
           <ToggleCategoryActive id={c.id} active={isActive} />
           <span className="text-sm text-ink-soft tabular-nums">{n} прод.</span>
           {n === 0 && !hasChildren ? <DeleteButton id={c.id} name={c.name} kind="category" /> : <span className="w-9" aria-hidden />}
@@ -50,7 +53,7 @@ async function AdminCategories() {
 
   return (
     <>
-      <PageTitle title="Категории" sub="Две нива: основни категории и подкатегории. Натисни ред, за да го редактираш, или иконата, за да я смениш." />
+      <PageTitle title="Категории" sub="Две нива: основни категории и подкатегории. Натисни ред, за да го редактираш, иконата, за да я смениш, или стрелките, за да го преместиш." />
 
       <Panel className="mb-6 p-5">
         <h2 className="mb-4 font-display text-lg font-semibold">Нова категория</h2>

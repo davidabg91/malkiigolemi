@@ -388,7 +388,10 @@ export async function syncCategoriesAndToys(db: Db) {
     .from(schema.categories)
     .where(eq(schema.categories.slug, "igrachki"));
 
-  if (!existingToys) {
+  // A renamed "Играчки" keeps its old address in category_redirects; it must not be created a second time.
+  const [renamedToys] = await db.select().from(schema.categoryRedirects).where(eq(schema.categoryRedirects.slug, "igrachki"));
+
+  if (!existingToys && !renamedToys) {
     // 1. Deactivate "Вода и напитки" and its children
     const [napitki] = await db
       .select()

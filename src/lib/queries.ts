@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, desc, eq, gte, inArray, isNotNull, like, lte, or, sql, type SQL } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/db";
-import { brands, categories, products, type Category } from "@/db/schema";
+import { brands, categories, categoryRedirects, products, type Category } from "@/db/schema";
 import { PER_PAGE, type SortKey } from "./listing";
 import { catalogCacheLife, effectiveOldPrice, effectivePrice, pricedColumns, promoPercent } from "./pricing";
 
@@ -178,6 +178,27 @@ export async function getCategoryPath(slugs: string[]) {
   const sub = root.children.find((c) => c.slug === slugs[1]);
   if (!sub || slugs.length > 2) return null;
   return { root, sub };
+}
+
+/**
+ * Where an address that no longer names a category leads now: a renamed category keeps its old slugs in
+ * `category_redirects`. Returns the current path, or null when the address was never a category.
+ */
+export async function getRenamedCategoryPath(slugs: string[]): Promise<string | null> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CATALOG_TAG);
+
+  if (slugs.length === 0 || slugs.length > 2) return null;
+  const all = await db.select({ id: categories.id, slug: categories.slug, parentId: categories.parentId }).from(categories);
+  const old = await db.select().from(categoryRedirects).where(inArray(categoryRedirects.slug, slugs));
+  const find = (slug: string) => all.find((c) => c.slug === slug) ?? all.find((c) => c.id === old.find((o) => o.slug === slug)?.categoryId);
+  // The last part names the page; the path of a subcategory is rebuilt from its parent.
+  const target = find(slugs[slugs.length - 1]);
+  if (!target) return null;
+  const parent = target.parentId ? all.find((c) => c.id === target.parentId) : null;
+  if (target.parentId && !parent) return null;
+  return parent ? `/kategoria/${parent.slug}/${target.slug}` : `/kategoria/${target.slug}`;
 }
 
 /** A brand by its slug, for the brand page. */

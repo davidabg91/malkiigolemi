@@ -1,12 +1,11 @@
 "use server";
 
-import { and, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, like, ne, sql } from "drizzle-orm";
 import { refresh, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
-import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { db } from "@/db";
-import { brands, categories, ORDER_STATUSES, products, type OrderStatus } from "@/db/schema";
+import { brands, categories, categoryRedirects, ORDER_STATUSES, products, type OrderStatus } from "@/db/schema";
 import { assertAdmin } from "@/lib/auth";
 import { removeImage, saveImage } from "@/lib/images";
 import { PACKS } from "@/lib/listing";
@@ -14,6 +13,7 @@ import { CATALOG_TAG } from "@/lib/queries";
 import { ORIGIN_LABELS, TONES } from "@/lib/site";
 import { searchTextOf, slugify } from "@/lib/slug";
 import { CATEGORY_ICON_NAMES } from "@/lib/icons";
+import { isTileImage, TILE_AUTO, TILE_PRESETS } from "@/lib/tile-art";
 import { setActiveCouriersConfig } from "@/lib/couriers-server";
 import { changeOrderStatus, changeOrdersStatus } from "@/lib/order-status";
 import { notifyRestocked } from "@/lib/stock-alerts";
@@ -300,8 +300,15 @@ const categorySchema = z.object({
   parentId: z.string().trim(),
   tone: z.string().refine((v) => v in TONES, "Невалиден цвят."),
   icon: z.string().refine((v) => CATEGORY_ICON_NAMES.includes(v), "Невалидна икона."),
-  sort: z.coerce.number().int().min(0).max(999),
 });
+
+/** `base` if no category has it, otherwise `base-2`, `base-3` and so on. */
+async function freeCategorySlug(base: string) {
+  const rows = await db.select({ slug: categories.slug }).from(categories).where(like(categories.slug, `${base}%`));
+  const taken = new Set(rows.map((c) => c.slug));
+  if (!taken.has(base)) return base;
+  for (let n = 2; ; n++) if (!taken.has(`${base}-${n}`)) return `${base}-${n}`;
+}
 
 export async function saveCategory(id: number | null, _prev: AdminFormState, formData: FormData): Promise<AdminFormState> {
   await assertAdmin();
@@ -312,7 +319,6 @@ export async function saveCategory(id: number | null, _prev: AdminFormState, for
     parentId: text("parentId"),
     tone: text("tone") || "butter",
     icon: text("icon") || "ShoppingBasket",
-    sort: text("sort") || "0",
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const d = parsed.data;
@@ -329,6 +335,27 @@ export async function saveCategory(id: number | null, _prev: AdminFormState, for
     parentId = parent.id;
   }
 
+  const [current] = id ? await db.select().from(categories).where(eq(categories.id, id)).limit(1) : [];
+  if (id && !current) return { error: "Категорията не съществува." };
+
+  // The picture on the tile: "auto", a ready-made illustration, or an uploaded picture (kept unless a new one comes).
+  const choice = text("tile") || TILE_AUTO;
+  const upload = formData.get("tileImage");
+  const old = current?.tile ?? null;
+  let tile: string;
+  if (choice === "image") {
+    if (upload instanceof File && upload.size > 0) {
+      try {
+        tile = await saveImage(upload);
+      } catch (e) {
+        return { error: e instanceof Error ? e.message : "Снимката не можа да се качи." };
+      }
+    } else if (isTileImage(old)) tile = old;
+    else return { error: "Избери снимка за плочката." };
+  } else if (choice === TILE_AUTO || choice in TILE_PRESETS) tile = choice;
+  else return { error: "Невалидна картинка за плочката." };
+  if (isTileImage(old) && old !== tile) await removeImage(old);
+
   const active = formData.has("active") ? formData.get("active") === "on" : true;
   const values = {
     name: d.name,
@@ -336,17 +363,32 @@ export async function saveCategory(id: number | null, _prev: AdminFormState, for
     parentId,
     tone: d.tone,
     icon: d.icon,
-    sort: d.sort,
     active,
+    tile,
   };
-  if (id) {
-    await db.update(categories).set(values).where(eq(categories.id, id));
+  // The address follows the name. A slug that already is the name, or the name with a number, is left alone.
+  const wanted = slugify(d.name) || `kategoria-${Date.now()}`;
+  const keep = current && (current.slug === wanted || new RegExp(`^${wanted}-\\d+$`).test(current.slug));
+  const slug = keep ? current.slug : await freeCategorySlug(wanted);
+  if (current) {
+    await db.update(categories).set({ ...values, slug }).where(eq(categories.id, current.id));
+    // Links to the old address keep working: it now leads here.
+    if (slug !== current.slug) {
+      await db
+        .insert(categoryRedirects)
+        .values({ slug: current.slug, categoryId: current.id })
+        .onConflictDoUpdate({ target: categoryRedirects.slug, set: { categoryId: current.id } });
+    }
   } else {
-    let slug = slugify(d.name) || `kategoria-${Date.now()}`;
-    const [taken] = await db.select({ id: categories.id }).from(categories).where(eq(categories.slug, slug)).limit(1);
-    if (taken) slug = `${slug}-${randomBytes(2).toString("hex")}`;
-    await db.insert(categories).values({ ...values, slug });
+    // A new category goes last among its neighbours; the arrows in the list move it from there.
+    const [last] = await db
+      .select({ sort: sql<number>`coalesce(max(${categories.sort}), -1)` })
+      .from(categories)
+      .where(parentId ? eq(categories.parentId, parentId) : isNull(categories.parentId));
+    await db.insert(categories).values({ ...values, slug, sort: Number(last.sort) + 1 });
   }
+  // An address in use by a category is no longer an old address of another one.
+  await db.delete(categoryRedirects).where(eq(categoryRedirects.slug, slug));
 
   updateTag(CATALOG_TAG);
   refresh();

@@ -1,9 +1,9 @@
 "use client";
 
-import { Eye, EyeOff, Loader2, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Eye, EyeOff, Loader2, Trash2 } from "lucide-react";
 import { useTransition } from "react";
 import { toast } from "sonner";
-import { deleteCategory, deleteProduct, toggleCategoryActive, toggleProduct } from "@/actions/admin";
+import { deleteCategory, deleteProduct, reorderCategories, toggleCategoryActive, toggleProduct } from "@/actions/admin";
 
 const icon = "grid h-9 w-9 place-items-center rounded-full text-ink-soft transition hover:bg-sand disabled:opacity-50";
 
@@ -76,5 +76,35 @@ export function ToggleCategoryActive({ id, active }: { id: number; active: boole
     >
       {pending ? "..." : active ? "Активна" : "Неактивна"}
     </button>
+  );
+}
+
+/** Up and down arrows in the list of categories: swaps a category with its neighbour and saves the order. */
+export function MoveCategory({ ids, index, name }: { ids: number[]; index: number; name: string }) {
+  const [pending, start] = useTransition();
+  const move = (to: number) => (e: React.MouseEvent) => {
+    // The buttons sit in the row's <summary>; moving must not open or close the row.
+    e.preventDefault();
+    e.stopPropagation();
+    const next = [...ids];
+    [next[index], next[to]] = [next[to], next[index]];
+    start(async () => {
+      try {
+        await reorderCategories(next);
+      } catch {
+        toast.error("Подредбата не беше запазена");
+      }
+    });
+  };
+  const arrow = "grid h-8 w-8 place-items-center rounded-full text-ink-soft transition hover:bg-sand hover:text-ink disabled:opacity-25 disabled:hover:bg-transparent";
+  return (
+    <span className="flex shrink-0 items-center">
+      <button type="button" onClick={move(index - 1)} disabled={pending || index === 0} className={arrow} aria-label={`Премести нагоре: ${name}`} title="Премести нагоре">
+        {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronUp className="h-4 w-4" />}
+      </button>
+      <button type="button" onClick={move(index + 1)} disabled={pending || index === ids.length - 1} className={arrow} aria-label={`Премести надолу: ${name}`} title="Премести надолу">
+        <ChevronDown className="h-4 w-4" />
+      </button>
+    </span>
   );
 }

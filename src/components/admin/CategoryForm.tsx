@@ -7,6 +7,7 @@ import { btn } from "@/components/ui";
 import type { Category } from "@/db/schema";
 import { TONE_LABELS } from "@/lib/icons";
 import { IconPicker } from "./IconPicker";
+import { TilePicker } from "./TilePicker";
 
 export function CategoryForm({ category, roots }: { category?: Category; roots: { id: number; name: string }[] }) {
   const [state, action, pending] = useActionState(saveCategory.bind(null, category?.id ?? null), undefined);
@@ -20,6 +21,11 @@ export function CategoryForm({ category, roots }: { category?: Category; roots: 
           Име
         </label>
         <input id={`name-${uid}`} name="name" required maxLength={80} defaultValue={category?.name} className="field" />
+        {category && (
+          <p className="mt-1 break-all text-xs text-ink-soft">
+            Адрес: …/{category.slug}. Сменя се сам, когато смениш името; старият адрес продължава да води тук.
+          </p>
+        )}
       </div>
       <div className="lg:col-span-2">
         <label htmlFor={`parent-${uid}`} className={label}>
@@ -52,17 +58,14 @@ export function CategoryForm({ category, roots }: { category?: Category; roots: 
         <span className={label}>Икона</span>
         <IconPicker value={category?.icon ?? "ShoppingBasket"} />
       </div>
+      <div className="sm:col-span-2 lg:col-span-6">
+        <TilePicker key={category?.tile ?? "new"} value={category?.tile ?? null} />
+      </div>
       <div className="sm:col-span-2 lg:col-span-4">
         <label htmlFor={`description-${uid}`} className={label}>
           Кратко описание <span className="font-normal text-ink-soft">(по желание)</span>
         </label>
         <input id={`description-${uid}`} name="description" maxLength={300} defaultValue={category?.description ?? ""} className="field" />
-      </div>
-      <div>
-        <label htmlFor={`sort-${uid}`} className={label}>
-          Подредба
-        </label>
-        <input id={`sort-${uid}`} name="sort" inputMode="numeric" defaultValue={category?.sort ?? 0} className="field" />
       </div>
       <div className="flex items-center gap-2.5 pt-6">
         <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
