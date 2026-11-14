@@ -143,6 +143,15 @@
   letter-spacing: -0.015em;
 }
 
+/* On a phone, inside the header's category row once the page is scrolled (see CategoryNav). */
+@custom-variant compact {
+  @media (width < 48rem) {
+    [data-compact="true"] & {
+      @slot;
+    }
+  }
+}
+
 @utility container-shop {
   width: 100%;
   max-width: 84rem;

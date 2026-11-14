@@ -16,9 +16,36 @@ export interface CategoryNavProps {
   isAdmin?: boolean;
 }
 
-/** A category button in the header row: a raised card with the icon above its name. */
+/**
+ * A category button in the header row: a raised card with the icon above its name. On a phone it shrinks
+ * (`compact:`) once the page is scrolled, so the sticky header leaves more of the screen to the products.
+ */
 const chip =
-  "group flex h-[4.25rem] min-w-[5.25rem] max-w-[8rem] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl px-3 text-center text-[0.8rem] font-semibold leading-[1.15] text-ink transition raised hover:brightness-[0.97] active:scale-95";
+  "group flex h-[4.25rem] min-w-[5.25rem] max-w-[8rem] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl px-3 text-center text-[0.8rem] font-semibold leading-[1.15] text-ink transition-all duration-300 ease-out-soft raised hover:brightness-[0.97] active:scale-95 compact:h-[2.6rem] compact:min-w-[3.75rem] compact:max-w-none compact:gap-0.5 compact:whitespace-nowrap compact:rounded-xl compact:px-2.5 compact:text-[0.68rem]";
+const chipIcon = "h-6 w-6 shrink-0 transition-all duration-300 ease-out-soft compact:h-4 compact:w-4";
+
+/** True once the page is scrolled down a little; goes back near the top. The gap between the two stops flicker. */
+function useScrolledDown() {
+  const [down, setDown] = useState(false);
+  useEffect(() => {
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const y = window.scrollY;
+      setDown((was) => (was ? y > 40 : y > 120));
+    };
+    const onScroll = () => {
+      frame ||= requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(frame);
+    };
+  }, []);
+  return down;
+}
 
 // A 14-point starburst around the centre of a 48×48 box.
 const BURST = Array.from({ length: 28 }, (_, i) => {
@@ -83,6 +110,7 @@ export function CategoryNav({
   const [dragOverId, setDragOverId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
   const [savedToast, setSavedToast] = useState(false);
+  const scrolled = useScrolledDown();
 
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startPos = useRef<{ x: number; y: number } | null>(null);
@@ -225,7 +253,12 @@ export function CategoryNav({
         </div>
       )}
 
-      <nav aria-label="Категории" className="no-scrollbar -mx-2 flex items-center gap-2 overflow-x-auto px-2 pb-3 pt-1">
+      <nav
+        aria-label="Категории"
+        // While the admin is arranging the buttons they keep their full size.
+        data-compact={scrolled && !isEditing}
+        className="no-scrollbar -mx-2 flex items-center gap-2 overflow-x-auto px-2 pb-3 pt-1 transition-all duration-300 ease-out-soft compact:gap-1.5 compact:pb-2"
+      >
         {items.map((c, index) => {
           const isOdd = index % 2 !== 0;
           const isCurrentDragging = draggingId === c.id;
@@ -306,7 +339,7 @@ export function CategoryNav({
                   }}
                   className={chip}
                 >
-                  <CategoryIcon name={c.icon} className="h-6 w-6 shrink-0" />
+                  <CategoryIcon name={c.icon} className={chipIcon} />
                   <span>{c.name}</span>
                 </Link>
               )}
@@ -316,11 +349,11 @@ export function CategoryNav({
 
         {/* Static Special Links */}
         <Link href="/promo" className={`${chip} !text-tomato`}>
-          <BadgePercent className="h-6 w-6 shrink-0" strokeWidth={1.75} aria-hidden />
+          <BadgePercent className={chipIcon} strokeWidth={1.75} aria-hidden />
           Промоции
         </Link>
         <Link href="/novi" className={chip}>
-          <NewSign className="-my-1 h-8 w-8 shrink-0" />
+          <NewSign className="-my-1 h-8 w-8 shrink-0 transition-all duration-300 ease-out-soft compact:my-0 compact:h-[1.15rem] compact:w-[1.15rem]" />
           Нови продукти
         </Link>
 
