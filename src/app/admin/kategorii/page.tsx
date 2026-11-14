@@ -3,13 +3,12 @@ import { ChevronDown } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { CategoryForm } from "@/components/admin/CategoryForm";
+import { IconPicker } from "@/components/admin/IconPicker";
 import { AdminSkeleton, PageTitle, Panel } from "@/components/admin/bits";
 import { DeleteButton, ToggleCategoryActive } from "@/components/admin/RowActions";
-import { CategoryIcon } from "@/components/ui";
 import { db } from "@/db";
 import { categories, products, type Category } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
-import { TONES } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Категории" };
 
@@ -24,7 +23,6 @@ async function AdminCategories() {
   const rootOptions = roots.map((r) => ({ id: r.id, name: r.name }));
 
   const Row = ({ c, child }: { c: Category; child?: boolean }) => {
-    const tone = TONES[c.tone] ?? TONES.cream;
     const n = countOf(c.id);
     const hasChildren = all.some((x) => x.parentId === c.id);
     const isActive = c.active !== false;
@@ -32,9 +30,7 @@ async function AdminCategories() {
       <details className={`group border-line ${child ? "border-t" : ""}`}>
         <summary className={`flex min-h-14 list-none items-center gap-3 px-4 py-2 transition hover:bg-sand/60 [&::-webkit-details-marker]:hidden ${child ? "pl-12" : ""}`}>
           {!child && (
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl" style={{ background: tone.bg, color: tone.ink }}>
-              <CategoryIcon name={c.icon} className="h-5 w-5" />
-            </span>
+            <IconPicker value={c.icon} categoryId={c.id} categoryName={c.name} />
           )}
           <span className={`min-w-0 flex-1 truncate ${child ? "" : "font-semibold"} ${!isActive ? "text-ink-soft opacity-60" : ""}`}>
             {c.name}
@@ -54,7 +50,7 @@ async function AdminCategories() {
 
   return (
     <>
-      <PageTitle title="Категории" sub="Две нива: основни категории и подкатегории. Натисни ред, за да го редактираш." />
+      <PageTitle title="Категории" sub="Две нива: основни категории и подкатегории. Натисни ред, за да го редактираш, или иконата, за да я смениш." />
 
       <Panel className="mb-6 p-5">
         <h2 className="mb-4 font-display text-lg font-semibold">Нова категория</h2>

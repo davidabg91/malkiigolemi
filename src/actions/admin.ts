@@ -290,6 +290,15 @@ export async function saveCategory(id: number | null, _prev: AdminFormState, for
   return undefined;
 }
 
+/** The icon picker in the list of categories: saves the chosen icon at once. */
+export async function setCategoryIcon(id: number, icon: string): Promise<void> {
+  await assertAdmin();
+  if (!CATEGORY_ICON_NAMES.includes(icon)) throw new Error("Невалидна икона.");
+  await db.update(categories).set({ icon }).where(eq(categories.id, id));
+  updateTag(CATALOG_TAG);
+  refresh();
+}
+
 export async function toggleCategoryActive(id: number): Promise<void> {
   await assertAdmin();
   await db
