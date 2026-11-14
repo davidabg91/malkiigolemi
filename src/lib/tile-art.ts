@@ -128,11 +128,16 @@ export const TILE_PRESETS: Record<string, ShowcaseItem[]> = {
 };
 
 /**
- * Showcases laid out inside a box of a fixed shape in the tile's bottom-right corner, so a group of
- * several products keeps its arrangement whatever the tile's width (the images are placed relative to the box).
+ * Every illustration is laid out inside a box of a fixed shape in the tile's bottom-right corner, and its
+ * pictures are placed relative to that box. In a wide tile the products therefore stay together in the
+ * corner instead of drifting apart with the tile's width; in a narrow tile the box is simply the tile.
  */
+export const TILE_FRAME = "absolute inset-y-0 right-0 aspect-[1.3/1] max-w-full";
+
+/** Illustrations with more products need a wider box, or one of their own. */
 export const TILE_FRAMES: Record<string, string> = {
   igrachki: "absolute bottom-0 right-11 aspect-[2.3/1] h-[72%] max-w-[calc(100%-3.25rem)] lg:h-[82%]",
+  napitki: "absolute inset-y-0 right-0 aspect-[2.1/1] max-w-full",
 };
 
 /** Names of the illustrations, as the admin sees them. */

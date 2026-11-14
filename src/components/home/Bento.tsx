@@ -4,7 +4,7 @@ import { ProductVisual } from "@/components/product/PackShot";
 import { btn } from "@/components/ui";
 import { optimizedImage } from "@/lib/optimized-image";
 import type { CategoryNode, ProductCardData } from "@/lib/queries";
-import { isTileImage, TILE_FRAMES, TILE_PRESETS } from "@/lib/tile-art";
+import { isTileImage, TILE_FRAME, TILE_FRAMES, TILE_PRESETS } from "@/lib/tile-art";
 
 function plural(n: number) {
   return n === 1 ? "продукт" : "продукта";
@@ -13,7 +13,7 @@ function plural(n: number) {
 /** One of the ready-made illustrations: realistic isolated products in the tile's corner. */
 function CategoryArt({ preset }: { preset: string }) {
   const items = TILE_PRESETS[preset];
-  const frame = TILE_FRAMES[preset];
+  const frame = TILE_FRAMES[preset] ?? TILE_FRAME;
   const fly = "absolute max-w-none drop-shadow-[0_14px_16px_rgb(0_0_0/0.2)] transition-transform duration-500 ease-out-soft";
   const art = items?.map((item, i) => (
     // eslint-disable-next-line @next/next/no-img-element -- sized by the tile's classes; the file itself is resized by optimizedImage
@@ -29,7 +29,7 @@ function CategoryArt({ preset }: { preset: string }) {
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-      {frame ? <div className={frame}>{art}</div> : art}
+      <div className={frame}>{art}</div>
     </div>
   );
 }
@@ -55,7 +55,7 @@ function TileArt({ products }: { products: ProductCardData[] }) {
   const [a, b, c] = products;
   const fly = "absolute drop-shadow-[0_14px_14px_rgb(0_0_0/0.16)] transition-transform duration-500 ease-out-soft";
   return (
-    <div className="pointer-events-none absolute inset-0" aria-hidden>
+    <div className={`pointer-events-none ${TILE_FRAME}`} aria-hidden>
       {c && (
         <ProductVisual product={c} className={`${fly} bottom-[4%] right-[44%] h-[46%] w-auto -rotate-12 group-hover:-translate-x-2 group-hover:-rotate-[16deg]`} />
       )}
