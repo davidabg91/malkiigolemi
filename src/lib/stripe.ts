@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { orders, type Order } from "@/db/schema";
 import { sendOrderPlaced } from "./order-mail";
 import { site } from "./site";
+import { lineName } from "./product-colors";
 
 /**
  * Card payments go through Stripe Checkout: the customer pays on Stripe's page (3D Secure, Apple Pay,
@@ -37,7 +38,7 @@ export async function createCheckout(orderId: number): Promise<string> {
     order.discount > 0
       ? [{ quantity: 1, price_data: { currency: "eur", unit_amount: order.total, product_data: { name: `Поръчка ${order.number}` } } }]
       : [
-          ...order.items.map((i) => ({ quantity: i.qty, price_data: { currency: "eur", unit_amount: i.price, product_data: { name: i.name.slice(0, 250) } } })),
+          ...order.items.map((i) => ({ quantity: i.qty, price_data: { currency: "eur", unit_amount: i.price, product_data: { name: lineName(i.name, i.color).slice(0, 250) } } })),
           ...(order.shipping > 0
             ? [{ quantity: 1, price_data: { currency: "eur", unit_amount: order.shipping, product_data: { name: "Доставка" } } }]
             : []),

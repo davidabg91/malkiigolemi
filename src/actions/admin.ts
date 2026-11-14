@@ -18,6 +18,7 @@ import { setActiveCouriersConfig } from "@/lib/couriers-server";
 import { changeOrderStatus, changeOrdersStatus } from "@/lib/order-status";
 import { notifyRestocked } from "@/lib/stock-alerts";
 import type { CourierId } from "@/lib/couriers";
+import { cleanColors } from "@/lib/product-colors";
 
 export type AdminFormState = { error?: string; fieldErrors?: Record<string, string> } | undefined;
 
@@ -78,6 +79,15 @@ async function nextSku() {
   // Step past a number that is somehow already taken (e.g. typed by hand as "01002").
   while ((await db.select({ id: products.id }).from(products).where(eq(products.sku, String(n))).limit(1)).length) n++;
   return String(n);
+}
+
+/** The product form's list of colours (JSON in a hidden field), tidied; anything unreadable counts as none. */
+function readColors(raw: FormDataEntryValue | null) {
+  try {
+    return cleanColors(JSON.parse(String(raw ?? "[]")));
+  } catch {
+    return [];
+  }
 }
 
 export async function saveProduct(id: number | null, _prev: AdminFormState, formData: FormData): Promise<AdminFormState> {
@@ -171,6 +181,7 @@ export async function saveProduct(id: number | null, _prev: AdminFormState, form
     origin: d.origin || null,
     pack: d.pack,
     color: d.color,
+    colorOptions: readColors(formData.get("colors")),
     image,
     isNew: formData.get("isNew") === "on",
     isFeatured: formData.get("isFeatured") === "on",

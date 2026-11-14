@@ -71,6 +71,8 @@ export const products = sqliteTable(
     image: text("image"),
     pack: text("pack").notNull().default("box"),
     color: text("color").notNull().default("#1F5C3F"),
+    /** Colours the product is sold in, by name; when there are any the customer picks one. Empty = no choice. */
+    colorOptions: text("color_options", { mode: "json" }).$type<string[]>().notNull().default([]),
     origin: text("origin"),
     stock: integer("stock").notNull().default(100),
     isNew: integer("is_new", { mode: "boolean" }).notNull().default(false),
@@ -235,6 +237,8 @@ export const orderItems = sqliteTable(
     sku: text("sku").notNull(),
     price: integer("price").notNull(),
     qty: integer("qty").notNull(),
+    /** The colour the customer chose, for a product sold in several. */
+    color: text("color"),
   },
   (t) => [index("order_items_order_idx").on(t.orderId)],
 );

@@ -7,7 +7,7 @@ import { ProductGrid } from "@/components/product/ProductCard";
 import { btn } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
 import { liveCartData } from "@/actions/cart";
-import { cartTotals, useCart, useFreshCartPrices, useHydrated, useWishlist } from "@/lib/store";
+import { cartTotals, lineKey, useCart, useFreshCartPrices, useHydrated, useWishlist } from "@/lib/store";
 
 function Empty({ icon: Icon, title, text }: { icon: typeof Heart; title: string; text: string }) {
   return (
@@ -45,7 +45,7 @@ export function CartPage() {
       <div className="rounded-tile bg-paper px-5 py-2 shadow-soft sm:px-7">
         <ul className="divide-y divide-line">
           {items.map((i) => (
-            <CartLine key={i.id} item={i} />
+            <CartLine key={lineKey(i)} item={i} />
           ))}
         </ul>
         <div className="border-t border-line py-4 text-right">

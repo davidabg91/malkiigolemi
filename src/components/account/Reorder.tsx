@@ -29,7 +29,7 @@ export function ReorderButton({ orderId }: { orderId: number }) {
             toast.error("Нито един от продуктите не е наличен в момента.");
             return;
           }
-          for (const { qty, ...product } of result.items) add(product, qty);
+          for (const { qty, chosenColor, ...product } of result.items) add(product, qty, chosenColor);
           openCart(true);
           if (result.missing.length > 0) {
             toast("Някои продукти не са налични", { description: result.missing.join(", "), duration: 6000 });

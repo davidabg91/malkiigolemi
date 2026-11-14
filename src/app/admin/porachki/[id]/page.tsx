@@ -23,6 +23,7 @@ import { stripePaymentUrl } from "@/lib/stripe";
 import { findFlag, getFlagIndex } from "@/lib/flags";
 import { formatDate, formatPrice, formatTimestamp } from "@/lib/format";
 import { DELIVERY_METHODS, ORDER_STATUS_LABELS } from "@/lib/site";
+import { ColorDot } from "@/components/product/ColorTag";
 
 export const metadata: Metadata = { title: "Поръчка" };
 
@@ -143,6 +144,14 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
                               </Link>
                             ) : (
                               i.name
+                            )}
+                            {i.color && (
+                              <p className="mt-1">
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-lime px-2.5 py-1 text-xs font-semibold">
+                                  <ColorDot name={i.color} />
+                                  Цвят: {i.color}
+                                </span>
+                              </p>
                             )}
                             <p className="text-xs text-ink-soft">Арт. № {i.sku}</p>
                           </div>

@@ -1,10 +1,12 @@
 "use client";
 
-import { Check, Heart, Minus, Plus, ShoppingBag } from "lucide-react";
+import { Check, Heart, Minus, Palette, Plus, ShoppingBag } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { ProductCardData } from "@/lib/queries";
-import { useCart, useHydrated, useWishlist } from "@/lib/store";
+import { lineKey, useCart, useHydrated, useWishlist } from "@/lib/store";
+import { ColorDot } from "./ColorTag";
 import { NotifyMe } from "./NotifyMe";
 
 export function QtyStepper({
@@ -57,8 +59,21 @@ export function CardAddButton({ product }: { product: ProductCardData }) {
   if (product.stock <= 0) {
     return <span className="rounded-full bg-sand px-3 py-2 text-xs font-medium text-ink-soft">Изчерпан</span>;
   }
+  // Sold in several colours: the colour is chosen on the product's page.
+  if (product.colors && product.colors.length > 0) {
+    return (
+      <Link
+        href={`/produkt/${product.slug}`}
+        className="inline-flex h-11 items-center gap-1.5 rounded-full bg-forest px-3.5 text-xs font-semibold text-white transition duration-200 hover:bg-forest-deep active:scale-95"
+        aria-label={`Избери цвят: ${product.name}`}
+      >
+        <Palette className="h-4 w-4" aria-hidden />
+        Цветове
+      </Link>
+    );
+  }
   if (hydrated && qty > 0) {
-    return <QtyStepper size="sm" qty={qty} onChange={(q) => setQty(product.id, q)} label={product.name} />;
+    return <QtyStepper size="sm" qty={qty} onChange={(q) => setQty(lineKey(product), q)} label={product.name} />;
   }
   return (
     <button
@@ -100,17 +115,59 @@ export function WishlistButton({ product, className = "" }: { product: ProductCa
 export function BuyBox({ product }: { product: ProductCardData }) {
   const [qty, setQty] = useState(1);
   const [done, setDone] = useState(false);
+  const colors = product.colors ?? [];
+  // With one colour there is nothing to choose; with several the customer has to.
+  const [color, setColor] = useState<string | null>(colors.length === 1 ? colors[0] : null);
+  const [missing, setMissing] = useState(false);
   const add = useCart((s) => s.add);
   const openCart = useCart((s) => s.setOpen);
 
   if (product.stock <= 0) return <NotifyMe productId={product.id} />;
   return (
     <div className="flex flex-wrap items-center gap-3">
+      {colors.length > 0 && (
+        <fieldset className="w-full">
+          <legend className="mb-2 text-sm font-medium">
+            Цвят{color ? <span className="text-ink-soft">: {color}</span> : <span className="text-tomato" aria-hidden> *</span>}
+          </legend>
+          <div className="flex flex-wrap gap-2">
+            {colors.map((c) => (
+              <label
+                key={c}
+                className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-full border border-line bg-paper px-4 text-sm font-medium transition hover:border-forest has-[:checked]:border-forest has-[:checked]:bg-forest has-[:checked]:text-white has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-forest has-[:focus-visible]:ring-offset-2"
+              >
+                <input
+                  type="radio"
+                  name={`color-${product.id}`}
+                  value={c}
+                  checked={color === c}
+                  onChange={() => {
+                    setColor(c);
+                    setMissing(false);
+                  }}
+                  className="sr-only"
+                />
+                <ColorDot name={c} className="h-4 w-4" />
+                {c}
+              </label>
+            ))}
+          </div>
+          {missing && (
+            <p role="alert" className="mt-2 text-sm font-medium text-tomato">
+              Избери цвят, за да добавиш продукта в количката.
+            </p>
+          )}
+        </fieldset>
+      )}
       <QtyStepper qty={qty} min={1} onChange={setQty} label={product.name} />
       <button
         type="button"
         onClick={() => {
-          add(product, qty);
+          if (colors.length > 0 && !color) {
+            setMissing(true);
+            return;
+          }
+          add(product, qty, color);
           setDone(true);
           setTimeout(() => setDone(false), 1600);
           openCart(true);

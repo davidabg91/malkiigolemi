@@ -15,6 +15,7 @@ import { sendOrderPlaced } from "@/lib/order-mail";
 import { orderNumber } from "@/lib/orders";
 import { getLoyaltySettings, pointsBalance, redeemable, syncOrderPoints } from "@/lib/loyalty";
 import { pricedColumns } from "@/lib/pricing";
+import { matchColor } from "@/lib/product-colors";
 import { savedOffice } from "@/lib/courier-offices";
 import { CATALOG_TAG, sellable } from "@/lib/queries";
 import { DELIVERY_METHODS, shippingFor, STORE } from "@/lib/site";
@@ -39,7 +40,7 @@ const input = z.object({
   /** Signed-in customers can pay part of the goods with loyalty points. */
   usePoints: z.boolean().optional(),
   items: z
-    .array(z.object({ id: z.number().int().positive(), qty: z.number().int().min(1).max(99) }))
+    .array(z.object({ id: z.number().int().positive(), qty: z.number().int().min(1).max(99), color: z.string().trim().max(40).nullish() }))
     .min(1, "Количката е празна.")
     .max(100),
 }).superRefine((d, ctx) => {
@@ -114,10 +115,27 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
     }
   }
 
-  const lines = rows.map((p) => {
-    const qty = qtyById.get(p.id)!;
-    return { productId: p.id, name: `${p.name} ${p.unit}`.trim(), sku: p.sku, qty, price: unitPriceFor(p, qty) };
-  });
+  // One line per product, or per colour of it for a product sold in several. The price for quantity counts
+  // all colours of the product together.
+  const lines: { productId: number; name: string; sku: string; qty: number; price: number; color: string | null }[] = [];
+  for (const p of rows) {
+    const price = unitPriceFor(p, qtyById.get(p.id)!);
+    const name = `${p.name} ${p.unit}`.trim();
+    if (p.colorOptions.length === 0) {
+      lines.push({ productId: p.id, name, sku: p.sku, qty: qtyById.get(p.id)!, price, color: null });
+      continue;
+    }
+    const qtyByColor = new Map<string, number>();
+    for (const i of data.items) {
+      if (i.id !== p.id) continue;
+      const color = matchColor(p.colorOptions, i.color);
+      if (!color) {
+        return { ok: false, error: `Избери цвят за „${p.name}“ от страницата на продукта и го добави отново в количката.` };
+      }
+      qtyByColor.set(color, (qtyByColor.get(color) ?? 0) + i.qty);
+    }
+    for (const [color, qty] of qtyByColor) lines.push({ productId: p.id, name, sku: p.sku, qty, price, color });
+  }
   const subtotal = lines.reduce((sum, l) => sum + l.price * l.qty, 0);
   const shipping = shippingFor(data.delivery, subtotal, data.courier);
   const session = await getSession();
@@ -175,7 +193,7 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
         if (updated.length === 0) throw new Error("OUT_OF_STOCK");
         if (updated[0].stock === 0) {
           soldOut = true;
-          soldOutNames.push(l.name);
+          if (!soldOutNames.includes(l.name)) soldOutNames.push(l.name);
         }
       }
     });

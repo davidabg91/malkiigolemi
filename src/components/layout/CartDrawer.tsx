@@ -8,12 +8,16 @@ import { QtyStepper } from "@/components/product/AddToCart";
 import { ProductVisual } from "@/components/product/PackShot";
 import { btn } from "@/components/ui";
 import { formatPrice, unitPriceFor } from "@/lib/format";
-import { cartTotals, useCart, useHydrated, type CartItem } from "@/lib/store";
+import { ColorTag } from "@/components/product/ColorTag";
+import { cartTotals, lineKey, useCart, useHydrated, type CartItem } from "@/lib/store";
 
 export function CartLine({ item, onNavigate }: { item: CartItem; onNavigate?: () => void }) {
   const setQty = useCart((s) => s.setQty);
   const remove = useCart((s) => s.remove);
-  const unit = unitPriceFor(item, item.qty);
+  // All colours of a product count together towards its price for quantity.
+  const together = useCart((s) => s.items.reduce((n, i) => (i.id === item.id ? n + i.qty : n), 0));
+  const unit = unitPriceFor(item, together);
+  const key = lineKey(item);
   return (
     <li className="flex gap-3 py-4">
       <Link
@@ -31,15 +35,16 @@ export function CartLine({ item, onNavigate }: { item: CartItem; onNavigate?: ()
           <Link href={`/produkt/${item.slug}`} onClick={onNavigate} className="line-clamp-2 text-sm font-medium leading-snug hover:text-forest">
             {item.name}
           </Link>
-          <button type="button" onClick={() => remove(item.id)} className="-mr-2 -mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink-soft hover:bg-sand hover:text-tomato" aria-label={`Премахни ${item.name}`}>
+          <button type="button" onClick={() => remove(key)} className="-mr-2 -mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink-soft hover:bg-sand hover:text-tomato" aria-label={`Премахни ${item.name}`}>
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
         <p className="text-xs text-ink-soft">
-          {item.brand} · {item.unit}
+          {[item.brand, item.unit].filter(Boolean).join(" · ")}
         </p>
+        {item.chosenColor && <ColorTag name={item.chosenColor} className="mt-1" />}
         <div className="mt-auto flex items-center justify-between pt-2">
-          <QtyStepper size="sm" qty={item.qty} onChange={(q) => setQty(item.id, q)} label={item.name} />
+          <QtyStepper size="sm" qty={item.qty} onChange={(q) => setQty(key, q)} label={item.name} />
           <div className="text-right leading-tight">
             <p className="font-bold tabular-nums">{formatPrice(unit * item.qty)}</p>
             {unit < item.price && <p className="text-xs font-medium text-forest">цена за количество</p>}
@@ -107,7 +112,7 @@ export function CartDrawer() {
                 <div className="flex-1 overflow-y-auto px-5 sm:px-6">
                   <ul className="divide-y divide-line">
                     {items.map((i) => (
-                      <CartLine key={i.id} item={i} onNavigate={close} />
+                      <CartLine key={lineKey(i)} item={i} onNavigate={close} />
                     ))}
                   </ul>
                 </div>
