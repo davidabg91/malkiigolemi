@@ -8,7 +8,7 @@ import { config } from "dotenv";
 config({ path: ".env.local" });
 
 import { migrate } from "drizzle-orm/libsql/migrator";
-import { ensureAdmin, isCatalogEmpty, seedCatalog, syncCategoriesAndToys } from "./catalog";
+import { ensureAdmin, isCatalogEmpty, seedCatalog } from "./catalog";
 
 async function main() {
   // Imported after dotenv so the client sees DATABASE_URL.
@@ -20,10 +20,9 @@ async function main() {
   if (await isCatalogEmpty(db)) {
     const n = await seedCatalog(db);
     console.log(`db:setup — empty database, loaded sample catalogue (${n.products} products)`);
-  } else {
-    const res = await syncCategoriesAndToys(db);
-    console.log(`db:setup — categories sync:`, res.message);
   }
+  // A database that already has a catalogue is left exactly as the admin made it: nothing deleted in the
+  // admin panel is ever created again by a deploy.
 
   console.log(
     (await ensureAdmin(db))
