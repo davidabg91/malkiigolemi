@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { payOrder } from "@/actions/payment";
+import { PushToggle } from "@/components/PushToggle";
 import { StoreLocation } from "@/components/StoreLocation";
 import { btn } from "@/components/ui";
 import { db } from "@/db";
@@ -12,6 +13,7 @@ import { orders } from "@/db/schema";
 import { courierName } from "@/lib/couriers";
 import { formatPrice } from "@/lib/format";
 import { DELIVERY_METHODS, site } from "@/lib/site";
+import { pushConfigured, vapidPublicKey } from "@/lib/push";
 import { awaitsCardPayment, syncPayment } from "@/lib/stripe";
 
 export const metadata: Metadata = { title: "Благодарим за поръчката", robots: { index: false } };
@@ -49,6 +51,10 @@ async function Confirmation({ params, searchParams }: Props) {
           )}
         </p>
       </div>
+
+      {pushConfigured() && order.status !== "cancelled" && order.status !== "delivered" && (
+        <PushToggle publicKey={vapidPublicKey()} orderNumber={order.number} className="mt-6" />
+      )}
 
       {unpaid && (
         <div className="mt-6 rounded-tile border border-line bg-paper p-6 shadow-soft sm:p-8">

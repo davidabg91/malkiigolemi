@@ -6,6 +6,7 @@ import { courierName } from "./couriers";
 import { econtTrackingUrl } from "./econt";
 import { formatPrice } from "./format";
 import { escapeHtml, mailLayout, sendMail } from "./mail";
+import { notifyAdminsNewOrder } from "./push";
 import { COMPANY, DELIVERY_METHODS, site, STORE, WITHDRAWAL_DAYS } from "./site";
 
 /** An order as the e-mails need it; real ones come from the database, samples are made up. */
@@ -83,7 +84,7 @@ ${o.payment === "card" ? "" : `<p>При получаване плащаш ${esc
   return { subject: `Поръчка ${o.number} е изпратена`, html: mailLayout("Поръчката ти пътува", body, { href: `${site.url}/profil`, label: "Проследи в профила" }, legalFooter()) };
 }
 
-/** "Получихме поръчката ти" to the customer, and a short note to the shop. Never throws. */
+/** "Получихме поръчката ти" to the customer, and a short note (and a phone notification) to the shop. Never throws. */
 export async function sendOrderPlaced(orderId: number) {
   const o = await loadOrder(orderId).catch(() => undefined);
   if (!o) return;
@@ -91,6 +92,7 @@ export async function sendOrderPlaced(orderId: number) {
   await sendMail(o.email, toCustomer.subject, toCustomer.html);
   const toShop = shopNewOrderMail(o);
   await sendMail(site.email, toShop.subject, toShop.html, o.email);
+  await notifyAdminsNewOrder(orderId);
 }
 
 /** "Поръчката ти пътува", with the tracking link when there is one. Never throws. */

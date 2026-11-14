@@ -11,6 +11,7 @@ import { StockAlertsList } from "@/components/account/StockAlertsList";
 import { OrderProgress } from "@/components/account/OrderProgress";
 import { ReorderButton } from "@/components/account/Reorder";
 import { ProductVisual } from "@/components/product/PackShot";
+import { PushToggle } from "@/components/PushToggle";
 import { StatusPill } from "@/components/StatusPill";
 import { btn } from "@/components/ui";
 import { db } from "@/db";
@@ -18,6 +19,7 @@ import { orders } from "@/db/schema";
 import { getSession } from "@/lib/auth";
 import { econtTrackingUrl, parseEvents } from "@/lib/econt";
 import { formatDate, formatPrice } from "@/lib/format";
+import { pushConfigured, vapidPublicKey } from "@/lib/push";
 import { syncShipmentsIfStale } from "@/lib/shipments";
 import { withdrawalOpen } from "@/lib/withdrawals";
 import { DELIVERY_METHODS } from "@/lib/site";
@@ -44,7 +46,12 @@ async function Orders() {
     limit: 50,
   });
 
-  const alerts = <StockAlertsList userId={session.uid} />;
+  const alerts = (
+    <>
+      {pushConfigured() && <PushToggle publicKey={vapidPublicKey()} className="mb-6" />}
+      <StockAlertsList userId={session.uid} />
+    </>
+  );
 
   if (list.length === 0) {
     return (

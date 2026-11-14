@@ -91,6 +91,26 @@ export const users = sqliteTable("users", {
   createdAt: createdAt(),
 });
 
+/**
+ * A phone or browser that agreed to receive notifications (Web Push). One row per device: `endpoint` is the
+ * address the push service gave it, `p256dh` and `auth` encrypt what is sent there.
+ */
+export const pushSubscriptions = sqliteTable(
+  "push_subscriptions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    endpoint: text("endpoint").notNull().unique(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    /** The account signed in on the device, when there is one: it then hears about all of that account's orders. */
+    userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+    /** A random value kept in the device's `push_device` cookie, so an order placed without an account finds its device. */
+    token: text("token").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("push_subscriptions_user_idx").on(t.userId), index("push_subscriptions_token_idx").on(t.token)],
+);
+
 export const ORDER_STATUSES = ["new", "confirmed", "shipped", "delivered", "cancelled"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
@@ -130,6 +150,8 @@ export const orders = sqliteTable(
     shippingCost: integer("shipping_cost"),
     /** "site" for checkout orders, "facebook" for orders made in the admin from a Facebook comment. */
     source: text("source").notNull().default("site"),
+    /** The device the order was placed from (or that asked to follow it), told when the status changes. */
+    pushSubscriptionId: integer("push_subscription_id").references(() => pushSubscriptions.id, { onDelete: "set null" }),
     /** Card orders: the Stripe Checkout session last opened for paying it. */
     stripeSessionId: text("stripe_session_id"),
     /** Card orders: the Stripe payment, for refunds and the link to the Stripe dashboard. */
@@ -430,6 +452,7 @@ export type OrderItem = typeof orderItems.$inferSelect;
 export type Setting = typeof settings.$inferSelect;
 export type Withdrawal = typeof withdrawals.$inferSelect;
 export type StorePayment = typeof storePayments.$inferSelect;
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 export type FlaggedContact = typeof flaggedContacts.$inferSelect;
 export type FbPost = typeof fbPosts.$inferSelect;
 export type FbClaim = typeof fbClaims.$inferSelect;
