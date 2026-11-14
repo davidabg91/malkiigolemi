@@ -270,6 +270,16 @@ export function CategoryNav({
         // Centred on a computer; "safe" keeps the first buttons reachable when the row is wider than the screen.
         className="cat-row no-scrollbar -mx-2 flex items-center gap-2 overflow-x-auto px-2 pb-3 pt-1 md:justify-center-safe"
       >
+        {/* Promotions and new products always come first, before the categories. */}
+        <Link href="/promo" className={`${chip} !text-tomato`}>
+          <BadgePercent className={chipIcon} strokeWidth={1.75} aria-hidden />
+          Промоции
+        </Link>
+        <Link href="/novi" className={chip}>
+          <NewSign className="cat-chip-sign -my-1 h-8 w-8 shrink-0" />
+          Нови продукти
+        </Link>
+
         {items.map((c, index) => {
           const isOdd = index % 2 !== 0;
           const isCurrentDragging = draggingId === c.id;
@@ -357,16 +367,6 @@ export function CategoryNav({
             </div>
           );
         })}
-
-        {/* Static Special Links */}
-        <Link href="/promo" className={`${chip} !text-tomato`}>
-          <BadgePercent className={chipIcon} strokeWidth={1.75} aria-hidden />
-          Промоции
-        </Link>
-        <Link href="/novi" className={chip}>
-          <NewSign className="cat-chip-sign -my-1 h-8 w-8 shrink-0" />
-          Нови продукти
-        </Link>
 
         {/* Admin trigger button if not in editing mode */}
         {isAdmin && !isEditing && (
