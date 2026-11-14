@@ -1,5 +1,7 @@
 "use server";
 
+import { after } from "next/server";
+import { notifyAdmins } from "@/lib/push";
 import { eq, sql } from "drizzle-orm";
 import { refresh, updateTag } from "next/cache";
 import { z } from "zod";
@@ -35,6 +37,14 @@ export async function submitReview(productId: number, _prev: ReviewFormState, fo
     });
   updateTag(CATALOG_TAG);
   refresh();
+  after(() =>
+    notifyAdmins("review", {
+      title: `Нов отзив: ${parsed.data.rating} от 5`,
+      body: `${session.name}${parsed.data.body ? `: ${parsed.data.body.slice(0, 110)}` : ""}`,
+      url: "/admin/otzivi",
+      tag: "review",
+    }),
+  );
   return { ok: true };
 }
 

@@ -22,7 +22,21 @@ const registration = async () => (await navigator.serviceWorker.getRegistration(
  * the customer presses the button. On an order's page the device is also tied to that order, so someone
  * who ordered without an account is told when it is confirmed, shipped and delivered.
  */
-export function PushToggle({ publicKey, orderNumber, className = "" }: { publicKey: string; orderNumber?: string; className?: string }) {
+export function PushToggle({
+  publicKey,
+  orderNumber,
+  className = "",
+  audience = "customer",
+  compact = false,
+}: {
+  publicKey: string;
+  orderNumber?: string;
+  className?: string;
+  /** Who the wording is for: a customer following an order, or the shop's admin. */
+  audience?: "customer" | "admin" | "chat";
+  /** One small line with a button instead of a card (inside the chat). */
+  compact?: boolean;
+}) {
   const [state, setState] = useState<State>("checking");
   const [busy, setBusy] = useState(false);
 
@@ -92,6 +106,42 @@ export function PushToggle({ publicKey, orderNumber, className = "" }: { publicK
 
   if (state === "checking" || state === "unsupported") return null;
 
+  const text = {
+    customer: {
+      ask: "Искаш ли известие, когато поръчката тръгне?",
+      askHint: "Ще ти казваме на телефона, когато е потвърдена, изпратена и доставена. Без реклами.",
+      on: "Ще ти кажем, когато поръчката бъде потвърдена, изпратена и доставена.",
+      install: "Известия за поръчката на телефона",
+    },
+    admin: {
+      ask: "Включи известията на това устройство",
+      askHint: "Телефонът ще звъни за нови поръчки, съобщения в чата и всичко, което си избрал по-долу.",
+      on: "Това устройство получава известията, избрани по-долу.",
+      install: "Известия от магазина на телефона",
+    },
+    chat: {
+      ask: "Извести ме, когато отговорите",
+      askHint: "",
+      on: "Ще получиш известие, когато отговорим.",
+      install: "Известие при отговор",
+    },
+  }[audience];
+
+  if (compact) {
+    if (state === "needs-install" || state === "blocked") return null;
+    return state === "on" ? (
+      <p className={`flex items-center gap-1.5 text-xs text-ink-soft ${className}`}>
+        <BellRing className="h-3.5 w-3.5 shrink-0 text-forest" aria-hidden />
+        {text.on}
+      </p>
+    ) : (
+      <button type="button" onClick={turnOn} disabled={busy} className={`inline-flex items-center gap-1.5 text-xs font-semibold text-forest underline-offset-2 hover:underline ${className}`}>
+        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Bell className="h-3.5 w-3.5" aria-hidden />}
+        {text.ask}
+      </button>
+    );
+  }
+
   const box = `flex flex-wrap items-center gap-x-4 gap-y-3 rounded-tile bg-paper p-5 shadow-soft sm:p-6 ${className}`;
   const icon = "grid h-11 w-11 shrink-0 place-items-center rounded-2xl";
 
@@ -102,7 +152,7 @@ export function PushToggle({ publicKey, orderNumber, className = "" }: { publicK
           <Bell className="h-5 w-5" aria-hidden />
         </span>
         <p className="min-w-48 flex-1 text-[0.95rem]">
-          <span className="font-semibold">Известия за поръчката на телефона</span>
+          <span className="font-semibold">{text.install}</span>
           <span className="block text-sm text-ink-soft">На iPhone работят, след като добавиш магазина на началния екран.</span>
         </p>
         <Link href="/prilozhenie" className={btn.sm}>
@@ -120,7 +170,7 @@ export function PushToggle({ publicKey, orderNumber, className = "" }: { publicK
         </span>
         <p className="min-w-48 flex-1 text-[0.95rem]">
           <span className="font-semibold">Известията са спрени за този сайт</span>
-          <span className="block text-sm text-ink-soft">Разреши ги от настройките на телефона или браузъра, за да ти казваме за поръчките.</span>
+          <span className="block text-sm text-ink-soft">Разреши ги от настройките на телефона или браузъра, за да получаваш известия оттук.</span>
         </p>
       </div>
     );
@@ -134,7 +184,7 @@ export function PushToggle({ publicKey, orderNumber, className = "" }: { publicK
         </span>
         <p className="min-w-48 flex-1 text-[0.95rem]">
           <span className="font-semibold">Известията са включени на това устройство</span>
-          <span className="block text-sm text-ink-soft">Ще ти кажем, когато поръчката бъде потвърдена, изпратена и доставена.</span>
+          <span className="block text-sm text-ink-soft">{text.on}</span>
         </p>
         <button type="button" onClick={turnOff} disabled={busy} className={btn.sm}>
           {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
@@ -150,8 +200,8 @@ export function PushToggle({ publicKey, orderNumber, className = "" }: { publicK
         <Bell className="h-5 w-5" aria-hidden />
       </span>
       <p className="min-w-48 flex-1 text-[0.95rem]">
-        <span className="font-semibold">Искаш ли известие, когато поръчката тръгне?</span>
-        <span className="block text-sm text-ink-soft">Ще ти казваме на телефона, когато е потвърдена, изпратена и доставена. Без реклами.</span>
+        <span className="font-semibold">{text.ask}</span>
+        <span className="block text-sm text-ink-soft">{text.askHint}</span>
       </p>
       <button type="button" onClick={turnOn} disabled={busy} className={btn.smPrimary}>
         {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Bell className="h-4 w-4" aria-hidden />}

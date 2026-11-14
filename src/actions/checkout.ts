@@ -9,7 +9,7 @@ import { db } from "@/db";
 import { orderItems, orders, products, users } from "@/db/schema";
 import { recordOrder, visitorOf } from "@/lib/analytics";
 import { getSession } from "@/lib/auth";
-import { currentPushDeviceId } from "@/lib/push";
+import { currentPushDeviceId, notifyAdmins } from "@/lib/push";
 import { unitPriceFor } from "@/lib/format";
 import { sendOrderPlaced } from "@/lib/order-mail";
 import { orderNumber } from "@/lib/orders";
@@ -126,6 +126,7 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
   const number = orderNumber();
 
   let soldOut = false;
+  const soldOutNames: string[] = [];
   let orderId = 0;
   try {
     await db.transaction(async (tx) => {
@@ -172,7 +173,10 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
           .where(and(eq(products.id, l.productId), gte(products.stock, l.qty)))
           .returning({ stock: products.stock });
         if (updated.length === 0) throw new Error("OUT_OF_STOCK");
-        if (updated[0].stock === 0) soldOut = true;
+        if (updated[0].stock === 0) {
+          soldOut = true;
+          soldOutNames.push(l.name);
+        }
       }
     });
   } catch (e) {
@@ -204,7 +208,10 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
       .where(eq(users.id, session.uid))
       .catch(() => {});
   }
-  if (soldOut) updateTag(CATALOG_TAG);
+  if (soldOut) {
+    updateTag(CATALOG_TAG);
+    after(() => notifyAdmins("soldOut", { title: "Изчерпан продукт", body: soldOutNames.join(", ").slice(0, 160), url: "/admin/produkti?stock=low", tag: "sold-out" }));
+  }
   // For the visitor statistics: this visit ended in an order.
   const visitor = session?.role === "admin" ? null : visitorOf(await headers());
   if (visitor) after(() => recordOrder(visitor, subtotal + shipping));

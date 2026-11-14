@@ -127,6 +127,46 @@ export const pushSubscriptions = sqliteTable(
   (t) => [index("push_subscriptions_user_idx").on(t.userId), index("push_subscriptions_token_idx").on(t.token)],
 );
 
+/**
+ * A conversation between a visitor and the shop in the live chat. A signed-in customer's thread belongs to
+ * the account; a guest's is found again through the `chat_id` cookie that holds `token`.
+ */
+export const chatThreads = sqliteTable(
+  "chat_threads",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    token: text("token").notNull().unique(),
+    userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+    /** What a guest called themselves; an account's name is read from the account. */
+    name: text("name"),
+    /** The device the customer writes from, told when the shop answers (if it has notifications on). */
+    pushSubscriptionId: integer("push_subscription_id").references(() => pushSubscriptions.id, { onDelete: "set null" }),
+    /** Messages the shop has not opened yet; shown as the admin's badge. */
+    adminUnread: integer("admin_unread").notNull().default(0),
+    /** Answers the customer has not seen yet; shown as a dot on the chat button. */
+    customerUnread: integer("customer_unread").notNull().default(0),
+    lastBody: text("last_body"),
+    lastFrom: text("last_from", { enum: ["customer", "admin"] }),
+    lastMessageAt: integer("last_message_at", { mode: "timestamp" }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("chat_threads_user_idx").on(t.userId), index("chat_threads_last_idx").on(t.lastMessageAt)],
+);
+
+export const chatMessages = sqliteTable(
+  "chat_messages",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    threadId: integer("thread_id")
+      .notNull()
+      .references(() => chatThreads.id, { onDelete: "cascade" }),
+    sender: text("sender", { enum: ["customer", "admin"] }).notNull(),
+    body: text("body").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("chat_messages_thread_idx").on(t.threadId)],
+);
+
 export const ORDER_STATUSES = ["new", "confirmed", "shipped", "delivered", "cancelled"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
@@ -469,6 +509,8 @@ export type Setting = typeof settings.$inferSelect;
 export type Withdrawal = typeof withdrawals.$inferSelect;
 export type StorePayment = typeof storePayments.$inferSelect;
 export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
+export type ChatThread = typeof chatThreads.$inferSelect;
+export type ChatMessage = typeof chatMessages.$inferSelect;
 export type FlaggedContact = typeof flaggedContacts.$inferSelect;
 export type FbPost = typeof fbPosts.$inferSelect;
 export type FbClaim = typeof fbClaims.$inferSelect;
