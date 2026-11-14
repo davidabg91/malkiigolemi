@@ -1,17 +1,6 @@
-import {
-  Baby,
-  Coffee,
-  Flower2,
-  Gamepad2,
-  GlassWater,
-  Lamp,
-  ShoppingBasket,
-  SprayCan,
-  UtensilsCrossed,
-  type LucideIcon,
-} from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { CATEGORY_ICONS } from "./category-icons";
 
 const base =
   "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition duration-200 active:scale-[.98] disabled:pointer-events-none disabled:opacity-50";
@@ -29,20 +18,10 @@ export const btn = {
   smDanger: `${base} h-10 border border-line bg-paper px-4 text-sm text-tomato hover:border-tomato`,
 };
 
-export const CATEGORY_ICONS: Record<string, LucideIcon> = {
-  UtensilsCrossed,
-  Coffee,
-  GlassWater,
-  Gamepad2,
-  SprayCan,
-  Flower2,
-  Baby,
-  Lamp,
-  ShoppingBasket,
-};
+export { CATEGORY_ICONS };
 
 export function CategoryIcon({ name, className }: { name: string; className?: string }) {
-  const Icon = CATEGORY_ICONS[name] ?? ShoppingBasket;
+  const Icon = CATEGORY_ICONS[name] ?? CATEGORY_ICONS.ShoppingBasket;
   return <Icon className={className} aria-hidden strokeWidth={1.75} />;
 }
 

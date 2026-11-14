@@ -5,7 +5,8 @@ import { useActionState } from "react";
 import { saveCategory } from "@/actions/admin";
 import { btn } from "@/components/ui";
 import type { Category } from "@/db/schema";
-import { CATEGORY_ICON_LABELS, CATEGORY_ICON_NAMES, TONE_LABELS } from "@/lib/icons";
+import { TONE_LABELS } from "@/lib/icons";
+import { IconPicker } from "./IconPicker";
 
 export function CategoryForm({ category, roots }: { category?: Category; roots: { id: number; name: string }[] }) {
   const [state, action, pending] = useActionState(saveCategory.bind(null, category?.id ?? null), undefined);
@@ -48,16 +49,8 @@ export function CategoryForm({ category, roots }: { category?: Category; roots: 
         </select>
       </div>
       <div>
-        <label htmlFor={`icon-${uid}`} className={label}>
-          Икона
-        </label>
-        <select id={`icon-${uid}`} name="icon" defaultValue={category?.icon ?? "ShoppingBasket"} className="field">
-          {CATEGORY_ICON_NAMES.map((k) => (
-            <option key={k} value={k}>
-              {CATEGORY_ICON_LABELS[k]}
-            </option>
-          ))}
-        </select>
+        <span className={label}>Икона</span>
+        <IconPicker value={category?.icon ?? "ShoppingBasket"} />
       </div>
       <div className="sm:col-span-2 lg:col-span-4">
         <label htmlFor={`description-${uid}`} className={label}>
