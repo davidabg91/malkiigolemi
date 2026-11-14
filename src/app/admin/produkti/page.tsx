@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { AdminSkeleton, PageTitle, Panel, td, th } from "@/components/admin/bits";
+import { BULK_PRODUCTS_FORM, BulkProductsBar, SelectAllProducts } from "@/components/admin/BulkProducts";
 import { DeleteButton, ToggleActive } from "@/components/admin/RowActions";
 import { ProductVisual } from "@/components/product/PackShot";
 import { btn } from "@/components/ui";
@@ -104,6 +105,8 @@ async function AdminProducts({ searchParams }: Pick<PageProps<"/admin/produkti">
         )}
       </form>
 
+      {rows.length > 0 && <BulkProductsBar />}
+
       <Panel>
         {rows.length === 0 ? (
           <p className="px-5 py-14 text-center text-ink-soft">Няма продукти по тези критерии.</p>
@@ -112,6 +115,9 @@ async function AdminProducts({ searchParams }: Pick<PageProps<"/admin/produkti">
             <table className="w-full min-w-[48rem] text-[0.95rem]">
               <thead>
                 <tr>
+                  <th className={`${th} w-10`}>
+                    <SelectAllProducts />
+                  </th>
                   <th className={th}>Продукт</th>
                   <th className={th}>Категория</th>
                   <th className={`${th} text-right`}>Цена</th>
@@ -122,6 +128,9 @@ async function AdminProducts({ searchParams }: Pick<PageProps<"/admin/produkti">
               <tbody className="divide-y divide-line">
                 {rows.map(({ product: p, brand, category }) => (
                   <tr key={p.id} className={`transition hover:bg-sand/60 ${p.active ? "" : "opacity-55"}`}>
+                    <td className={td}>
+                      <input type="checkbox" form={BULK_PRODUCTS_FORM} name="ids" value={p.id} aria-label={`Избери: ${p.name}`} className="block h-5 w-5 accent-[#33484b]" />
+                    </td>
                     <td className={td}>
                       <div className="flex items-center gap-3">
                         <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-sand">

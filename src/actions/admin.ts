@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { refresh, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { randomBytes } from "node:crypto";
@@ -194,6 +194,20 @@ export async function deleteProduct(id: number) {
   await removeImage(row?.image ?? null);
   updateTag(CATALOG_TAG);
   refresh();
+}
+
+export type BulkDeleteState = { ok?: boolean; deleted?: number; error?: string } | undefined;
+
+/** "Изтрий избраните" above the products table: removes every ticked product and its photo. */
+export async function deleteProducts(_prev: BulkDeleteState, formData: FormData): Promise<BulkDeleteState> {
+  await assertAdmin();
+  const ids = [...new Set(formData.getAll("ids").map(Number))].filter((n) => Number.isInteger(n) && n > 0).slice(0, 200);
+  if (ids.length === 0) return { error: "Не са избрани продукти." };
+  const rows = await db.delete(products).where(inArray(products.id, ids)).returning({ image: products.image });
+  await Promise.all(rows.map((r) => removeImage(r.image ?? null)));
+  updateTag(CATALOG_TAG);
+  refresh();
+  return { ok: true, deleted: rows.length };
 }
 
 export async function toggleProduct(id: number) {
