@@ -17,6 +17,18 @@ const nextConfig: NextConfig = {
     // Keep this under Vercel's 4.5 MB request limit.
     serverActions: { bodySizeLimit: "4mb" },
   },
+  async headers() {
+    return [
+      {
+        // The service worker must never be served stale, or phones keep an old one.
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+        ],
+      },
+    ];
+  },
   turbopack: {
     rules: {
       "*.css": {

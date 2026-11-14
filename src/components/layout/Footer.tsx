@@ -9,6 +9,7 @@ export const INFO_PAGES = [
   { href: "/za-nas", label: "За нас" },
   { href: "/kontakti", label: "Контакти" },
   { href: "/dostavka", label: "Доставка и плащане" },
+  { href: "/prilozhenie", label: "Приложение за телефона" },
   { href: "/usloviya", label: "Общи условия" },
   { href: "/poveritelnost", label: "Поверителност" },
   { href: "/otkaz", label: "Откажете се от договора тук" },

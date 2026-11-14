@@ -3,6 +3,7 @@ import { CartDrawer } from "@/components/layout/CartDrawer";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { RouteScrollTop } from "@/components/layout/RouteScrollTop";
+import { InstallBanner } from "@/components/InstallApp";
 import { Tracker } from "@/components/Tracker";
 
 export default function ShopLayout({ children }: LayoutProps<"/">) {
@@ -11,6 +12,7 @@ export default function ShopLayout({ children }: LayoutProps<"/">) {
       <Suspense fallback={null}>
         <RouteScrollTop />
         <Tracker />
+        <InstallBanner />
       </Suspense>
       <a
         href="#main"
