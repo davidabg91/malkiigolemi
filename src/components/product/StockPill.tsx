@@ -10,7 +10,7 @@ const STYLES: Record<StockState, { pill: string; dot: string }> = {
 
 /**
  * A product's status for the customer: "Налично", "Доставка 7 дни", "Очаква се" or "Изчерпан", with a dot
- * that glows for the first and the third.
+ * that glows for the first and the third (and pulses on the large pill of a product's page).
  * `notable` shows it only when there is something to know beyond "on hand" (the cart, the checkout);
  * `large` is the product page's version, where `children` may replace the short label.
  */
@@ -38,7 +38,10 @@ export function StockPill({
         large ? "gap-2.5 rounded-2xl px-4 py-2.5 text-sm" : "gap-1.5 rounded-xl px-2 py-0.5 text-xs leading-snug"
       } ${className}`}
     >
-      <span className={`relative shrink-0 rounded-full bg-current ${style.dot} ${large ? "h-2.5 w-2.5" : "h-2 w-2"}`} aria-hidden />
+      <span
+        className={`relative shrink-0 rounded-full bg-current ${style.dot} ${large ? `h-2.5 w-2.5 ${style.dot.includes("glow-dot") ? "glow-pulse" : ""}` : "h-2 w-2"}`}
+        aria-hidden
+      />
       {/* A word joiner after the dash keeps a range such as "5–7" on one line. */}
       <span className={large ? "" : "min-w-0 text-balance [overflow-wrap:anywhere]"}>
         {children ?? label.replace(/([–—-])(?=\d)/g, "$1⁠")}

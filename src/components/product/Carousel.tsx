@@ -158,12 +158,18 @@ export function Carousel({ children, label, autoplay = false, rows = 1 }: { chil
         {/*
           The space between cards is each slide's own left padding (taken back by the row's negative margin),
           not a flex gap: a looping row needs the space to travel with the slide. The carousel moves the
-          row with a 3D transform, which already gives it its own layer; no `will-change` here, because that
-          would change what the carousel measures the slides against.
+          row with a 3D transform; no `will-change` on the row itself, because that would change what the
+          carousel measures the slides against.
+
+          `will-change-transform` on each slide is what keeps the movement smooth. Without it Chrome paints
+          every card again (shadows and all) on each frame, to keep the text sharp at the row's new
+          in-between-pixels position: measured on the live home page, 52 frames a second with 35 ms
+          stutters while moving, against 150 and none with it. A slide marked this way is painted once and
+          then only moved.
         */}
         <ul className="-ml-3 flex touch-pan-y sm:-ml-4">
           {columns.map((column, i) => (
-            <li key={i} className="w-[48%] shrink-0 pl-3 sm:w-[32%] sm:pl-4 md:w-1/4 xl:w-1/5">
+            <li key={i} className="w-[48%] shrink-0 pl-3 will-change-transform sm:w-[32%] sm:pl-4 md:w-1/4 xl:w-1/5">
               {/*
                 Equal rows, so the cards line up across columns whatever their own height. The one column is
                 spelled out (`grid-cols-1` is `minmax(0, 1fr)`): left to itself it grows to the widest thing
