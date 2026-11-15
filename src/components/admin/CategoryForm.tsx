@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { saveCategory } from "@/actions/admin";
 import { btn } from "@/components/ui";
 import type { Category } from "@/db/schema";
@@ -9,25 +9,31 @@ import { TONE_LABELS } from "@/lib/icons";
 import { IconPicker } from "./IconPicker";
 import { TilePicker } from "./TilePicker";
 
+/**
+ * Laid out for a phone first, where the admins work: two columns, with the short fields side by side and
+ * the save button next to "Активна", so the whole form fits on about one screen.
+ */
 export function CategoryForm({ category, roots }: { category?: Category; roots: { id: number; name: string }[] }) {
   const [state, action, pending] = useActionState(saveCategory.bind(null, category?.id ?? null), undefined);
+  // Only a main category has a tile on the home page, so the picture is offered while no parent is typed.
+  const [parent, setParent] = useState(() => roots.find((r) => r.id === category?.parentId)?.name ?? "");
   const uid = category?.id ?? "new";
   const label = "mb-1.5 block text-sm font-medium";
 
   return (
-    <form action={action} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
-      <div className="lg:col-span-2">
+    <form action={action} className="grid grid-cols-2 gap-x-3 gap-y-4 sm:gap-4 lg:grid-cols-6">
+      <div className="col-span-2 sm:col-span-1 lg:col-span-2">
         <label htmlFor={`name-${uid}`} className={label}>
           Име
         </label>
         <input id={`name-${uid}`} name="name" required maxLength={80} defaultValue={category?.name} className="field" />
         {category && (
-          <p className="mt-1 break-all text-xs text-ink-soft">
+          <p className="mt-1 text-xs text-ink-soft [overflow-wrap:anywhere]">
             Адрес: …/{category.slug}. Сменя се сам, когато смениш името; старият адрес продължава да води тук.
           </p>
         )}
       </div>
-      <div className="lg:col-span-2">
+      <div className="col-span-2 sm:col-span-1 lg:col-span-2">
         <label htmlFor={`parent-${uid}`} className={label}>
           Родител
         </label>
@@ -38,7 +44,8 @@ export function CategoryForm({ category, roots }: { category?: Category; roots: 
           list={`parents-${uid}`}
           maxLength={80}
           autoComplete="off"
-          defaultValue={roots.find((r) => r.id === category?.parentId)?.name ?? ""}
+          value={parent}
+          onChange={(e) => setParent(e.target.value)}
           placeholder="празно = основна категория"
           className="field"
         />
@@ -67,23 +74,20 @@ export function CategoryForm({ category, roots }: { category?: Category; roots: 
         <span className={label}>Икона</span>
         <IconPicker value={category?.icon ?? "ShoppingBasket"} />
       </div>
-      <div className="sm:col-span-2 lg:col-span-6">
-        <TilePicker key={category?.tile ?? "new"} value={category?.tile ?? null} />
-      </div>
-      <div className="sm:col-span-2 lg:col-span-4">
+      {!parent.trim() && (
+        <div className="col-span-2 lg:col-span-6">
+          <TilePicker key={category?.tile ?? "new"} value={category?.tile ?? null} />
+        </div>
+      )}
+      <div className="col-span-2 lg:col-span-4">
         <label htmlFor={`description-${uid}`} className={label}>
           Кратко описание <span className="font-normal text-ink-soft">(по желание)</span>
         </label>
         <input id={`description-${uid}`} name="description" maxLength={300} defaultValue={category?.description ?? ""} className="field" />
       </div>
-      <div className="flex items-center gap-2.5 pt-6">
-        <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
-          <input
-            type="checkbox"
-            name="active"
-            defaultChecked={category?.active ?? true}
-            className="h-4 w-4 rounded accent-[#33484b]"
-          />
+      <div className="flex min-h-12 items-center self-end">
+        <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm font-medium">
+          <input type="checkbox" name="active" defaultChecked={category?.active ?? true} className="h-5 w-5 rounded accent-[#33484b]" />
           <span>Активна</span>
         </label>
       </div>
@@ -94,7 +98,7 @@ export function CategoryForm({ category, roots }: { category?: Category; roots: 
         </button>
       </div>
       {state?.error && (
-        <p role="alert" className="rounded-2xl bg-tomato/10 px-4 py-3 text-sm font-medium text-tomato sm:col-span-2 lg:col-span-6">
+        <p role="alert" className="col-span-2 rounded-2xl bg-tomato/10 px-4 py-3 text-sm font-medium text-tomato lg:col-span-6">
           {state.error}
         </p>
       )}

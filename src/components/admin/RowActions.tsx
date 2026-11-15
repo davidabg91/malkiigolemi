@@ -23,7 +23,8 @@ export function ToggleActive({ id, active, name }: { id: number; active: boolean
   );
 }
 
-export function DeleteButton({ id, name, kind }: { id: number; name: string; kind: "product" | "category" }) {
+/** With `label` it is a button with words (the category's panel on a phone) instead of a round icon. */
+export function DeleteButton({ id, name, kind, label }: { id: number; name: string; kind: "product" | "category"; label?: string }) {
   const [pending, start] = useTransition();
   return (
     <button
@@ -40,11 +41,16 @@ export function DeleteButton({ id, name, kind }: { id: number; name: string; kin
           }
         });
       }}
-      className={`${icon} hover:text-tomato`}
+      className={
+        label
+          ? "inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold text-tomato transition hover:bg-tomato/10 active:scale-95 disabled:opacity-50"
+          : `${icon} hover:text-tomato`
+      }
       aria-label={`Изтрий: ${name}`}
       title="Изтрий"
     >
       {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+      {label}
     </button>
   );
 }
@@ -67,7 +73,7 @@ export function ToggleCategoryActive({ id, active }: { id: number; active: boole
           }
         });
       }}
-      className={`rounded-full px-2.5 py-0.5 text-xs font-semibold transition ${
+      className={`inline-flex h-8 shrink-0 items-center rounded-full px-3 text-xs font-semibold transition active:scale-95 sm:h-6 sm:px-2.5 ${
         active
           ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
           : "bg-gray-200 text-gray-700 hover:bg-gray-300"
@@ -96,14 +102,14 @@ export function MoveCategory({ ids, index, name }: { ids: number[]; index: numbe
       }
     });
   };
-  const arrow = "grid h-8 w-8 place-items-center rounded-full text-ink-soft transition hover:bg-sand hover:text-ink disabled:opacity-25 disabled:hover:bg-transparent";
+  const arrow = "grid h-11 w-10 place-items-center rounded-full active:bg-sand sm:h-8 sm:w-8 text-ink-soft transition hover:bg-sand hover:text-ink disabled:opacity-25 disabled:hover:bg-transparent";
   return (
     <span className="flex shrink-0 items-center">
       <button type="button" onClick={move(index - 1)} disabled={pending || index === 0} className={arrow} aria-label={`Премести нагоре: ${name}`} title="Премести нагоре">
-        {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronUp className="h-4 w-4" />}
+        {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronUp className="h-5 w-5 sm:h-4 sm:w-4" />}
       </button>
       <button type="button" onClick={move(index + 1)} disabled={pending || index === ids.length - 1} className={arrow} aria-label={`Премести надолу: ${name}`} title="Премести надолу">
-        <ChevronDown className="h-4 w-4" />
+        <ChevronDown className="h-5 w-5 sm:h-4 sm:w-4" />
       </button>
     </span>
   );
