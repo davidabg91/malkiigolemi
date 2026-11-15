@@ -131,9 +131,9 @@ export async function Listing({
         // A filter that would keep everything, or nothing, is not offered.
         only: (
           [
+            ["stock", "Налични сега", result.facets.stock],
             ["promo", "С намаление", result.facets.promo],
             ["new", "Нови", result.facets.fresh],
-            ["stock", "В наличност", result.facets.stock],
           ] as const
         )
           .filter(([key, , n]) => (n > 0 && n < result.facets.scopeTotal) || f.only.includes(key))

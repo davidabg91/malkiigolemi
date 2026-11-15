@@ -14,7 +14,7 @@ export type Facets = {
   subcategories: boolean;
   /** Products on the page before any filter. */
   scopeTotal: number;
-  /** "Show only" switches worth offering: discounted, new, in stock. */
+  /** "Show only" switches worth offering: on hand right now, discounted, new. */
   only: { key: string; label: string; n: number }[];
   brands: { slug: string; name: string; n: number }[];
   origins: { origin: string | null; n: number }[];
@@ -153,6 +153,15 @@ export function ListingShell({
   const filters = (
     <div className="space-y-7">
       {nav}
+      {/* First in the panel: "only what is on hand" is the question shoppers ask most. */}
+      {facets.only.length > 0 && (
+        <fieldset>
+          <legend className="mb-2 text-sm font-semibold uppercase tracking-[0.14em]">Покажи само</legend>
+          {facets.only.map((o) => (
+            <CheckRow key={o.key} label={o.label} count={o.n} checked={current.only.includes(o.key)} onChange={() => go({ only: toggle(current.only, o.key) })} />
+          ))}
+        </fieldset>
+      )}
       {hasCategories && (
         <fieldset>
           <legend className="mb-2 text-sm font-semibold uppercase tracking-[0.14em]">{facets.subcategories ? "Подкатегория" : "Категория"}</legend>
@@ -164,14 +173,6 @@ export function ListingShell({
               checked={current.categories.includes(c.slug)}
               onChange={() => go({ categories: toggle(current.categories, c.slug) })}
             />
-          ))}
-        </fieldset>
-      )}
-      {facets.only.length > 0 && (
-        <fieldset>
-          <legend className="mb-2 text-sm font-semibold uppercase tracking-[0.14em]">Покажи само</legend>
-          {facets.only.map((o) => (
-            <CheckRow key={o.key} label={o.label} count={o.n} checked={current.only.includes(o.key)} onChange={() => go({ only: toggle(current.only, o.key) })} />
           ))}
         </fieldset>
       )}
