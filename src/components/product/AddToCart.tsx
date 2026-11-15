@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { ProductCardData } from "@/lib/queries";
+import { availabilityOf } from "@/lib/availability";
 import { colorChoices } from "@/lib/product-colors";
 import { lineKey, useCart, useHydrated, useWishlist } from "@/lib/store";
 import { ColorDot } from "./ColorTag";
@@ -58,6 +59,8 @@ export function CardAddButton({ product }: { product: ProductCardData }) {
   const setQty = useCart((s) => s.setQty);
 
   if (product.stock <= 0) {
+    // Goods on their way already say "Очаква се" on the card.
+    if (availabilityOf(product) === "expected") return null;
     return <span className="rounded-full bg-sand px-3 py-2 text-xs font-medium text-ink-soft">Изчерпан</span>;
   }
   // Sold in several colours: the colour is chosen on the product's page.

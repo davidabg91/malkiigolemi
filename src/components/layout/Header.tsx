@@ -5,7 +5,7 @@ import { FacebookIcon } from "@/components/ui";
 import { getAdminAlerts } from "@/lib/admin-alerts";
 import { getSession } from "@/lib/auth";
 import { getCategoryTree } from "@/lib/queries";
-import { site } from "@/lib/site";
+import { FREE_BOXNOW_LINE, site } from "@/lib/site";
 import { HeaderClient, type MenuCategory } from "./HeaderClient";
 
 /**
@@ -39,7 +39,7 @@ export async function Header() {
         <div className="container-shop flex h-9 items-center justify-center text-[0.8rem] font-medium sm:justify-between">
           <p className="flex items-center gap-2">
             <Truck className="h-4 w-4" aria-hidden />
-            <span className="whitespace-nowrap">Безплатна доставка с BoxNow</span>
+            <span className="whitespace-nowrap">{FREE_BOXNOW_LINE}</span>
           </p>
           <a
             href={site.facebookUrl}

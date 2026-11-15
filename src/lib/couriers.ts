@@ -53,7 +53,7 @@ export const COURIERS: Record<CourierId, CourierMeta> = {
   boxnow: {
     id: "boxnow",
     name: "Box Now",
-    tagline: "Безплатна доставка · 24/7 соларни автомати",
+    tagline: "Безплатно над 40 € · 24/7 соларни автомати",
     badge: "Безплатна",
     color: "#15803d",
     bgLight: "#edfbf2",

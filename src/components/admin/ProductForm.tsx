@@ -6,8 +6,10 @@ import { startTransition, useActionState, useId, useState, type ReactNode } from
 import { saveProduct } from "@/actions/admin";
 import { PackShot } from "@/components/product/PackShot";
 import { btn } from "@/components/ui";
+import { StockPill } from "@/components/product/StockPill";
 import { ColorOptions } from "./ColorOptions";
 import type { Brand, Product } from "@/db/schema";
+import { AVAILABILITY_OPTIONS, availabilityOf, type Availability } from "@/lib/availability";
 import { MAX_IMAGE_MB, PACKS } from "@/lib/listing";
 import { colorChoices, DELIVERY_TIME_PRESETS, MAX_DELIVERY_TIME_LENGTH } from "@/lib/product-colors";
 import { megabytes, replaceChosenFile, shrinkImage, UPLOAD_LIMIT } from "@/lib/shrink-image";
@@ -47,6 +49,8 @@ export function ProductForm({
   const [initialColors] = useState(() => colorChoices({ colors: product?.colorOptions, colorStock: product?.colorStock }));
   // With colours the product has as many as its colours together; null = no colours, the number is typed.
   const [colorTotal, setColorTotal] = useState<number | null>(() => (initialColors.length > 0 ? initialColors.reduce((sum, c) => sum + c.stock, 0) : null));
+  const [availability, setAvailability] = useState<Availability>(() => (product ? availabilityOf(product) : "available"));
+  const [deliveryTime, setDeliveryTime] = useState(product?.deliveryTime ?? "");
   const [imageError, setImageError] = useState("");
   const [imageNote, setImageNote] = useState("");
   const [shrinking, setShrinking] = useState(false);
@@ -177,32 +181,60 @@ export function ProductForm({
               </p>
             </div>
           )}
-          <div className="sm:col-span-2">
-            <label htmlFor={`${uid}-deliveryTime`} className="mb-1.5 block text-sm font-medium">
-              Срок за доставка
-            </label>
-            <input
-              id={`${uid}-deliveryTime`}
-              name="deliveryTime"
-              list={`${uid}-deliveryTimes`}
-              defaultValue={product?.deliveryTime ?? ""}
-              maxLength={MAX_DELIVERY_TIME_LENGTH}
-              placeholder="напр. 7–10 работни дни"
-              className="field"
-              aria-invalid={errors.deliveryTime ? true : undefined}
-              aria-describedby={`${uid}-deliveryTime-hint`}
-            />
-            <datalist id={`${uid}-deliveryTimes`}>
-              {DELIVERY_TIME_PRESETS.map((t) => (
-                <option key={t} value={t} />
+          <fieldset className="min-w-0 sm:col-span-2">
+            <legend className="mb-1.5 block text-sm font-medium">Статус за клиента</legend>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {AVAILABILITY_OPTIONS.map((o) => (
+                <label
+                  key={o.id}
+                  className="flex cursor-pointer items-start gap-3 rounded-2xl border border-line p-3.5 transition has-[:checked]:border-forest has-[:checked]:bg-lime/25 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-forest has-[:focus-visible]:ring-offset-2"
+                >
+                  <input type="radio" name="availability" value={o.id} checked={availability === o.id} onChange={() => setAvailability(o.id)} className="sr-only" />
+                  <span className="min-w-0">
+                    <StockPill product={{ stock: 1, availability: o.id, deliveryTime: o.id === "delivery" ? deliveryTime.trim() || "7 дни" : null }} />
+                    <span className="mt-1.5 block text-xs text-ink-soft">{o.hint}</span>
+                  </span>
+                </label>
               ))}
-            </datalist>
-            <p id={`${uid}-deliveryTime-hint`} className="mt-1.5 text-xs text-ink-soft">
-              По желание. Попълни, ако продуктът не е при теб на склад и доставката отнема повече време — клиентът го вижда при продукта, в количката и в поръчката.
-              Празно = обичайният срок.
+            </div>
+            {availability !== "available" && (
+              <div className="mt-3">
+                <label htmlFor={`${uid}-deliveryTime`} className="mb-1.5 block text-sm font-medium">
+                  {availability === "delivery" ? (
+                    <>
+                      Срок за доставка <span className="text-tomato" aria-hidden>*</span>
+                    </>
+                  ) : (
+                    <>
+                      Кога се очаква <span className="font-normal text-ink-soft">(по желание)</span>
+                    </>
+                  )}
+                </label>
+                <input
+                  id={`${uid}-deliveryTime`}
+                  name="deliveryTime"
+                  list={availability === "delivery" ? `${uid}-deliveryTimes` : undefined}
+                  value={deliveryTime}
+                  onChange={(e) => setDeliveryTime(e.target.value)}
+                  maxLength={MAX_DELIVERY_TIME_LENGTH}
+                  placeholder={availability === "delivery" ? "напр. 7 дни" : "напр. до 20 декември"}
+                  className="field"
+                  aria-invalid={errors.deliveryTime ? true : undefined}
+                  aria-describedby={`${uid}-deliveryTime-hint`}
+                />
+                <datalist id={`${uid}-deliveryTimes`}>
+                  {DELIVERY_TIME_PRESETS.map((t) => (
+                    <option key={t} value={t} />
+                  ))}
+                </datalist>
+                {errors.deliveryTime && <p role="alert" className="mt-1.5 text-sm font-medium text-tomato">{errors.deliveryTime}</p>}
+              </div>
+            )}
+            <p id={`${uid}-deliveryTime-hint`} className="mt-2 text-xs text-ink-soft">
+              Клиентът вижда статуса при продукта, а срокът се записва и в поръчката. Статусът е само информация: дали продуктът може да се поръча, зависи от
+              наличността по-горе. „Очаква се“ с 0 броя показва на клиента бутон „Уведоми ме“.
             </p>
-            {errors.deliveryTime && <p role="alert" className="mt-1.5 text-sm font-medium text-tomato">{errors.deliveryTime}</p>}
-          </div>
+          </fieldset>
         </Group>
 
         <Group title="Цветове">

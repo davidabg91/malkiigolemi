@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, ShoppingBag, Trash2, X } from "lucide-react";
+import { ShoppingBag, Trash2, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useEffect } from "react";
@@ -9,6 +9,7 @@ import { ProductVisual } from "@/components/product/PackShot";
 import { btn } from "@/components/ui";
 import { formatPrice, unitPriceFor } from "@/lib/format";
 import { ColorTag } from "@/components/product/ColorTag";
+import { StockPill } from "@/components/product/StockPill";
 import { colorChoices } from "@/lib/product-colors";
 import { cartTotals, lineKey, useCart, useHydrated, type CartItem } from "@/lib/store";
 
@@ -46,12 +47,7 @@ export function CartLine({ item, onNavigate }: { item: CartItem; onNavigate?: ()
           {[item.brand, item.unit].filter(Boolean).join(" · ")}
         </p>
         {item.chosenColor && <ColorTag name={item.chosenColor} className="mt-1" />}
-        {item.deliveryTime && (
-          <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-ink">
-            <Clock className="h-3.5 w-3.5 shrink-0 text-ink-soft" aria-hidden />
-            Доставка: {item.deliveryTime}
-          </p>
-        )}
+        <StockPill product={item} notable className="mt-1 self-start" />
         {left < item.qty && (
           <p className="mt-1 text-xs font-semibold text-tomato" role="status">
             {left <= 0 ? (item.chosenColor ? "Този цвят е изчерпан — махни го, за да поръчаш." : "Изчерпан — махни го, за да поръчаш.") : `Остават само ${left} бр.`}

@@ -18,6 +18,7 @@ import { setActiveCouriersConfig } from "@/lib/couriers-server";
 import { changeOrderStatus, changeOrdersStatus } from "@/lib/order-status";
 import { notifyRestocked } from "@/lib/stock-alerts";
 import type { CourierId } from "@/lib/couriers";
+import { AVAILABILITY, availabilityOf } from "@/lib/availability";
 import { cleanColorChoices, MAX_DELIVERY_TIME_LENGTH } from "@/lib/product-colors";
 
 export type AdminFormState = { error?: string; fieldErrors?: Record<string, string> } | undefined;
@@ -68,6 +69,8 @@ const productSchema = z.object({
   pack: z.string().refine((v) => v in PACKS, "Невалидна опаковка."),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Невалиден цвят."),
   deliveryTime: z.string().trim().max(MAX_DELIVERY_TIME_LENGTH, "Най-много 60 знака."),
+  // A form without the field (an older page still open) means "on hand" or, with a time typed, "delivery".
+  availability: z.string().refine((v) => v === "" || (AVAILABILITY as readonly string[]).includes(v), "Невалиден статус."),
 });
 
 /** The next free article number: one above the highest all-digit one, starting at 1001 like the catalogue. */
@@ -111,6 +114,11 @@ export async function saveProduct(id: number | null, _prev: AdminFormState, form
   }
   if (d.bulkPrice !== null && (d.bulkPrice >= d.price! || d.bulkMinQty! < 2)) {
     return { error: "Цената за количество трябва да е под редовната, от поне 2 броя.", fieldErrors: { bulkPrice: "Трябва да е под редовната цена." } };
+  }
+
+  const availability = availabilityOf({ availability: d.availability || null, deliveryTime: d.deliveryTime });
+  if (d.availability === "delivery" && !d.deliveryTime) {
+    return { error: "Напиши срока за доставка.", fieldErrors: { deliveryTime: "Напиши срока, напр. 7 дни." } };
   }
 
   const [category] = await db.select({ id: categories.id }).from(categories).where(eq(categories.id, d.categoryId)).limit(1);
@@ -182,7 +190,9 @@ export async function saveProduct(id: number | null, _prev: AdminFormState, form
     bulkPrice: d.bulkPrice,
     // With colours the product has as many as its colours together.
     stock: colours.length > 0 ? colours.reduce((sum, c) => sum + c.stock, 0) : (d.stock ?? 0),
-    deliveryTime: d.deliveryTime || null,
+    availability,
+    // On hand needs no time; for goods on their way it is when they are expected, if the admin wrote it.
+    deliveryTime: availability === "available" ? null : d.deliveryTime || null,
     origin: d.origin || null,
     pack: d.pack,
     color: d.color,

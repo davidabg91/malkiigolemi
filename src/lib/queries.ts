@@ -29,6 +29,7 @@ const card = {
   colors: products.colorOptions,
   colorStock: products.colorStock,
   deliveryTime: products.deliveryTime,
+  availability: products.availability,
   origin: products.origin,
   isNew: products.isNew,
   stock: products.stock,
@@ -56,6 +57,8 @@ export type ProductCardData = {
   colorStock?: number[];
   /** A longer than usual delivery time, when the product has one. */
   deliveryTime?: string | null;
+  /** "available", "delivery" or "expected" (see lib/availability.ts); missing on cart lines saved earlier. */
+  availability?: string | null;
   origin: string | null;
   isNew: boolean;
   stock: number;

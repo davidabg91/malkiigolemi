@@ -18,7 +18,7 @@ export default function Image() {
         <img src={LOGO_SRC} width={logoWidth} height={Math.round(logoWidth / LOGO_RATIO)} alt="" />
         <div style={{ marginTop: 34, fontSize: 38, fontWeight: 500, color: "#5c5f62" }}>Онлайн магазин за цялото семейство</div>
         <div style={{ position: "absolute", bottom: 40, display: "flex", alignItems: "center", gap: 14, fontSize: 26, fontWeight: 700, color: "#2b3f42" }}>
-          <div style={{ display: "flex", borderRadius: 9999, background: "#ebebe8", padding: "8px 22px" }}>Безплатна доставка с BoxNow</div>
+          <div style={{ display: "flex", borderRadius: 9999, background: "#ebebe8", padding: "8px 22px" }}>Безплатна доставка с BoxNow над 40 €</div>
           <div style={{ display: "flex", color: "#5c5f62", fontWeight: 500 }}>{site.domain}</div>
         </div>
       </div>

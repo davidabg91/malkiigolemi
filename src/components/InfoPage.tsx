@@ -76,7 +76,7 @@ export function DeliveryTable() {
                 {d.label}
               </th>
               <td className="px-5 py-3.5">{d.hint}</td>
-              <td className="px-5 py-3.5 text-right font-semibold text-ink tabular-nums">{d.id === "box" ? `0 € с BoxNow, иначе ${formatPrice(shippingFor("box", 0, "econt"))}` : d.price === 0 ? "Безплатно" : formatPrice(d.price)}</td>
+              <td className="px-5 py-3.5 text-right font-semibold text-ink tabular-nums">{d.id === "box" ? `0 € с BoxNow над 40 €, иначе ${formatPrice(shippingFor("box", 0, "econt"))}` : d.price === 0 ? "Безплатно" : formatPrice(d.price)}</td>
             </tr>
           ))}
         </tbody>

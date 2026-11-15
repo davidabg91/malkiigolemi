@@ -89,6 +89,19 @@ export async function recordBatch(visitor: string, raw: unknown) {
         device: parsed.data.d,
       })),
   );
+  // The product's own counter, which the admins see as an eye on the product. Unlike the rows above it
+  // is never deleted, so it is the number of views since the shop started counting.
+  const opened = new Map<string, number>();
+  for (const e of parsed.data.e) {
+    const slug = e.t === "view" ? /^\/produkt\/([^/]+)\/?$/.exec(e.p)?.[1] : undefined;
+    if (slug) opened.set(slug, (opened.get(slug) ?? 0) + 1);
+  }
+  for (const [slug, times] of opened) {
+    await db
+      .update(products)
+      .set({ views: sql`${products.views} + ${times}` })
+      .where(eq(products.slug, slug));
+  }
   return true;
 }
 

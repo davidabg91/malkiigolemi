@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, inArray, like, lt, sql, type SQL } from "drizzle-orm";
-import { Pencil, Plus, Search } from "lucide-react";
+import { Eye, Pencil, Plus, Search } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -7,6 +7,7 @@ import { AdminSkeleton, PageTitle, Panel, td, th } from "@/components/admin/bits
 import { BULK_PRODUCTS_FORM, BulkProductsBar, SelectAllProducts } from "@/components/admin/BulkProducts";
 import { DeleteButton, ToggleActive } from "@/components/admin/RowActions";
 import { ProductVisual } from "@/components/product/PackShot";
+import { StockPill } from "@/components/product/StockPill";
 import { btn } from "@/components/ui";
 import { db } from "@/db";
 import { brands, categories, products } from "@/db/schema";
@@ -122,6 +123,7 @@ async function AdminProducts({ searchParams }: Pick<PageProps<"/admin/produkti">
                   <th className={th}>Категория</th>
                   <th className={`${th} text-right`}>Цена</th>
                   <th className={`${th} text-right`}>Наличност</th>
+                  <th className={`${th} text-right`}>Гледания</th>
                   <th className={`${th} text-right`}>Действия</th>
                 </tr>
               </thead>
@@ -155,6 +157,15 @@ async function AdminProducts({ searchParams }: Pick<PageProps<"/admin/produkti">
                     <td className={`${td} text-right`}>
                       <span className={`rounded-full px-2.5 py-1 text-xs font-bold tabular-nums ${p.stock === 0 ? "bg-tomato text-white" : p.stock < 10 ? "bg-sun/50" : "bg-sand"}`}>
                         {p.stock}
+                      </span>
+                      <span className="mt-1.5 flex justify-end">
+                        <StockPill product={p} notable />
+                      </span>
+                    </td>
+                    <td className={`${td} text-right text-ink-soft tabular-nums`}>
+                      <span className="inline-flex items-center gap-1.5">
+                        <Eye className="h-4 w-4" aria-hidden />
+                        {p.views}
                       </span>
                     </td>
                     <td className={td}>

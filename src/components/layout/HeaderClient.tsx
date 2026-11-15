@@ -13,6 +13,7 @@ import { setIsAdmin } from "@/lib/admin-flag";
 import { site } from "@/lib/site";
 import { cartTotals, useCart, useHydrated, useWishlist } from "@/lib/store";
 import { AccountButton } from "./AccountButton";
+import { AdminViewsLoader } from "@/components/admin/ProductViews";
 import { arrayMove, CategoryNav } from "./CategoryNav";
 import { SearchBox } from "./SearchBox";
 
@@ -320,6 +321,7 @@ export function HeaderClient({ tree, isAdmin, adminAlerts = null }: { tree: Menu
         <SearchBox className="pb-3 md:hidden" />
 
         <CategoryNav tree={tree} isAdmin={isAdmin} />
+        {isAdmin && <AdminViewsLoader />}
       </div>
 
       {/* Desktop mega menu */}

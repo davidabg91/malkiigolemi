@@ -1,8 +1,9 @@
-import { Clock, PackageCheck, ShieldCheck, Truck } from "lucide-react";
+import { PackageCheck, ShieldCheck, Truck } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ProductAdminActions } from "@/components/admin/ProductAdminActions";
+import { ViewCount } from "@/components/admin/ProductViews";
 import { BuyBox } from "@/components/product/AddToCart";
 import { Carousel } from "@/components/product/Carousel";
 import { ProductVisual } from "@/components/product/PackShot";
@@ -11,11 +12,13 @@ import { ProductZoom } from "@/components/product/ProductZoom";
 import { RecentlyViewed } from "@/components/product/Recent";
 import { Reviews } from "@/components/product/Reviews";
 import { ratingLabel, Stars } from "@/components/product/Stars";
+import { StockPill } from "@/components/product/StockPill";
 import { Breadcrumbs, SectionHeading } from "@/components/ui";
 import { getSession } from "@/lib/auth";
+import { stockState } from "@/lib/availability";
 import { discountPercent, formatPrice } from "@/lib/format";
 import { getProduct } from "@/lib/queries";
-import { ORIGIN_LABELS, site } from "@/lib/site";
+import { FREE_BOXNOW_LINE, ORIGIN_LABELS, site } from "@/lib/site";
 
 type Props = PageProps<"/produkt/[slug]">;
 
@@ -46,6 +49,7 @@ async function Content({ params }: Pick<Props, "params">) {
   const { description, ...cardData } = product;
   const off = discountPercent(product.price, product.oldPrice);
   const root = parent ?? category;
+  const state = stockState(product);
 
   const crumbs = [
     ...(root ? [{ label: root.name, href: `/kategoria/${root.slug}` }] : []),
@@ -87,7 +91,12 @@ async function Content({ params }: Pick<Props, "params">) {
       <div>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Breadcrumbs items={crumbs} />
-          {isAdmin && <ProductAdminActions product={product} />}
+          {isAdmin && (
+            <div className="flex flex-wrap items-center gap-2">
+              <ViewCount id={product.id} words />
+              <ProductAdminActions product={product} />
+            </div>
+          )}
         </div>
         <div className="mt-6 grid gap-8 lg:grid-cols-2 lg:gap-14">
           <div
@@ -146,22 +155,22 @@ async function Content({ params }: Pick<Props, "params">) {
             <div className="mt-7">
               <BuyBox product={cardData} />
             </div>
-            <p className="mt-3 flex items-center gap-2 text-sm text-ink-soft">
-              <span className={`h-2 w-2 rounded-full ${product.stock > 0 ? "bg-forest" : "bg-tomato"}`} aria-hidden />
-              {product.stock <= 0 ? "Изчерпан" : product.deliveryTime ? "Може да се поръча" : "В наличност — изпращаме до 24 часа"}
+            <p className="mt-4 flex">
+              <StockPill product={product} large>
+                {state.kind === "available" && "Налично — изпращаме до 24 часа"}
+                {state.kind === "delivery" && (
+                  <>
+                    Срок за доставка: <strong className="font-bold">{product.deliveryTime}</strong>
+                  </>
+                )}
+                {state.kind === "expected" && (product.stock > 0 ? `${state.label} — може да се поръча отсега` : state.label)}
+                {state.kind === "soldout" && state.label}
+              </StockPill>
             </p>
-            {product.deliveryTime && product.stock > 0 && (
-              <p className="mt-3 inline-flex items-center gap-2.5 rounded-2xl bg-lime px-4 py-3 text-sm font-medium">
-                <Clock className="h-5 w-5 shrink-0" aria-hidden />
-                <span>
-                  Срок за доставка: <strong>{product.deliveryTime}</strong>
-                </span>
-              </p>
-            )}
 
             <ul className="mt-8 grid gap-3 sm:grid-cols-3">
               {[
-                { icon: Truck, text: "Безплатна доставка с BoxNow" },
+                { icon: Truck, text: FREE_BOXNOW_LINE },
                 { icon: PackageCheck, text: "Преглед преди плащане" },
                 { icon: ShieldCheck, text: "Оригинален внос" },
               ].map(({ icon: Icon, text }) => (

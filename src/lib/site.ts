@@ -54,7 +54,7 @@ export const DELIVERY_METHODS = [
   {
     id: "box",
     label: "До автомат",
-    hint: "Безплатно с BoxNow · Еконт и Спиди като до офис",
+    hint: "С BoxNow безплатно над 40 € · иначе като до офис",
     price: 0,
     addressLabel: "Автомат (име или адрес)",
   },
@@ -92,11 +92,19 @@ export const STORE = {
 
 export type DeliveryId = (typeof DELIVERY_METHODS)[number]["id"];
 
-/** What delivery costs. Lockers are free only with BOX NOW; another courier's locker costs the same as its office. */
+/** A BOX NOW locker is free for an order of goods worth at least this much, in euro cents. */
+export const FREE_BOXNOW_FROM = 4000;
+/** The promise as the shop words it: the top bar, the product page, the share picture. */
+export const FREE_BOXNOW_LINE = "Безплатна доставка с BoxNow над 40 €";
+
+/**
+ * What delivery costs. A locker is free only with BOX NOW and only from FREE_BOXNOW_FROM up; below that,
+ * and with any other courier, a locker costs the same as an office.
+ */
 export function shippingFor(delivery: string, subtotal: number, courier?: string | null) {
   const officePrice = DELIVERY_METHODS.find((d) => d.id === "office")!.price;
   if (delivery === "store") return 0;
-  if (delivery === "box") return !courier || courier === "boxnow" ? 0 : officePrice;
+  if (delivery === "box") return (!courier || courier === "boxnow") && subtotal >= FREE_BOXNOW_FROM ? 0 : officePrice;
   return DELIVERY_METHODS.find((d) => d.id === delivery)?.price ?? officePrice;
 }
 
