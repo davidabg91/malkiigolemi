@@ -238,8 +238,10 @@ export type ListingFilters = {
   origins?: string[];
   min?: number;
   max?: number;
-  /** "stock", "promo", "new": show only products on hand right now, discounted, or new. */
+  /** "promo", "new": show only discounted or new products. */
   only?: string[];
+  /** What is on hand right now comes first; nothing is hidden. Works together with any `sort`. */
+  availableFirst?: boolean;
   sort?: SortKey;
   page?: number;
 };
@@ -250,6 +252,12 @@ export type ListingFilters = {
  * in `lib/availability.ts`.
  */
 const onHand = sql`(${products.stock} > 0 and (${products.availability} = 'available' or (${products.availability} = 'delivery' and coalesce(trim(${products.deliveryTime}), '') = '')))`;
+
+/**
+ * For "Първо наличните": on hand first, then ordered in for the customer, then on its way, and sold out
+ * last. Within each group the chosen order stays.
+ */
+const byAvailability = sql`(case when ${onHand} then 0 when ${products.availability} = 'expected' then 2 when ${products.stock} <= 0 then 3 else 1 end)`;
 
 function scopeWhere(scope: ListingScope) {
   const where: SQL[] = [sellable];
@@ -337,7 +345,6 @@ export async function listProducts(scope: ListingScope, f: ListingFilters) {
   }
   if (f.only?.includes("promo")) where.push(isPromo);
   if (f.only?.includes("new")) where.push(eq(products.isNew, true));
-  if (f.only?.includes("stock")) where.push(onHand);
   if (f.brands?.length) {
     const ids = await db.select({ id: brands.id }).from(brands).where(inArray(brands.slug, f.brands));
     where.push(inArray(products.brandId, ids.length ? ids.map((b) => b.id) : [-1]));
@@ -346,13 +353,14 @@ export async function listProducts(scope: ListingScope, f: ListingFilters) {
   if (f.min != null) where.push(gte(effectivePrice, f.min));
   if (f.max != null) where.push(lte(effectivePrice, f.max));
 
-  const order = {
+  const sorted = {
     popular: shopOrder,
     "price-asc": [asc(effectivePrice)],
     "price-desc": [desc(effectivePrice)],
     discount: [sql`(case when ${effectiveOldPrice} is null then 0 else 1.0 - 1.0 * ${effectivePrice} / ${effectiveOldPrice} end) desc`],
     name: [asc(products.name)],
   }[f.sort ?? "popular"];
+  const order = f.availableFirst ? [byAvailability, ...sorted] : sorted;
 
   const page = Math.max(1, f.page ?? 1);
   const [items, [{ total }]] = await Promise.all([
@@ -381,7 +389,7 @@ export async function listProducts(scope: ListingScope, f: ListingFilters) {
       scopeTotal: Number(counts.total),
       promo: Number(counts.promo),
       fresh: Number(counts.fresh),
-      stock: Number(counts.stock),
+      onHand: Number(counts.stock),
     },
   };
 }
