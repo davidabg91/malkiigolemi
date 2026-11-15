@@ -1,3 +1,4 @@
+import { Clock } from "lucide-react";
 import Link from "next/link";
 import { LogoArt } from "@/components/ui";
 import { discountPercent, formatPrice } from "@/lib/format";
@@ -74,6 +75,12 @@ export function ProductCard({ product }: { product: ProductCardData }) {
           </Link>
         </h3>
         <p className="mt-0.5 text-sm text-ink-soft">{product.unit}</p>
+        {product.deliveryTime && product.stock > 0 && (
+          <p className="mt-1 flex items-center gap-1 text-xs font-medium text-ink">
+            <Clock className="h-3.5 w-3.5 shrink-0 text-ink-soft" aria-hidden />
+            <span className="truncate">Доставка {product.deliveryTime}</span>
+          </p>
+        )}
         {product.reviewCount ? (
           <p className="mt-1 flex items-center gap-1.5 text-xs text-ink-soft">
             <Stars value={product.rating ?? 0} className="h-3.5 w-3.5" />

@@ -1,6 +1,6 @@
 "use client";
 
-import { ShoppingBag, Trash2, X } from "lucide-react";
+import { Clock, ShoppingBag, Trash2, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useEffect } from "react";
@@ -9,6 +9,7 @@ import { ProductVisual } from "@/components/product/PackShot";
 import { btn } from "@/components/ui";
 import { formatPrice, unitPriceFor } from "@/lib/format";
 import { ColorTag } from "@/components/product/ColorTag";
+import { colorChoices } from "@/lib/product-colors";
 import { cartTotals, lineKey, useCart, useHydrated, type CartItem } from "@/lib/store";
 
 export function CartLine({ item, onNavigate }: { item: CartItem; onNavigate?: () => void }) {
@@ -18,6 +19,8 @@ export function CartLine({ item, onNavigate }: { item: CartItem; onNavigate?: ()
   const together = useCart((s) => s.items.reduce((n, i) => (i.id === item.id ? n + i.qty : n), 0));
   const unit = unitPriceFor(item, together);
   const key = lineKey(item);
+  // How many there are of this line: of its colour for a product with colours, otherwise of the product.
+  const left = item.colors?.length ? (colorChoices(item).find((c) => c.name === item.chosenColor)?.stock ?? 0) : item.stock;
   return (
     <li className="flex gap-3 py-4">
       <Link
@@ -43,6 +46,17 @@ export function CartLine({ item, onNavigate }: { item: CartItem; onNavigate?: ()
           {[item.brand, item.unit].filter(Boolean).join(" · ")}
         </p>
         {item.chosenColor && <ColorTag name={item.chosenColor} className="mt-1" />}
+        {item.deliveryTime && (
+          <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-ink">
+            <Clock className="h-3.5 w-3.5 shrink-0 text-ink-soft" aria-hidden />
+            Доставка: {item.deliveryTime}
+          </p>
+        )}
+        {left < item.qty && (
+          <p className="mt-1 text-xs font-semibold text-tomato" role="status">
+            {left <= 0 ? (item.chosenColor ? "Този цвят е изчерпан — махни го, за да поръчаш." : "Изчерпан — махни го, за да поръчаш.") : `Остават само ${left} бр.`}
+          </p>
+        )}
         <div className="mt-auto flex items-center justify-between pt-2">
           <QtyStepper size="sm" qty={item.qty} onChange={(q) => setQty(key, q)} label={item.name} />
           <div className="text-right leading-tight">

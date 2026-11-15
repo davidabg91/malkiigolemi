@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { ProductCardData } from "@/lib/queries";
+import { colorChoices } from "@/lib/product-colors";
 import { lineKey, useCart, useHydrated, useWishlist } from "@/lib/store";
 import { ColorDot } from "./ColorTag";
 import { NotifyMe } from "./NotifyMe";
@@ -115,9 +116,12 @@ export function WishlistButton({ product, className = "" }: { product: ProductCa
 export function BuyBox({ product }: { product: ProductCardData }) {
   const [qty, setQty] = useState(1);
   const [done, setDone] = useState(false);
-  const colors = product.colors ?? [];
-  // With one colour there is nothing to choose; with several the customer has to.
-  const [color, setColor] = useState<string | null>(colors.length === 1 ? colors[0] : null);
+  const colors = colorChoices(product);
+  const available = colors.filter((c) => c.stock > 0);
+  // With one colour left there is nothing to choose; with several the customer has to.
+  const [color, setColor] = useState<string | null>(available.length === 1 ? available[0].name : null);
+  // How many can be taken: of the chosen colour, or of the product.
+  const left = colors.length > 0 ? (colors.find((c) => c.name === color)?.stock ?? null) : product.stock;
   const [missing, setMissing] = useState(false);
   const add = useCart((s) => s.add);
   const openCart = useCart((s) => s.setOpen);
@@ -133,25 +137,35 @@ export function BuyBox({ product }: { product: ProductCardData }) {
           <div className="flex flex-wrap gap-2">
             {colors.map((c) => (
               <label
-                key={c}
-                className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-full border border-line bg-paper px-4 text-sm font-medium transition hover:border-forest has-[:checked]:border-forest has-[:checked]:bg-forest has-[:checked]:text-white has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-forest has-[:focus-visible]:ring-offset-2"
+                key={c.name}
+                className={`inline-flex h-11 items-center gap-2 rounded-full border border-line px-4 text-sm font-medium transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-forest has-[:focus-visible]:ring-offset-2 ${
+                  c.stock > 0
+                    ? "cursor-pointer bg-paper hover:border-forest has-[:checked]:border-forest has-[:checked]:bg-forest has-[:checked]:text-white"
+                    : "cursor-not-allowed bg-sand/60 text-ink-soft"
+                }`}
               >
                 <input
                   type="radio"
                   name={`color-${product.id}`}
-                  value={c}
-                  checked={color === c}
+                  value={c.name}
+                  checked={color === c.name}
+                  disabled={c.stock <= 0}
                   onChange={() => {
-                    setColor(c);
+                    setColor(c.name);
+                    setQty((q) => Math.min(q, c.stock));
                     setMissing(false);
                   }}
                   className="sr-only"
                 />
-                <ColorDot name={c} className="h-4 w-4" />
-                {c}
+                <ColorDot name={c.name} className={`h-4 w-4 ${c.stock > 0 ? "" : "opacity-50"}`} />
+                <span className={c.stock > 0 ? "" : "line-through"}>{c.name}</span>
+                {c.stock <= 0 && <span className="text-xs">изчерпан</span>}
               </label>
             ))}
           </div>
+          {color && left !== null && left <= 5 && (
+            <p className="mt-2 text-sm font-medium text-tomato">{left === 1 ? "Остава само 1 брой от този цвят." : `Остават само ${left} броя от този цвят.`}</p>
+          )}
           {missing && (
             <p role="alert" className="mt-2 text-sm font-medium text-tomato">
               Избери цвят, за да добавиш продукта в количката.
@@ -159,7 +173,7 @@ export function BuyBox({ product }: { product: ProductCardData }) {
           )}
         </fieldset>
       )}
-      <QtyStepper qty={qty} min={1} onChange={setQty} label={product.name} />
+      <QtyStepper qty={qty} min={1} onChange={(q) => setQty(left === null ? q : Math.max(1, Math.min(q, left)))} label={product.name} />
       <button
         type="button"
         onClick={() => {

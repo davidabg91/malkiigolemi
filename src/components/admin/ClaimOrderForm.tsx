@@ -7,6 +7,7 @@ import { orderFromClaim } from "@/actions/facebook";
 import { CourierOfficePicker } from "@/components/checkout/CourierOfficePicker";
 import { btn } from "@/components/ui";
 import type { CourierId, CourierOffice } from "@/lib/couriers";
+import type { ColorChoice } from "@/lib/product-colors";
 import { DELIVERY_METHODS, STORE, type DeliveryId } from "@/lib/site";
 
 export type ClaimPrefill = {
@@ -30,7 +31,8 @@ const FROM_LABELS = {
 };
 
 /** Contact and delivery details for one Facebook claim, then "Създай поръчка". */
-export function ClaimOrderForm({ claimId, qty, prefill }: { claimId: number; qty: number; prefill: ClaimPrefill }) {
+/** `colors` is set for a post about a product sold in several colours: the order then has to name one. */
+export function ClaimOrderForm({ claimId, qty, prefill, colors = [] }: { claimId: number; qty: number; prefill: ClaimPrefill; colors?: ColorChoice[] }) {
   const [state, action, pending] = useActionState(orderFromClaim.bind(null, claimId), undefined);
   const [delivery, setDelivery] = useState<DeliveryId>(prefill.delivery);
   const [courier, setCourier] = useState<CourierId>(prefill.courier || "speedy");
@@ -76,6 +78,24 @@ export function ClaimOrderForm({ claimId, qty, prefill }: { claimId: number; qty
         {field("phone", "Телефон *", { defaultValue: prefill.phone, type: "tel", inputMode: "tel", required: true, placeholder: "08…" })}
         {field("email", "Имейл", { defaultValue: prefill.email, type: "email", placeholder: "по желание" })}
         {field("qty", "Бр", { defaultValue: qty, type: "number", min: 1, max: 99 })}
+        {colors.length > 0 && (
+          <div>
+            <label className="mb-1.5 block text-sm font-medium" htmlFor={`claim-${claimId}-color`}>
+              Цвят <span className="text-tomato" aria-hidden>*</span>
+            </label>
+            <select id={`claim-${claimId}-color`} name="color" required defaultValue="" className="field" aria-invalid={state?.fieldErrors?.color ? true : undefined}>
+              <option value="" disabled>
+                Избери…
+              </option>
+              {colors.map((c) => (
+                <option key={c.name} value={c.name} disabled={c.stock <= 0}>
+                  {c.name} — {c.stock > 0 ? `${c.stock} бр` : "изчерпан"}
+                </option>
+              ))}
+            </select>
+            {state?.fieldErrors?.color && <p role="alert" className="mt-1.5 text-sm font-medium text-tomato">{state.fieldErrors.color}</p>}
+          </div>
+        )}
       </div>
 
       <fieldset>

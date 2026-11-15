@@ -1,4 +1,4 @@
-import { PackageCheck, ShieldCheck, Truck } from "lucide-react";
+import { Clock, PackageCheck, ShieldCheck, Truck } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -148,8 +148,16 @@ async function Content({ params }: Pick<Props, "params">) {
             </div>
             <p className="mt-3 flex items-center gap-2 text-sm text-ink-soft">
               <span className={`h-2 w-2 rounded-full ${product.stock > 0 ? "bg-forest" : "bg-tomato"}`} aria-hidden />
-              {product.stock > 0 ? "В наличност — изпращаме до 24 часа" : "Изчерпан"}
+              {product.stock <= 0 ? "Изчерпан" : product.deliveryTime ? "Може да се поръча" : "В наличност — изпращаме до 24 часа"}
             </p>
+            {product.deliveryTime && product.stock > 0 && (
+              <p className="mt-3 inline-flex items-center gap-2.5 rounded-2xl bg-lime px-4 py-3 text-sm font-medium">
+                <Clock className="h-5 w-5 shrink-0" aria-hidden />
+                <span>
+                  Срок за доставка: <strong>{product.deliveryTime}</strong>
+                </span>
+              </p>
+            )}
 
             <ul className="mt-8 grid gap-3 sm:grid-cols-3">
               {[

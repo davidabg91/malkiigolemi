@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, getTableColumns, gte, inArray, sql } from "drizzle-orm";
+import { and, eq, getTableColumns, inArray } from "drizzle-orm";
 import { updateTag } from "next/cache";
 import { headers } from "next/headers";
 import { after } from "next/server";
@@ -15,7 +15,8 @@ import { sendOrderPlaced } from "@/lib/order-mail";
 import { orderNumber } from "@/lib/orders";
 import { getLoyaltySettings, pointsBalance, redeemable, syncOrderPoints } from "@/lib/loyalty";
 import { pricedColumns } from "@/lib/pricing";
-import { matchColor } from "@/lib/product-colors";
+import { colorChoices, matchColor } from "@/lib/product-colors";
+import { takeStock } from "@/lib/stock";
 import { savedOffice } from "@/lib/courier-offices";
 import { CATALOG_TAG, sellable } from "@/lib/queries";
 import { DELIVERY_METHODS, shippingFor, STORE } from "@/lib/site";
@@ -117,14 +118,16 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
 
   // One line per product, or per colour of it for a product sold in several. The price for quantity counts
   // all colours of the product together.
-  const lines: { productId: number; name: string; sku: string; qty: number; price: number; color: string | null }[] = [];
+  const lines: { productId: number; name: string; sku: string; qty: number; price: number; color: string | null; deliveryTime: string | null }[] = [];
   for (const p of rows) {
     const price = unitPriceFor(p, qtyById.get(p.id)!);
     const name = `${p.name} ${p.unit}`.trim();
+    const deliveryTime = p.deliveryTime;
     if (p.colorOptions.length === 0) {
-      lines.push({ productId: p.id, name, sku: p.sku, qty: qtyById.get(p.id)!, price, color: null });
+      lines.push({ productId: p.id, name, sku: p.sku, qty: qtyById.get(p.id)!, price, color: null, deliveryTime });
       continue;
     }
+    const choices = colorChoices({ colors: p.colorOptions, colorStock: p.colorStock });
     const qtyByColor = new Map<string, number>();
     for (const i of data.items) {
       if (i.id !== p.id) continue;
@@ -134,7 +137,17 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
       }
       qtyByColor.set(color, (qtyByColor.get(color) ?? 0) + i.qty);
     }
-    for (const [color, qty] of qtyByColor) lines.push({ productId: p.id, name, sku: p.sku, qty, price, color });
+    for (const [color, qty] of qtyByColor) {
+      // Each colour has its own quantity; a colour that ran out cannot be ordered.
+      const left = choices.find((c) => c.name === color)?.stock ?? 0;
+      if (left < qty) {
+        return {
+          ok: false,
+          error: left === 0 ? `Цвят „${color}“ на „${p.name}“ е изчерпан. Избери друг цвят или го махни от количката.` : `От „${p.name}“ в цвят „${color}“ остават само ${left} бр.`,
+        };
+      }
+      lines.push({ productId: p.id, name, sku: p.sku, qty, price, color, deliveryTime });
+    }
   }
   const subtotal = lines.reduce((sum, l) => sum + l.price * l.qty, 0);
   const shipping = shippingFor(data.delivery, subtotal, data.courier);
@@ -184,14 +197,10 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
       // Writes the "used points" line in the customer's history.
       if (pointsUsed > 0) await syncOrderPoints(tx, order.id);
       for (const l of lines) {
-        // The stock guard in WHERE makes two simultaneous orders unable to oversell.
-        const updated = await tx
-          .update(products)
-          .set({ stock: sql`${products.stock} - ${l.qty}` })
-          .where(and(eq(products.id, l.productId), gte(products.stock, l.qty)))
-          .returning({ stock: products.stock });
-        if (updated.length === 0) throw new Error("OUT_OF_STOCK");
-        if (updated[0].stock === 0) {
+        // Guarded inside the update itself, so two simultaneous orders cannot oversell (see lib/stock.ts).
+        const left = await takeStock(tx, rows.find((p) => p.id === l.productId)!, l.qty, l.color);
+        if (left === null) throw new Error("OUT_OF_STOCK");
+        if (left === 0) {
           soldOut = true;
           if (!soldOutNames.includes(l.name)) soldOutNames.push(l.name);
         }

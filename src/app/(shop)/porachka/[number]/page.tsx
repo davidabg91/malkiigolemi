@@ -90,6 +90,7 @@ async function Confirmation({ params, searchParams }: Props) {
             <li key={i.id} className="flex justify-between gap-4 py-3 text-[0.95rem]">
               <span>
                 {lineName(i.name, i.color)} <span className="text-ink-soft">× {i.qty}</span>
+                {i.deliveryTime && <span className="block text-sm text-ink-soft">Срок за доставка: {i.deliveryTime}</span>}
               </span>
               <span className="font-medium tabular-nums">{formatPrice(i.price * i.qty)}</span>
             </li>

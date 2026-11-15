@@ -1,11 +1,12 @@
 import "server-only";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { orderItems, orders, products, type OrderStatus } from "@/db/schema";
+import { orderItems, orders, type OrderStatus } from "@/db/schema";
 import { syncOrderPoints } from "./loyalty";
 import { sendOrderShipped } from "./order-mail";
 import { notifyOrderStatus } from "./push";
 import { refundOrder } from "./stripe";
+import { moveStock } from "./stock";
 import { notifyRestocked } from "./stock-alerts";
 
 /**
@@ -41,12 +42,8 @@ export async function changeOrderStatus(
       const items = await tx.select().from(orderItems).where(eq(orderItems.orderId, order.id));
       for (const i of items) {
         if (i.productId == null) continue;
-        const [p] = await tx
-          .update(products)
-          .set({ stock: sql`max(0, ${products.stock} + ${sign * i.qty})` })
-          .where(eq(products.id, i.productId))
-          .returning({ id: products.id, stock: products.stock });
-        if (sign > 0 && p && p.stock === i.qty) restocked.push(p.id);
+        const total = await moveStock(tx, i.productId, sign * i.qty, i.color);
+        if (sign > 0 && total === i.qty) restocked.push(i.productId);
       }
     }
     await syncOrderPoints(tx, order.id);

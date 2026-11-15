@@ -18,7 +18,7 @@ import { setActiveCouriersConfig } from "@/lib/couriers-server";
 import { changeOrderStatus, changeOrdersStatus } from "@/lib/order-status";
 import { notifyRestocked } from "@/lib/stock-alerts";
 import type { CourierId } from "@/lib/couriers";
-import { cleanColors } from "@/lib/product-colors";
+import { cleanColorChoices, MAX_DELIVERY_TIME_LENGTH } from "@/lib/product-colors";
 
 export type AdminFormState = { error?: string; fieldErrors?: Record<string, string> } | undefined;
 
@@ -67,6 +67,7 @@ const productSchema = z.object({
   origin: z.string().refine((v) => v === "" || v in ORIGIN_LABELS, "Невалиден произход."),
   pack: z.string().refine((v) => v in PACKS, "Невалидна опаковка."),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Невалиден цвят."),
+  deliveryTime: z.string().trim().max(MAX_DELIVERY_TIME_LENGTH, "Най-много 60 знака."),
 });
 
 /** The next free article number: one above the highest all-digit one, starting at 1001 like the catalogue. */
@@ -81,10 +82,10 @@ async function nextSku() {
   return String(n);
 }
 
-/** The product form's list of colours (JSON in a hidden field), tidied; anything unreadable counts as none. */
+/** The product form's colours with their quantities (JSON in a hidden field), tidied; anything unreadable counts as none. */
 function readColors(raw: FormDataEntryValue | null) {
   try {
-    return cleanColors(JSON.parse(String(raw ?? "[]")));
+    return cleanColorChoices(JSON.parse(String(raw ?? "[]")));
   } catch {
     return [];
   }
@@ -166,6 +167,7 @@ export async function saveProduct(id: number | null, _prev: AdminFormState, form
     return { error: e instanceof Error ? e.message : "Неуспешно качване на изображението.", fieldErrors: { image: "Провери файла." } };
   }
 
+  const colours = readColors(formData.get("colors"));
   const values = {
     name: d.name,
     sku: d.sku,
@@ -178,11 +180,14 @@ export async function saveProduct(id: number | null, _prev: AdminFormState, form
     oldPrice: d.oldPrice,
     bulkMinQty: d.bulkMinQty,
     bulkPrice: d.bulkPrice,
-    stock: d.stock ?? 0,
+    // With colours the product has as many as its colours together.
+    stock: colours.length > 0 ? colours.reduce((sum, c) => sum + c.stock, 0) : (d.stock ?? 0),
+    deliveryTime: d.deliveryTime || null,
     origin: d.origin || null,
     pack: d.pack,
     color: d.color,
-    colorOptions: readColors(formData.get("colors")),
+    colorOptions: colours.map((c) => c.name),
+    colorStock: colours.map((c) => c.stock),
     image,
     isNew: formData.get("isNew") === "on",
     isFeatured: formData.get("isFeatured") === "on",
