@@ -1,6 +1,7 @@
 import { ArrowRight, BadgePercent, Headset, PackageCheck, ShieldCheck, Truck } from "lucide-react";
 import Link from "next/link";
 import { Bento } from "@/components/home/Bento";
+import { BrandMarquee } from "@/components/home/BrandMarquee";
 import { FacebookSection } from "@/components/home/FacebookSection";
 import { OriginTabs } from "@/components/home/OriginTabs";
 import { PromoRibbon } from "@/components/home/PromoRibbon";
@@ -125,24 +126,7 @@ export default async function HomePage() {
         </ul>
       </section>
 
-      {home.brands.length > 0 && (
-        <section aria-label="Марки" className="-mx-4 overflow-hidden sm:-mx-6 xl:-mx-8">
-          <div className="flex w-max animate-marquee gap-4 hover:[animation-play-state:paused]">
-            {/* The list runs twice for a seamless loop; the second copy is hidden from screen readers and the tab order. */}
-            {[...home.brands, ...home.brands].map((b, i) => (
-              <Link
-                key={`${b.id}-${i}`}
-                href={`/marka/${b.slug}`}
-                aria-hidden={i >= home.brands.length || undefined}
-                tabIndex={i >= home.brands.length ? -1 : undefined}
-                className="whitespace-nowrap rounded-full border border-line bg-paper px-6 py-3 font-display text-sm font-medium text-ink-soft transition hover:border-forest hover:bg-lime hover:text-ink"
-              >
-                {b.name}
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      <BrandMarquee brands={home.brands} />
     </div>
   );
 }

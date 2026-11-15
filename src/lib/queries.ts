@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, gt, gte, inArray, isNotNull, like, lte, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNotNull, like, lte, or, sql, type SQL } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/db";
 import { brands, categories, categoryRedirects, products, type Category } from "@/db/schema";
@@ -238,11 +238,18 @@ export type ListingFilters = {
   origins?: string[];
   min?: number;
   max?: number;
-  /** "promo", "new", "stock": show only discounted, new, or in-stock products. */
+  /** "stock", "promo", "new": show only products on hand right now, discounted, or new. */
   only?: string[];
   sort?: SortKey;
   page?: number;
 };
+
+/**
+ * On hand right now: what the shop shows as "Налично". Not the goods ordered in for the customer
+ * ("Доставка 7 дни") and not the ones still on their way ("Очаква се"). The same rule as `stockState`
+ * in `lib/availability.ts`.
+ */
+const onHand = sql`(${products.stock} > 0 and (${products.availability} = 'available' or (${products.availability} = 'delivery' and coalesce(trim(${products.deliveryTime}), '') = '')))`;
 
 function scopeWhere(scope: ListingScope) {
   const where: SQL[] = [sellable];
@@ -307,7 +314,7 @@ export async function listProducts(scope: ListingScope, f: ListingFilters) {
         total: sql<number>`count(*)`,
         promo: sql<number>`coalesce(sum(case when ${isPromo} then 1 else 0 end), 0)`,
         fresh: sql<number>`coalesce(sum(case when ${products.isNew} then 1 else 0 end), 0)`,
-        stock: sql<number>`coalesce(sum(case when ${products.stock} > 0 then 1 else 0 end), 0)`,
+        stock: sql<number>`coalesce(sum(case when ${onHand} then 1 else 0 end), 0)`,
       })
       .from(products)
       .where(and(...base)),
@@ -330,7 +337,7 @@ export async function listProducts(scope: ListingScope, f: ListingFilters) {
   }
   if (f.only?.includes("promo")) where.push(isPromo);
   if (f.only?.includes("new")) where.push(eq(products.isNew, true));
-  if (f.only?.includes("stock")) where.push(gt(products.stock, 0));
+  if (f.only?.includes("stock")) where.push(onHand);
   if (f.brands?.length) {
     const ids = await db.select({ id: brands.id }).from(brands).where(inArray(brands.slug, f.brands));
     where.push(inArray(products.brandId, ids.length ? ids.map((b) => b.id) : [-1]));
@@ -370,7 +377,7 @@ export async function listProducts(scope: ListingScope, f: ListingFilters) {
       origins: originFacet,
       priceMin: range.min,
       priceMax: range.max,
-      /** Products in the scope before any filter, and how many of them are discounted, new and in stock. */
+      /** Products in the scope before any filter, and how many of them are discounted, new and on hand right now. */
       scopeTotal: Number(counts.total),
       promo: Number(counts.promo),
       fresh: Number(counts.fresh),
