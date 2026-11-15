@@ -77,7 +77,9 @@ export function ProductCard({ product }: { product: ProductCardData }) {
             {product.name}
           </Link>
         </h3>
-        <p className="mt-0.5 text-sm text-ink-soft">{product.unit}</p>
+        {/* One line: a long "unit" (some are whole sentences) would make this card, and with it every card
+            in its row or carousel, much taller than the rest. The product's page shows it in full. */}
+        <p className="mt-0.5 truncate text-sm text-ink-soft">{product.unit}</p>
         <p className="mt-1.5 flex">
           <StockPill product={product} />
         </p>

@@ -255,14 +255,16 @@ export function ListingShell({
         </aside>
       )}
 
-      <div>
+      {/* `min-w-0`: a grid item is otherwise as wide as the widest thing in it that cannot shrink, and on a
+          narrow phone that made the whole page scroll sideways. */}
+      <div className="min-w-0">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <p className="text-ink-soft" aria-live="polite">
             <strong className="font-semibold text-ink tabular-nums">{total}</strong> {total === 1 ? "продукт" : "продукта"}
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             {hasFilters && (
-              <button type="button" onClick={() => setSheet(true)} className={`${btn.sm} lg:hidden`}>
+              <button type="button" onClick={() => setSheet(true)} className={`${btn.sm} shrink-0 lg:hidden`}>
                 <SlidersHorizontal className="h-4 w-4" />
                 Филтри
                 {activeCount > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-forest px-1 text-xs text-white">{activeCount}</span>}
@@ -275,7 +277,9 @@ export function ListingShell({
               id={sortId}
               value={current.sort}
               onChange={(e) => go({ sort: e.target.value as SortKey })}
-              className="h-10 rounded-full border border-line bg-paper pl-4 pr-9 text-sm font-medium outline-none transition hover:border-ink focus-visible:border-forest"
+              // As wide as its longest option by default; on a 360 px phone that is wider than the screen
+              // next to the "Филтри" button, so it may shrink and cut the text off instead.
+              className="h-10 min-w-0 truncate rounded-full border border-line bg-paper pl-4 pr-9 text-sm font-medium outline-none transition hover:border-ink focus-visible:border-forest"
             >
               {Object.entries(SORTS).map(([k, label]) => (
                 <option key={k} value={k}>
