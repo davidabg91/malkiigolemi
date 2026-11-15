@@ -27,6 +27,8 @@ const card = {
   pack: products.pack,
   color: products.color,
   colors: products.colorOptions,
+  colorStock: products.colorStock,
+  deliveryTime: products.deliveryTime,
   origin: products.origin,
   isNew: products.isNew,
   stock: products.stock,
@@ -50,6 +52,10 @@ export type ProductCardData = {
   color: string;
   /** Colours to choose from; empty or missing when the product has no choice of colour. */
   colors?: string[];
+  /** How many there are of each colour, in the order of `colors`. */
+  colorStock?: number[];
+  /** A longer than usual delivery time, when the product has one. */
+  deliveryTime?: string | null;
   origin: string | null;
   isNew: boolean;
   stock: number;

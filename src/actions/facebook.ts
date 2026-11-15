@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, getTableColumns, gte, sql } from "drizzle-orm";
+import { and, eq, getTableColumns, sql } from "drizzle-orm";
 import { refresh, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -15,6 +15,8 @@ import { orderNumber } from "@/lib/orders";
 import { pricedColumns } from "@/lib/pricing";
 import { CATALOG_TAG } from "@/lib/queries";
 import { DELIVERY_METHODS, shippingFor, STORE } from "@/lib/site";
+import { colorChoices, matchColor } from "@/lib/product-colors";
+import { takeStock } from "@/lib/stock";
 
 export type FbFormState = { ok?: boolean; error?: string; fieldErrors?: Record<string, string>; orderNumber?: string } | undefined;
 
@@ -90,6 +92,8 @@ const orderSchema = z
     phone: z.string().trim().regex(/^\+?[0-9 ]{8,15}$/, "Въведи валиден телефон."),
     email: z.union([z.literal(""), z.string().trim().toLowerCase().pipe(z.email("Невалиден имейл."))]),
     qty: z.coerce.number().int().min(1, "Поне 1 бр.").max(99),
+    /** For a product sold in several colours: which one. */
+    color: z.string().trim().max(40).optional(),
     delivery: z.enum(DELIVERY_METHODS.map((m) => m.id) as [string, ...string[]]),
     courier: z.string().trim().optional(),
     officeCode: z.string().trim().max(40).optional(),
@@ -131,6 +135,14 @@ export async function orderFromClaim(claimId: number, _prev: FbFormState, formDa
   if (post.productId && !product) return { error: "Продуктът от поста вече не съществува." };
   if (!product && post.price == null) return { error: "Постът няма цена." };
   if (product && product.stock < d.qty) return { error: `Няма достатъчна наличност (остават ${product.stock} бр).` };
+  // A product sold in several colours is counted per colour, so the order has to say which.
+  let color: string | null = null;
+  if (product && product.colorOptions.length > 0) {
+    color = matchColor(product.colorOptions, d.color);
+    if (!color) return { error: "Провери отбелязаните полета.", fieldErrors: { color: "Избери цвят." } };
+    const left = colorChoices({ colors: product.colorOptions, colorStock: product.colorStock }).find((c) => c.name === color)?.stock ?? 0;
+    if (left < d.qty) return { error: `От цвят „${color}“ остават ${left} бр.`, fieldErrors: { color: left === 0 ? "Изчерпан." : `Остават ${left} бр.` } };
+  }
 
   const pickup = d.delivery === "store";
   const office = savedOffice(d.delivery, d.courier ?? null, d.officeCode ?? null);
@@ -183,15 +195,10 @@ export async function orderFromClaim(claimId: number, _prev: FbFormState, formDa
         sku: product?.sku ?? "FB",
         price,
         qty: d.qty,
+        color,
+        deliveryTime: product?.deliveryTime ?? null,
       });
-      if (product) {
-        const left = await tx
-          .update(products)
-          .set({ stock: sql`${products.stock} - ${d.qty}` })
-          .where(and(eq(products.id, product.id), gte(products.stock, d.qty)))
-          .returning({ id: products.id });
-        if (left.length === 0) throw new Error("OUT_OF_STOCK");
-      }
+      if (product && (await takeStock(tx, product, d.qty, color)) === null) throw new Error("OUT_OF_STOCK");
       await tx.update(fbClaims).set({ orderId: order.id }).where(eq(fbClaims.id, claim.id));
 
       // Next time this name comments, the form opens the way it was filled now.

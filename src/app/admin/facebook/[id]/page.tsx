@@ -17,6 +17,7 @@ import { fbContactKey } from "@/lib/fb-contacts";
 import { findFlag, getFlagIndex } from "@/lib/flags";
 import { formatDate, formatPrice } from "@/lib/format";
 import { DELIVERY_METHODS, type DeliveryId } from "@/lib/site";
+import { colorChoices } from "@/lib/product-colors";
 
 export const metadata: Metadata = { title: "Пост от Facebook" };
 
@@ -213,7 +214,7 @@ async function AdminFbPost({ params }: Pick<PageProps<"/admin/facebook/[id]">, "
                 </div>
                 {c.status === "pending" && (
                   <div className="mt-4 border-t border-line pt-4">
-                    <ClaimOrderForm claimId={c.id} qty={c.qty} prefill={match.prefill} />
+                    <ClaimOrderForm claimId={c.id} qty={c.qty} prefill={match.prefill} colors={product ? colorChoices({ colors: product.colorOptions, colorStock: product.colorStock }) : []} />
                   </div>
                 )}
               </Panel>

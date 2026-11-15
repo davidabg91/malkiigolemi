@@ -3,22 +3,31 @@
 import { Plus, X } from "lucide-react";
 import { useId, useState } from "react";
 import { ColorDot } from "@/components/product/ColorTag";
-import { cleanColors, COLOR_PRESETS, MAX_COLOR_LENGTH, MAX_COLORS } from "@/lib/product-colors";
+import { cleanColorChoices, COLOR_PRESETS, MAX_COLOR_LENGTH, MAX_COLORS, type ColorChoice } from "@/lib/product-colors";
 
 /**
- * The colours a product is sold in, in the admin's product form: tap ready-made ones or type any other name.
- * Left empty, the product has no choice of colour. Submitted as JSON in the hidden `colors` field.
+ * The colours a product is sold in, in the admin's product form, each with how many there are of it: tap
+ * ready-made ones or type any other name. Left empty, the product has no choice of colour.
+ * Submitted as JSON (`[{ name, stock }]`) in the hidden `colors` field. `onTotal` hears the sum of the
+ * quantities, or null when there are no colours, so the form can show it as the product's stock.
  */
-export function ColorOptions({ initial }: { initial: string[] }) {
+export function ColorOptions({ initial, onTotal }: { initial: ColorChoice[]; onTotal?: (total: number | null) => void }) {
   const uid = useId();
-  const [colors, setColors] = useState(() => cleanColors(initial));
+  const [colors, setColors] = useState(() => cleanColorChoices(initial));
   const [typed, setTyped] = useState("");
   const full = colors.length >= MAX_COLORS;
-  const has = (name: string) => colors.some((c) => c.toLocaleLowerCase("bg") === name.toLocaleLowerCase("bg"));
+  const has = (name: string) => colors.some((c) => c.name.toLocaleLowerCase("bg") === name.toLocaleLowerCase("bg"));
+  const total = colors.reduce((sum, c) => sum + c.stock, 0);
+
+  const update = (next: ColorChoice[]) => {
+    const clean = cleanColorChoices(next);
+    setColors(clean);
+    onTotal?.(clean.length > 0 ? clean.reduce((sum, c) => sum + c.stock, 0) : null);
+  };
 
   const addTyped = () => {
     // Several at once, separated by commas: "червен, син, зелен".
-    setColors((old) => cleanColors([...old, ...typed.split(/[,;]/)]));
+    update([...colors, ...typed.split(/[,;]/).map((name) => ({ name, stock: 0 }))]);
     setTyped("");
   };
 
@@ -26,26 +35,49 @@ export function ColorOptions({ initial }: { initial: string[] }) {
     <div className="sm:col-span-2">
       <input type="hidden" name="colors" value={JSON.stringify(colors)} />
       <p className="text-sm text-ink-soft">
-        По желание. Ако продуктът се предлага в няколко цвята, отбележи ги и клиентът ще избира цвят при поръчка. Остави празно за продукт без избор на цвят.
+        По желание. Ако продуктът се предлага в няколко цвята, отбележи ги и срещу всеки напиши колко броя има. Клиентът избира цвят при поръчка, а цвят с 0 броя
+        се показва като изчерпан и не може да се поръча. Остави празно за продукт без избор на цвят.
       </p>
 
       {colors.length > 0 && (
-        <ul className="mt-4 flex flex-wrap gap-2" aria-label="Избрани цветове">
-          {colors.map((c) => (
-            <li key={c} className="inline-flex h-10 items-center gap-2 rounded-full bg-forest pl-3.5 pr-1 text-sm font-medium text-white">
-              <ColorDot name={c} className="h-4 w-4" />
-              {c}
-              <button
-                type="button"
-                onClick={() => setColors((old) => old.filter((x) => x !== c))}
-                className="grid h-8 w-8 place-items-center rounded-full transition hover:bg-white/20"
-                aria-label={`Махни цвят ${c}`}
-              >
-                <X className="h-4 w-4" aria-hidden />
-              </button>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="mt-4 divide-y divide-line rounded-2xl border border-line" aria-label="Избрани цветове">
+            {colors.map((c) => (
+              <li key={c.name} className="flex items-center gap-3 px-3 py-2 sm:px-4">
+                <ColorDot name={c.name} className="h-5 w-5" />
+                <span className="min-w-0 flex-1 truncate font-medium">{c.name}</span>
+                {c.stock === 0 && <span className="rounded-full bg-tomato/10 px-2 py-0.5 text-xs font-semibold text-tomato">изчерпан</span>}
+                <label className="flex items-center gap-2 text-sm text-ink-soft">
+                  <span className="sr-only">Наличност от цвят {c.name}</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={99999}
+                    value={c.stock}
+                    onFocus={(e) => e.currentTarget.select()}
+                    onChange={(e) => update(colors.map((x) => (x.name === c.name ? { ...x, stock: Number(e.target.value) } : x)))}
+                    className="field h-11 w-24 text-right tabular-nums"
+                  />
+                  бр
+                </label>
+                <button
+                  type="button"
+                  onClick={() => update(colors.filter((x) => x.name !== c.name))}
+                  className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink-soft transition hover:bg-sand hover:text-tomato"
+                  aria-label={`Махни цвят ${c.name}`}
+                >
+                  <X className="h-4 w-4" aria-hidden />
+                </button>
+              </li>
+            ))}
+          </ul>
+          <p className={`mt-2 text-sm ${total === 0 ? "font-medium text-tomato" : "text-ink-soft"}`} role={total === 0 ? "alert" : undefined}>
+            {total === 0
+              ? "Напиши наличност срещу цветовете — с 0 навсякъде продуктът ще се показва като изчерпан."
+              : `Общо ${total} бр. Това е наличността на продукта — сборът от цветовете.`}
+          </p>
+        </>
       )}
 
       <p className="mb-2 mt-4 text-sm font-medium">Добави цвят</p>
@@ -55,7 +87,7 @@ export function ColorOptions({ initial }: { initial: string[] }) {
             key={p.name}
             type="button"
             disabled={full}
-            onClick={() => setColors((old) => cleanColors([...old, p.name]))}
+            onClick={() => update([...colors, { name: p.name, stock: 0 }])}
             className="inline-flex h-10 items-center gap-2 rounded-full border border-line bg-paper px-3.5 text-sm font-medium transition hover:border-forest disabled:opacity-40"
           >
             <ColorDot name={p.name} className="h-4 w-4" />

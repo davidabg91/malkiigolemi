@@ -73,6 +73,10 @@ export const products = sqliteTable(
     color: text("color").notNull().default("#1F5C3F"),
     /** Colours the product is sold in, by name; when there are any the customer picks one. Empty = no choice. */
     colorOptions: text("color_options", { mode: "json" }).$type<string[]>().notNull().default([]),
+    /** How many there are of each colour, in the order of `colorOptions`; `stock` is then their sum (see lib/stock.ts). */
+    colorStock: text("color_stock", { mode: "json" }).$type<number[]>().notNull().default([]),
+    /** How long delivery takes when it is longer than usual ("7–10 работни дни"), e.g. goods ordered in for the customer. Null = the usual. */
+    deliveryTime: text("delivery_time"),
     origin: text("origin"),
     stock: integer("stock").notNull().default(100),
     isNew: integer("is_new", { mode: "boolean" }).notNull().default(false),
@@ -239,6 +243,8 @@ export const orderItems = sqliteTable(
     qty: integer("qty").notNull(),
     /** The colour the customer chose, for a product sold in several. */
     color: text("color"),
+    /** The product's longer delivery time, as it was when ordered. */
+    deliveryTime: text("delivery_time"),
   },
   (t) => [index("order_items_order_idx").on(t.orderId)],
 );

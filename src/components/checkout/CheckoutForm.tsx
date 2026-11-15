@@ -366,6 +366,7 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
               <span className="min-w-0 flex-1 text-sm leading-snug">
                 <span className="line-clamp-2 font-medium">{i.name}</span>
                 <span className="text-ink-soft">{[i.unit, i.chosenColor].filter(Boolean).join(" · ")}</span>
+                {i.deliveryTime && <span className="block text-xs font-medium text-ink">Доставка: {i.deliveryTime}</span>}
               </span>
               <span className="text-sm font-semibold tabular-nums">{formatPrice(unitPriceFor(i, perProduct.get(i.id) ?? i.qty) * i.qty)}</span>
             </li>

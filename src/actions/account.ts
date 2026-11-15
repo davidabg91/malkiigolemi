@@ -14,7 +14,7 @@ import { savedOffice } from "@/lib/courier-offices";
 import { isCourierId } from "@/lib/couriers";
 import { CATALOG_TAG, getLiveCards, type ProductCardData } from "@/lib/queries";
 import { DELIVERY_METHODS } from "@/lib/site";
-import { lineName, matchColor } from "@/lib/product-colors";
+import { colorChoices, lineName, matchColor } from "@/lib/product-colors";
 
 export type AccountFormState = { ok?: boolean; error?: string; fieldErrors?: Record<string, string> } | undefined;
 
@@ -177,11 +177,13 @@ export async function reorder(orderId: number): Promise<ReorderResult> {
     const p = l.productId == null ? undefined : byId.get(l.productId);
     // A colour the product is no longer sold in cannot be ordered again.
     const chosenColor = p?.colors?.length ? matchColor(p.colors, l.color) : null;
-    if (!p || p.stock <= 0 || (p.colors?.length && !chosenColor)) {
+    // With colours, what counts is how many are left of that colour.
+    const left = !p ? 0 : p.colors?.length ? (colorChoices(p).find((c) => c.name === chosenColor)?.stock ?? 0) : p.stock;
+    if (!p || left <= 0) {
       missing.push(lineName(l.name, l.color));
       continue;
     }
-    const qty = Math.min(l.qty, p.stock);
+    const qty = Math.min(l.qty, left);
     if (qty < l.qty) reduced.push(p.name);
     items.push({ ...p, qty, chosenColor });
   }

@@ -9,6 +9,7 @@ import { btn } from "@/components/ui";
 import { ColorOptions } from "./ColorOptions";
 import type { Brand, Product } from "@/db/schema";
 import { MAX_IMAGE_MB, PACKS } from "@/lib/listing";
+import { colorChoices, DELIVERY_TIME_PRESETS, MAX_DELIVERY_TIME_LENGTH } from "@/lib/product-colors";
 import { megabytes, replaceChosenFile, shrinkImage, UPLOAD_LIMIT } from "@/lib/shrink-image";
 import { ORIGIN_LABELS } from "@/lib/site";
 
@@ -43,6 +44,9 @@ export function ProductForm({
   const [color, setColor] = useState(product?.color ?? "#1F5C3F");
   const [brandId, setBrandId] = useState(product?.brandId ? String(product.brandId) : "");
   const [newBrand, setNewBrand] = useState("");
+  const [initialColors] = useState(() => colorChoices({ colors: product?.colorOptions, colorStock: product?.colorStock }));
+  // With colours the product has as many as its colours together; null = no colours, the number is typed.
+  const [colorTotal, setColorTotal] = useState<number | null>(() => (initialColors.length > 0 ? initialColors.reduce((sum, c) => sum + c.stock, 0) : null));
   const [imageError, setImageError] = useState("");
   const [imageNote, setImageNote] = useState("");
   const [shrinking, setShrinking] = useState(false);
@@ -160,11 +164,49 @@ export function ProductForm({
           {input("oldPrice", "Стара цена (€) — за промоция", { inputMode: "decimal", defaultValue: euros(product?.oldPrice), placeholder: "празно = без промо" })}
           {input("bulkMinQty", "Цена за количество — от брой", { inputMode: "numeric", defaultValue: product?.bulkMinQty ?? "", placeholder: "напр. 3" })}
           {input("bulkPrice", "Цена за количество (€/бр)", { inputMode: "decimal", defaultValue: euros(product?.bulkPrice) })}
-          {input("stock", "Наличност (бр)", { inputMode: "numeric", defaultValue: product?.stock ?? 100 })}
+          {colorTotal === null ? (
+            input("stock", "Наличност (бр)", { inputMode: "numeric", defaultValue: product?.stock ?? 100 })
+          ) : (
+            <div>
+              <label htmlFor={`${uid}-stock`} className="mb-1.5 block text-sm font-medium">
+                Наличност (бр)
+              </label>
+              <input id={`${uid}-stock`} name="stock" readOnly value={colorTotal} className="field bg-sand/60 text-ink-soft" aria-describedby={`${uid}-stock-hint`} />
+              <p id={`${uid}-stock-hint`} className="mt-1.5 text-xs text-ink-soft">
+                Сбор от цветовете — променя се от раздел „Цветове“ по-долу.
+              </p>
+            </div>
+          )}
+          <div className="sm:col-span-2">
+            <label htmlFor={`${uid}-deliveryTime`} className="mb-1.5 block text-sm font-medium">
+              Срок за доставка
+            </label>
+            <input
+              id={`${uid}-deliveryTime`}
+              name="deliveryTime"
+              list={`${uid}-deliveryTimes`}
+              defaultValue={product?.deliveryTime ?? ""}
+              maxLength={MAX_DELIVERY_TIME_LENGTH}
+              placeholder="напр. 7–10 работни дни"
+              className="field"
+              aria-invalid={errors.deliveryTime ? true : undefined}
+              aria-describedby={`${uid}-deliveryTime-hint`}
+            />
+            <datalist id={`${uid}-deliveryTimes`}>
+              {DELIVERY_TIME_PRESETS.map((t) => (
+                <option key={t} value={t} />
+              ))}
+            </datalist>
+            <p id={`${uid}-deliveryTime-hint`} className="mt-1.5 text-xs text-ink-soft">
+              По желание. Попълни, ако продуктът не е при теб на склад и доставката отнема повече време — клиентът го вижда при продукта, в количката и в поръчката.
+              Празно = обичайният срок.
+            </p>
+            {errors.deliveryTime && <p role="alert" className="mt-1.5 text-sm font-medium text-tomato">{errors.deliveryTime}</p>}
+          </div>
         </Group>
 
         <Group title="Цветове">
-          <ColorOptions initial={product?.colorOptions ?? []} />
+          <ColorOptions initial={initialColors} onTotal={setColorTotal} />
         </Group>
 
         <Group title="Видимост">

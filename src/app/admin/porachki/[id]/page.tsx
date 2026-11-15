@@ -153,6 +153,7 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
                                 </span>
                               </p>
                             )}
+                            {i.deliveryTime && <p className="mt-1 text-xs font-semibold text-tomato">Срок за доставка: {i.deliveryTime}</p>}
                             <p className="text-xs text-ink-soft">Арт. № {i.sku}</p>
                           </div>
                         </div>

@@ -52,9 +52,35 @@ export function cleanColors(input: unknown): string[] {
   return out;
 }
 
+/** A colour with how many of it there are. */
+export type ColorChoice = { name: string; stock: number };
+
+const wholeNumber = (v: unknown) => Math.min(99_999, Math.max(0, Math.floor(Number(v) || 0)));
+
+/** A product's colours with their quantities. A colour without a recorded quantity counts as none left. */
+export function colorChoices(p: { colors?: readonly string[] | null; colorStock?: readonly number[] | null }): ColorChoice[] {
+  return (p.colors ?? []).map((name, i) => ({ name, stock: wholeNumber(p.colorStock?.[i]) }));
+}
+
+/** The product form's list (`[{ name, stock }]`), tidied the way `cleanColors` tidies names. */
+export function cleanColorChoices(input: unknown): ColorChoice[] {
+  if (!Array.isArray(input)) return [];
+  const rows = input.filter((r): r is { name: string; stock?: unknown } => typeof r === "object" && r !== null && typeof (r as { name?: unknown }).name === "string");
+  const stockOf = new Map<string, number>();
+  for (const r of rows) {
+    const k = key(r.name.replace(/\s+/g, " ").trim().slice(0, MAX_COLOR_LENGTH));
+    if (!stockOf.has(k)) stockOf.set(k, wholeNumber(r.stock));
+  }
+  return cleanColors(rows.map((r) => r.name)).map((name) => ({ name, stock: stockOf.get(key(name)) ?? 0 }));
+}
+
 /** The colour as the product lists it, whatever the letter case it was asked in; null when it has none such. */
 export const matchColor = (options: readonly string[] | null | undefined, wanted: string | null | undefined) =>
   (wanted && options?.find((c) => key(c) === key(wanted))) || null;
+
+/** Ready-made delivery times for the admin's product form; any other text can be typed. */
+export const DELIVERY_TIME_PRESETS = ["2–3 работни дни", "3–5 работни дни", "5–7 работни дни", "7–10 работни дни", "10–14 работни дни", "до 30 дни"];
+export const MAX_DELIVERY_TIME_LENGTH = 60;
 
 /** An order line's name with its colour: "Тениска M — Червен". */
 export const lineName = (name: string, color: string | null | undefined) => (color ? `${name} — ${color}` : name);
