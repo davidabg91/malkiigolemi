@@ -8,6 +8,8 @@ import { useIsAdmin } from "@/lib/admin-flag";
 
 const grid = "grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4";
 const tool = "inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-semibold transition active:scale-95 disabled:opacity-40";
+/** How long a product has to be held before the arranging turns on: long enough not to happen by accident. */
+const HOLD_MS = 900;
 
 function move<T>(list: T[], from: number, to: number) {
   if (from === to || to < 0 || to >= list.length) return list;
@@ -98,7 +100,8 @@ export function SortableGrid({ ids, cards, sortable }: { ids: number[]; cards: R
 
   const onPointerDown = (id: number) => (e: React.PointerEvent) => {
     if (!canSort || (e.pointerType === "mouse" && e.button !== 0)) return;
-    if ((e.target as HTMLElement).closest("[data-reorder-tool]")) return;
+    // The card's own buttons ("+", the quantity, the heart) are for pressing, not for holding the product.
+    if ((e.target as HTMLElement).closest("[data-reorder-tool], button, input, select, textarea, [role=button]")) return;
     window.clearTimeout(drag.current?.timer);
     const d = { id, x: e.clientX, y: e.clientY, active: false, timer: 0 };
     drag.current = d;
@@ -110,7 +113,7 @@ export function SortableGrid({ ids, cards, sortable }: { ids: number[]; cards: R
         longPressed.current = true;
         buzz();
         setEditing(true);
-      }, 500);
+      }, HOLD_MS);
     } else if (e.pointerType !== "mouse") {
       d.timer = window.setTimeout(() => {
         if (drag.current !== d) return;
@@ -125,6 +128,15 @@ export function SortableGrid({ ids, cards, sortable }: { ids: number[]; cards: R
     const d = drag.current;
     if (editing || !d || Math.hypot(e.clientX - d.x, e.clientY - d.y) < 8) return;
     window.clearTimeout(d.timer);
+    drag.current = null;
+  };
+
+  // A hold is over the moment the finger or the mouse button is lifted (or the page starts to scroll):
+  // otherwise an ordinary tap would turn the arranging on a moment later. While arranging, the window's
+  // own listeners end a drag instead.
+  const endHold = () => {
+    if (editing) return;
+    window.clearTimeout(drag.current?.timer);
     drag.current = null;
   };
 
@@ -237,6 +249,9 @@ export function SortableGrid({ ids, cards, sortable }: { ids: number[]; cards: R
             data-reorder-id={id}
             onPointerDown={onPointerDown(id)}
             onPointerMove={cancelHold}
+            onPointerUp={endHold}
+            onPointerCancel={endHold}
+            onPointerLeave={endHold}
             onDragStart={(e) => e.preventDefault()}
             className={`relative transition-transform duration-150 ${editing ? "cursor-grab" : ""} ${
               dragging === id ? "z-20 scale-[1.04] cursor-grabbing rounded-card shadow-lift ring-2 ring-forest" : ""
