@@ -10,8 +10,13 @@ export type SortKey = keyof typeof SORTS;
 
 export const PER_PAGE = 24;
 
-/** Product photo size limit. Vercel rejects request bodies over 4.5 MB, so this leaves room for the rest of the form. */
-export const MAX_IMAGE_MB = 3;
+/**
+ * The largest photo the admin may choose. Vercel rejects request bodies over 4.5 MB, so anything bigger
+ * than that is made smaller in the browser before it is sent (see shrink-image.ts).
+ */
+export const MAX_IMAGE_MB = 10;
+/** The largest photo the server takes: what fits in one request next to the rest of the form. */
+export const MAX_UPLOAD_MB = 4;
 
 export const PACKS = {
   bag: "Плик / пакет",

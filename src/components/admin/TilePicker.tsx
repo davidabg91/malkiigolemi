@@ -3,7 +3,7 @@
 import { Check, ImagePlus, Sparkles } from "lucide-react";
 import { useId, useState } from "react";
 import { toast } from "sonner";
-import { MAX_IMAGE_MB } from "@/lib/listing";
+import { replaceChosenFile, shrinkImage, UPLOAD_LIMIT } from "@/lib/shrink-image";
 import { optimizedImage } from "@/lib/optimized-image";
 import { isTileImage, TILE_AUTO, TILE_PRESET_LABELS, TILE_PRESETS } from "@/lib/tile-art";
 
@@ -62,15 +62,19 @@ export function TilePicker({ value }: { value: string | null }) {
           type="file"
           accept="image/png,image/webp,image/avif,image/jpeg"
           className="sr-only"
-          onChange={(e) => {
-            const file = e.currentTarget.files?.[0];
-            if (!file) return;
-            // Catch oversized pictures here: the server would reject the whole request before validation runs.
-            if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
-              e.currentTarget.value = "";
-              toast.error(`Снимката е по-голяма от ${MAX_IMAGE_MB} MB.`);
+          onChange={async (e) => {
+            const field = e.currentTarget;
+            const chosen = field.files?.[0];
+            if (!chosen) return;
+            // A large picture is made smaller here, before it is sent: the request has room for about 4 MB.
+            const result = await shrinkImage(chosen);
+            if (field.files?.[0] !== chosen) return;
+            if (!result.ok || (result.shrunk && !replaceChosenFile(field, result.file) && chosen.size > UPLOAD_LIMIT)) {
+              field.value = "";
+              toast.error(result.ok ? `Снимката е твърде голяма за този браузър. Опитай с по-малка (до 3,5 MB).` : result.error);
               return;
             }
+            const file = field.files?.[0] ?? chosen;
             setPreview((old) => {
               if (old) URL.revokeObjectURL(old);
               return URL.createObjectURL(file);

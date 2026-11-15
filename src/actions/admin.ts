@@ -7,7 +7,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { brands, categories, categoryRedirects, chatMessages, ORDER_STATUSES, products, type OrderStatus } from "@/db/schema";
 import { assertAdmin } from "@/lib/auth";
-import { photoIfOpaque, removeImage, saveImage } from "@/lib/images";
+import { removeImage, saveImage, tidyStoredPhoto } from "@/lib/images";
 import { PACKS } from "@/lib/listing";
 import { CATALOG_TAG } from "@/lib/queries";
 import { ORIGIN_LABELS, TONES } from "@/lib/site";
@@ -158,8 +158,9 @@ export async function saveProduct(id: number | null, _prev: AdminFormState, form
       await removeImage(image);
       image = null;
     } else if (image) {
-      // A photo uploaded as PNG earlier: saving the product is enough to have it shown edge to edge.
-      image = await photoIfOpaque(image);
+      // A photo uploaded before the shop tidied them: saving the product is enough to have it made smaller
+      // (and, for a PNG without a see-through background, shown edge to edge).
+      image = await tidyStoredPhoto(image);
     }
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Неуспешно качване на изображението.", fieldErrors: { image: "Провери файла." } };

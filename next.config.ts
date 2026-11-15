@@ -13,8 +13,8 @@ const nextConfig: NextConfig = {
     remotePatterns: [{ protocol: "https", hostname: "*.public.blob.vercel-storage.com" }],
   },
   experimental: {
-    // Product photos are uploaded through a Server Action (max 3 MB each, see MAX_IMAGE_MB).
-    // Keep this under Vercel's 4.5 MB request limit.
+    // Product photos are uploaded through a Server Action. Bigger ones are made smaller in the browser
+    // first (see shrink-image.ts), because this has to stay under Vercel's 4.5 MB request limit.
     serverActions: { bodySizeLimit: "4mb" },
   },
   async headers() {
