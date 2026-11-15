@@ -9,15 +9,15 @@ import { Logo } from "@/components/ui";
 import type { AdminAlerts } from "@/lib/admin-alerts";
 
 const LINKS = [
-  // The most used tab comes first.
+  // The most used tabs come first.
   { href: "/admin/produkti", label: "Продукти", icon: Package },
+  { href: "/admin/kategorii", label: "Категории", icon: FolderTree },
   { href: "/admin", label: "Табло", icon: LayoutDashboard, exact: true },
   { href: "/admin/porachki", label: "Поръчки", icon: ReceiptText },
   { href: "/admin/chat", label: "Чат", icon: MessagesSquare },
   { href: "/admin/plashtaniya", label: "Плащания", icon: QrCode },
   { href: "/admin/otkazi", label: "Откази", icon: Undo2 },
   { href: "/admin/facebook", label: "От Facebook", icon: ClipboardPaste },
-  { href: "/admin/kategorii", label: "Категории", icon: FolderTree },
   { href: "/admin/promocii", label: "Промоции", icon: BadgePercent },
   { href: "/admin/otzivi", label: "Отзиви", icon: MessageSquareText },
   { href: "/admin/lojalnost", label: "Точки", icon: Gift },
