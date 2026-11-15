@@ -9,6 +9,7 @@ import { btn } from "@/components/ui";
 import { ColorOptions } from "./ColorOptions";
 import type { Brand, Product } from "@/db/schema";
 import { MAX_IMAGE_MB, PACKS } from "@/lib/listing";
+import { megabytes, replaceChosenFile, shrinkImage, UPLOAD_LIMIT } from "@/lib/shrink-image";
 import { ORIGIN_LABELS } from "@/lib/site";
 
 type CategoryOption = { id: number; name: string; children: { id: number; name: string }[] };
@@ -43,6 +44,8 @@ export function ProductForm({
   const [brandId, setBrandId] = useState(product?.brandId ? String(product.brandId) : "");
   const [newBrand, setNewBrand] = useState("");
   const [imageError, setImageError] = useState("");
+  const [imageNote, setImageNote] = useState("");
+  const [shrinking, setShrinking] = useState(false);
   const errors = state?.fieldErrors ?? {};
   const previewLabel = newBrand || brands.find((b) => String(b.id) === brandId)?.name || "Марка";
 
@@ -193,22 +196,40 @@ export function ProductForm({
                 name="image"
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/avif"
-                onChange={(e) => {
-                  // Catch oversized photos here: the server would reject the whole request before validation runs.
-                  const file = e.currentTarget.files?.[0];
-                  if (file && file.size > MAX_IMAGE_MB * 1024 * 1024) {
-                    e.currentTarget.value = "";
-                    setImageError(`Снимката е ${(file.size / 1024 / 1024).toFixed(1)} MB. Максимумът е ${MAX_IMAGE_MB} MB.`);
-                  } else {
-                    setImageError("");
+                onChange={async (e) => {
+                  // A large photo is made smaller here, before it is sent: the request has room for about 4 MB.
+                  const field = e.currentTarget;
+                  const file = field.files?.[0];
+                  setImageError("");
+                  setImageNote("");
+                  if (!file) return;
+                  setShrinking(true);
+                  const result = await shrinkImage(file);
+                  setShrinking(false);
+                  // Another photo was chosen meanwhile: that one is being handled by its own call.
+                  if (field.files?.[0] !== file) return;
+                  if (!result.ok || (result.shrunk && !replaceChosenFile(field, result.file) && file.size > UPLOAD_LIMIT)) {
+                    field.value = "";
+                    setImageError(result.ok ? "Снимката е твърде голяма за този браузър. Опитай с по-малка (до 3,5 MB)." : result.error);
+                    return;
+                  }
+                  if (result.shrunk && field.files?.[0] !== file) {
+                    setImageNote(`Снимката е намалена от ${megabytes(file.size)} на ${megabytes(result.file.size)}, без видима разлика в качеството.`);
                   }
                 }}
                 className="block w-full text-sm text-ink-soft file:mr-3 file:h-10 file:cursor-pointer file:rounded-full file:border-0 file:bg-sand file:px-4 file:text-sm file:font-semibold file:text-ink hover:file:bg-lime"
                 aria-describedby={`${uid}-image-hint`}
               />
               <p id={`${uid}-image-hint`} className="mt-1.5 text-xs text-ink-soft">
-                JPG, PNG, WebP или AVIF до {MAX_IMAGE_MB} MB. Без снимка се показва илюстрацията.
+                JPG, PNG, WebP или AVIF до {MAX_IMAGE_MB} MB. Сайтът сам я намалява, за да не заема място. Без снимка се показва илюстрацията.
               </p>
+              {shrinking && (
+                <p role="status" className="mt-1.5 flex items-center gap-2 text-sm text-ink-soft">
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  Снимката се обработва…
+                </p>
+              )}
+              {imageNote && !shrinking && <p role="status" className="mt-1.5 text-sm font-medium text-forest">{imageNote}</p>}
               {(imageError || errors.image) && <p role="alert" className="mt-1.5 text-sm font-medium text-tomato">{imageError || errors.image}</p>}
               {product?.image && (
                 <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm">
@@ -246,7 +267,7 @@ export function ProductForm({
           </p>
         )}
         <div className="flex gap-3">
-          <button type="submit" disabled={pending} className={`${btn.primary} flex-1`}>
+          <button type="submit" disabled={pending || shrinking} className={`${btn.primary} flex-1`}>
             {pending && <Loader2 className="h-5 w-5 animate-spin" aria-hidden />}
             {product ? "Запази промените" : "Създай продукта"}
           </button>
