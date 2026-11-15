@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Heart, Minus, Palette, Plus, ShoppingBag } from "lucide-react";
+import { Check, Heart, Minus, Plus, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -63,16 +63,17 @@ export function CardAddButton({ product }: { product: ProductCardData }) {
     if (availabilityOf(product) === "expected") return null;
     return <span className="rounded-full bg-sand px-3 py-2 text-xs font-medium text-ink-soft">Изчерпан</span>;
   }
-  // Sold in several colours: the colour is chosen on the product's page.
+  // Sold in several colours: the colour is chosen on the product's page, so the same round "+" as on
+  // every other card leads there instead of adding.
   if (product.colors && product.colors.length > 0) {
     return (
       <Link
         href={`/produkt/${product.slug}`}
-        className="inline-flex h-11 items-center gap-1.5 rounded-full bg-forest px-3.5 text-xs font-semibold text-white transition duration-200 hover:bg-forest-deep active:scale-95"
+        onClick={() => toast("Избери цвят", { description: product.name, duration: 2500 })}
+        className="grid h-11 w-11 place-items-center rounded-full bg-forest text-white transition duration-200 hover:scale-105 hover:bg-forest-deep active:scale-95"
         aria-label={`Избери цвят: ${product.name}`}
       >
-        <Palette className="h-4 w-4" aria-hidden />
-        Цветове
+        <Plus className="h-5 w-5" aria-hidden />
       </Link>
     );
   }
