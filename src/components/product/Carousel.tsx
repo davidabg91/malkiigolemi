@@ -164,8 +164,12 @@ export function Carousel({ children, label, autoplay = false, rows = 1 }: { chil
         <ul className="-ml-3 flex touch-pan-y sm:-ml-4">
           {columns.map((column, i) => (
             <li key={i} className="w-[48%] shrink-0 pl-3 sm:w-[32%] sm:pl-4 md:w-1/4 xl:w-1/5">
-              {/* Equal rows, so the cards line up across columns whatever their own height. */}
-              {rows === 2 ? <div className="grid h-full grid-rows-2 gap-3 sm:gap-4">{column}</div> : column}
+              {/*
+                Equal rows, so the cards line up across columns whatever their own height. The one column is
+                spelled out (`grid-cols-1` is `minmax(0, 1fr)`): left to itself it grows to the widest thing
+                in a card that cannot wrap, and the cards then stick out over their neighbours.
+              */}
+              {rows === 2 ? <div className="grid h-full grid-cols-1 grid-rows-2 gap-3 sm:gap-4">{column}</div> : column}
             </li>
           ))}
         </ul>

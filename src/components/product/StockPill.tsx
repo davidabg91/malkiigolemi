@@ -33,11 +33,16 @@ export function StockPill({
   return (
     <span
       className={`inline-flex max-w-full items-center font-semibold ${style.pill} ${
-        large ? "gap-2.5 rounded-2xl px-4 py-2.5 text-sm" : "gap-1.5 rounded-full px-2 py-0.5 text-xs"
+        // The small one is as round as a pill on one line and still looks right when a long delivery time
+        // takes two on a narrow card: the time is the point, so it wraps instead of being cut off.
+        large ? "gap-2.5 rounded-2xl px-4 py-2.5 text-sm" : "gap-1.5 rounded-xl px-2 py-0.5 text-xs leading-snug"
       } ${className}`}
     >
       <span className={`relative shrink-0 rounded-full bg-current ${style.dot} ${large ? "h-2.5 w-2.5" : "h-2 w-2"}`} aria-hidden />
-      <span className={large ? "" : "truncate"}>{children ?? label}</span>
+      {/* A word joiner after the dash keeps a range such as "5–7" on one line. */}
+      <span className={large ? "" : "min-w-0 text-balance [overflow-wrap:anywhere]"}>
+        {children ?? label.replace(/([–—-])(?=\d)/g, "$1⁠")}
+      </span>
     </span>
   );
 }
