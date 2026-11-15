@@ -2,7 +2,7 @@
 
 import { ArrowRight, Flame, Pause, Play } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CardAddButton } from "@/components/product/AddToCart";
 import { ProductVisual } from "@/components/product/PackShot";
 import { ProductCard, ProductStamp } from "@/components/product/ProductCard";
@@ -65,6 +65,184 @@ function Spotlight({ product }: { product: ProductCardData }) {
         </div>
       </div>
     </article>
+  );
+}
+
+/** A finger or the mouse has to travel this far sideways before it counts as moving the ribbon, not as a tap. */
+const DRAG_FROM_PX = 6;
+/** How quickly a push fades back into the ribbon's own pace, in milliseconds. */
+const SETTLE_MS = 325;
+
+/**
+ * The moving ribbon: the products twice in a row, going round without a seam. It moves by itself and can
+ * be taken with a finger (or the mouse) and pushed either way; let go and it glides on, then falls back
+ * into its own pace. It stands still while the mouse is over it, while it is paused, for people who
+ * prefer reduced motion, and off screen. Up and down the page still scrolls as usual.
+ */
+function Ribbon({ products, paused }: { products: ProductCardData[]; paused: boolean }) {
+  const frame = useRef<HTMLDivElement>(null);
+  const track = useRef<HTMLDivElement>(null);
+  const first = useRef<HTMLDivElement>(null);
+  const copy = useRef<HTMLDivElement>(null);
+  const [hovered, setHovered] = useState(false);
+  // What the animation reads and writes on every frame; as state it would re-render sixty times a second.
+  const motion = useRef({
+    /** How far the ribbon has moved to the left, in px, always within one copy's width. */
+    x: 0,
+    /** Its speed, px per millisecond. */
+    v: 0,
+    /** The width of one copy: moving by this much changes nothing on screen. */
+    period: 0,
+    auto: true,
+    /** A tap that turned into a drag must not also open the product under the finger. */
+    moved: false,
+    drag: null as { id: number; startX: number; from: number; active: boolean; lastX: number; lastT: number; v: number } | null,
+  });
+  // The same pace as before the ribbon could be dragged: one copy every `seconds`.
+  const seconds = Math.max(28, products.length * 4.2);
+
+  useEffect(() => {
+    motion.current.auto = !paused && !hovered;
+  }, [paused, hovered]);
+
+  useEffect(() => {
+    const el = track.current;
+    const half = first.current;
+    const box = frame.current;
+    if (!el || !half || !box) return;
+    const m = motion.current;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const measure = () => {
+      m.period = half.offsetWidth;
+    };
+    measure();
+    const sizes = new ResizeObserver(measure);
+    sizes.observe(half);
+
+    let raf = 0;
+    let last = 0;
+    const step = (now: number) => {
+      const dt = last ? Math.min(64, now - last) : 16;
+      last = now;
+      if (!m.drag?.active) {
+        const own = m.auto && !reduce.matches && m.period ? m.period / (seconds * 1000) : 0;
+        // Whatever speed it was let go with eases into its own.
+        m.v = own + (m.v - own) * Math.exp(-dt / SETTLE_MS);
+        m.x += m.v * dt;
+      }
+      if (m.period) m.x = ((m.x % m.period) + m.period) % m.period;
+      el.style.transform = `translate3d(${-m.x}px,0,0)`;
+      raf = requestAnimationFrame(step);
+    };
+    const seen = new IntersectionObserver(([entry]) => {
+      cancelAnimationFrame(raf);
+      last = 0;
+      if (entry.isIntersecting) raf = requestAnimationFrame(step);
+    });
+    seen.observe(box);
+    return () => {
+      cancelAnimationFrame(raf);
+      seen.disconnect();
+      sizes.disconnect();
+    };
+  }, [seconds]);
+
+  // The second copy is for the eye only: hidden from screen readers and skipped by the Tab key, but it
+  // can be tapped like the first. Its buttons change as products go in and out of the cart, hence the watch.
+  useEffect(() => {
+    const el = copy.current;
+    if (!el) return;
+    const quiet = () => {
+      for (const node of el.querySelectorAll<HTMLElement>("a, button, input, select, textarea")) {
+        if (node.tabIndex !== -1) node.tabIndex = -1;
+      }
+    };
+    quiet();
+    const watch = new MutationObserver(quiet);
+    watch.observe(el, { childList: true, subtree: true });
+    return () => watch.disconnect();
+  }, []);
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    const m = motion.current;
+    m.moved = false;
+    m.drag = { id: e.pointerId, startX: e.clientX, from: m.x, active: false, lastX: e.clientX, lastT: e.timeStamp, v: 0 };
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    const m = motion.current;
+    const d = m.drag;
+    if (!d || d.id !== e.pointerId) return;
+    const dx = e.clientX - d.startX;
+    if (!d.active) {
+      if (Math.abs(dx) < DRAG_FROM_PX) return;
+      d.active = true;
+      m.moved = true;
+      // From here on the ribbon follows the pointer even when it leaves the ribbon.
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        // The pointer is already gone: the drag simply ends with it.
+      }
+    }
+    m.x = d.from - dx;
+    const dt = e.timeStamp - d.lastT;
+    if (dt > 0) {
+      d.v = 0.7 * ((d.lastX - e.clientX) / dt) + 0.3 * d.v;
+      d.lastX = e.clientX;
+      d.lastT = e.timeStamp;
+    }
+  };
+
+  const onPointerEnd = (e: React.PointerEvent) => {
+    const m = motion.current;
+    const d = m.drag;
+    if (!d || d.id !== e.pointerId) return;
+    // Let go while moving: it glides on. Held still first: it just carries on by itself.
+    if (d.active) m.v = e.timeStamp - d.lastT > 90 ? 0 : Math.max(-3, Math.min(3, d.v));
+    m.drag = null;
+  };
+
+  return (
+    <div
+      ref={frame}
+      className="relative overflow-hidden py-2"
+      onPointerEnter={(e) => e.pointerType === "mouse" && setHovered(true)}
+      onPointerLeave={(e) => e.pointerType === "mouse" && setHovered(false)}
+    >
+      {/* Left and right fade gradient overlays for smooth edge transition */}
+      <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-8 bg-gradient-to-r from-cream to-transparent sm:w-16 lg:w-24" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-8 bg-gradient-to-l from-cream to-transparent sm:w-16 lg:w-24" />
+
+      {/* `touch-pan-y`: the browser keeps scrolling the page up and down; sideways movement comes to us. */}
+      <div
+        ref={track}
+        className="flex w-max cursor-grab touch-pan-y select-none will-change-transform active:cursor-grabbing"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerEnd}
+        onPointerCancel={onPointerEnd}
+        onDragStart={(e) => e.preventDefault()}
+        onClickCapture={(e) => {
+          if (!motion.current.moved) return;
+          motion.current.moved = false;
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+      >
+        {[0, 1].map((n) => (
+          // The space after the last card is padding inside the copy, so the two copies are exactly equal.
+          <div key={n} ref={n === 0 ? first : copy} className="flex shrink-0 gap-4 pr-4" aria-hidden={n === 1 || undefined}>
+            {products.map((product) => (
+              <div key={product.id} className={cardWidth}>
+                <ProductCard product={product} />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -139,26 +317,7 @@ export function PromoRibbon({ products }: { products: ProductCardData[] }) {
           </ul>
         </div>
       ) : (
-        <div className="relative py-2">
-          {/* Left and right fade gradient overlays for smooth edge transition */}
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-8 bg-gradient-to-r from-cream to-transparent sm:w-16 lg:w-24" />
-          <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-8 bg-gradient-to-l from-cream to-transparent sm:w-16 lg:w-24" />
-
-          {/* The ribbon: the products twice in a row, so the loop has no seam. The second copy is for the eye only. */}
-          <div
-            className="flex w-max gap-4 px-4 hover:[animation-play-state:paused]"
-            style={{
-              animation: `marquee ${Math.max(28, products.length * 4.2)}s linear infinite`,
-              animationPlayState: isPaused ? "paused" : undefined,
-            }}
-          >
-            {[...products, ...products].map((product, index) => (
-              <div key={`${product.id}-${index}`} className={cardWidth} aria-hidden={index >= products.length || undefined} inert={index >= products.length || undefined}>
-                <ProductCard product={product} />
-              </div>
-            ))}
-          </div>
-        </div>
+        <Ribbon products={products} paused={isPaused} />
       )}
     </section>
   );

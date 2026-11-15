@@ -84,13 +84,16 @@
 }
 
 /*
- * The dot of "Налично" and "Очаква се" (see StockPill): a soft halo in the dot's own colour and a ring
- * that spreads out of it. Only transform and opacity move, so a page full of products stays smooth.
+ * The dot of "Налично" and "Очаква се" (see StockPill): a soft halo in the dot's own colour.
+ * `glow-pulse` adds a ring that spreads out of it, and is for the one large pill on a product's page only.
+ * On product cards the ring ran on every dot at once (62 on the home page), each one a layer of its own
+ * for the browser to redraw sixty times a second, and that made the carousels stutter on phones: 72 frames
+ * a second while a carousel moved, against 122 with the rings off.
  */
 .glow-dot {
   box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent), 0 0 7px currentColor;
 }
-.glow-dot::after {
+.glow-pulse::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -110,7 +113,7 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .glow-dot::after {
+  .glow-pulse::after {
     animation: none;
     opacity: 0;
   }
