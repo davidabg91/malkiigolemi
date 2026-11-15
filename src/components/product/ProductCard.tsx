@@ -43,7 +43,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
   const href = `/produkt/${product.slug}`;
   const isFull = Boolean(product.image && /\.(jpe?g|webp)$/i.test(product.image));
   return (
-    <article className="group relative flex h-full flex-col rounded-card bg-paper p-2.5 shadow-soft transition duration-300 hover:-translate-y-1 hover:shadow-lift sm:p-3">
+    <article className="group relative flex h-full min-w-0 flex-col rounded-card bg-paper p-2.5 shadow-soft transition duration-300 hover:-translate-y-1 hover:shadow-lift sm:p-3">
       <Link
         href={href}
         tabIndex={-1}
