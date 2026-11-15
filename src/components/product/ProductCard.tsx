@@ -1,11 +1,12 @@
-import { Clock } from "lucide-react";
 import Link from "next/link";
+import { ViewCount } from "@/components/admin/ProductViews";
 import { LogoArt } from "@/components/ui";
 import { discountPercent, formatPrice } from "@/lib/format";
 import type { ProductCardData } from "@/lib/queries";
 import { CardAddButton, WishlistButton } from "./AddToCart";
 import { ProductVisual } from "./PackShot";
 import { ratingLabel, Stars } from "./Stars";
+import { StockPill } from "./StockPill";
 
 export function Badges({ product }: { product: ProductCardData }) {
   const off = discountPercent(product.price, product.oldPrice);
@@ -59,6 +60,8 @@ export function ProductCard({ product }: { product: ProductCardData }) {
           }`}
         />
         <ProductStamp className="bottom-1.5 right-1.5 h-4 px-1 py-0.5 sm:h-[1.1rem]" />
+        {/* Admins only: how many times the product was opened. */}
+        <ViewCount id={product.id} className="absolute bottom-1.5 left-1.5 z-[1]" />
       </Link>
       <div className="absolute left-4 top-4 z-10 sm:left-5 sm:top-5">
         <Badges product={product} />
@@ -75,12 +78,9 @@ export function ProductCard({ product }: { product: ProductCardData }) {
           </Link>
         </h3>
         <p className="mt-0.5 text-sm text-ink-soft">{product.unit}</p>
-        {product.deliveryTime && product.stock > 0 && (
-          <p className="mt-1 flex items-center gap-1 text-xs font-medium text-ink">
-            <Clock className="h-3.5 w-3.5 shrink-0 text-ink-soft" aria-hidden />
-            <span className="truncate">Доставка {product.deliveryTime}</span>
-          </p>
-        )}
+        <p className="mt-1.5 flex">
+          <StockPill product={product} />
+        </p>
         {product.reviewCount ? (
           <p className="mt-1 flex items-center gap-1.5 text-xs text-ink-soft">
             <Stars value={product.rating ?? 0} className="h-3.5 w-3.5" />

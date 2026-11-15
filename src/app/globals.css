@@ -83,6 +83,39 @@
   }
 }
 
+/*
+ * The dot of "Налично" and "Очаква се" (see StockPill): a soft halo in the dot's own colour and a ring
+ * that spreads out of it. Only transform and opacity move, so a page full of products stays smooth.
+ */
+.glow-dot {
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent), 0 0 7px currentColor;
+}
+.glow-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: currentColor;
+  animation: glow-ring 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+@keyframes glow-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  70%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glow-dot::after {
+    animation: none;
+    opacity: 0;
+  }
+}
+
 /* The current carousel dot filling up until the next page (used inline by Carousel). */
 @keyframes carousel-fill {
   from {

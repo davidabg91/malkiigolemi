@@ -16,6 +16,7 @@ import { pricedColumns } from "@/lib/pricing";
 import { CATALOG_TAG } from "@/lib/queries";
 import { DELIVERY_METHODS, shippingFor, STORE } from "@/lib/site";
 import { colorChoices, matchColor } from "@/lib/product-colors";
+import { deliveryNote } from "@/lib/availability";
 import { takeStock } from "@/lib/stock";
 
 export type FbFormState = { ok?: boolean; error?: string; fieldErrors?: Record<string, string>; orderNumber?: string } | undefined;
@@ -196,7 +197,7 @@ export async function orderFromClaim(claimId: number, _prev: FbFormState, formDa
         price,
         qty: d.qty,
         color,
-        deliveryTime: product?.deliveryTime ?? null,
+        deliveryTime: product ? deliveryNote(product) : null,
       });
       if (product && (await takeStock(tx, product, d.qty, color)) === null) throw new Error("OUT_OF_STOCK");
       await tx.update(fbClaims).set({ orderId: order.id }).where(eq(fbClaims.id, claim.id));

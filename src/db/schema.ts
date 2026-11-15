@@ -77,6 +77,13 @@ export const products = sqliteTable(
     colorStock: text("color_stock", { mode: "json" }).$type<number[]>().notNull().default([]),
     /** How long delivery takes when it is longer than usual ("7–10 работни дни"), e.g. goods ordered in for the customer. Null = the usual. */
     deliveryTime: text("delivery_time"),
+    /**
+     * What the customer is told about getting it (see lib/availability.ts): on hand, ordered in with the
+     * delivery time above, or on its way to the shop. Information only: ordering still goes by `stock`.
+     */
+    availability: text("availability", { enum: ["available", "delivery", "expected"] }).notNull().default("available"),
+    /** How many times the product's page was opened by visitors (admins and bots are not counted). Shown to admins only. */
+    views: integer("views").notNull().default(0),
     origin: text("origin"),
     stock: integer("stock").notNull().default(100),
     isNew: integer("is_new", { mode: "boolean" }).notNull().default(false),

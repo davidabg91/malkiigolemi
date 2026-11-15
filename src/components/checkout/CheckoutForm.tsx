@@ -6,13 +6,14 @@ import { useRouter } from "next/navigation";
 import { useId, useLayoutEffect, useState, useTransition, type FormEvent } from "react";
 import { placeOrder } from "@/actions/checkout";
 import { ProductVisual } from "@/components/product/PackShot";
+import { StockPill } from "@/components/product/StockPill";
 import { StoreLocation } from "@/components/StoreLocation";
 import { CourierOfficePicker } from "./CourierOfficePicker";
 import { DeliveryOptions } from "./DeliveryOptions";
 import { PaymentBrands } from "./PaymentBrands";
 import { btn } from "@/components/ui";
 import { formatPrice, unitPriceFor } from "@/lib/format";
-import { DELIVERY_METHODS, shippingFor, STORE, type DeliveryId } from "@/lib/site";
+import { DELIVERY_METHODS, FREE_BOXNOW_FROM, shippingFor, STORE, type DeliveryId } from "@/lib/site";
 import { liveCartData } from "@/actions/cart";
 import { cartTotals, lineKey, productQty, useCart, useFreshCartPrices, useHydrated } from "@/lib/store";
 import type { CourierId, CourierOffice } from "@/lib/couriers";
@@ -366,7 +367,9 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
               <span className="min-w-0 flex-1 text-sm leading-snug">
                 <span className="line-clamp-2 font-medium">{i.name}</span>
                 <span className="text-ink-soft">{[i.unit, i.chosenColor].filter(Boolean).join(" · ")}</span>
-                {i.deliveryTime && <span className="block text-xs font-medium text-ink">Доставка: {i.deliveryTime}</span>}
+                <span className="mt-0.5 flex">
+                  <StockPill product={i} notable />
+                </span>
               </span>
               <span className="text-sm font-semibold tabular-nums">{formatPrice(unitPriceFor(i, perProduct.get(i.id) ?? i.qty) * i.qty)}</span>
             </li>
@@ -377,9 +380,14 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
             <dt className="text-ink-soft">Продукти</dt>
             <dd className="font-medium tabular-nums">{formatPrice(subtotal)}</dd>
           </div>
-          <div className="flex justify-between">
+          <div className="flex flex-wrap justify-between">
             <dt className="text-ink-soft">Доставка · {method.label.toLowerCase()}</dt>
             <dd className="font-medium tabular-nums">{shipping === 0 ? "Безплатно" : formatPrice(shipping)}</dd>
+            {delivery === "box" && courier === "boxnow" && subtotal < FREE_BOXNOW_FROM && (
+              <dd className="mt-0.5 w-full text-xs font-medium text-forest" role="status">
+                Още {formatPrice(FREE_BOXNOW_FROM - subtotal)} до безплатна доставка с BoxNow.
+              </dd>
+            )}
           </div>
           {discount > 0 && (
             <div className="flex justify-between text-forest">

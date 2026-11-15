@@ -79,7 +79,7 @@ export const matchColor = (options: readonly string[] | null | undefined, wanted
   (wanted && options?.find((c) => key(c) === key(wanted))) || null;
 
 /** Ready-made delivery times for the admin's product form; any other text can be typed. */
-export const DELIVERY_TIME_PRESETS = ["2–3 работни дни", "3–5 работни дни", "5–7 работни дни", "7–10 работни дни", "10–14 работни дни", "до 30 дни"];
+export const DELIVERY_TIME_PRESETS = ["7 дни", "10 дни", "14 дни", "2–3 работни дни", "3–5 работни дни", "5–7 работни дни", "7–10 работни дни", "10–14 работни дни", "до 30 дни"];
 export const MAX_DELIVERY_TIME_LENGTH = 60;
 
 /** An order line's name with its colour: "Тениска M — Червен". */

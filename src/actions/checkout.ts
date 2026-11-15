@@ -16,6 +16,7 @@ import { orderNumber } from "@/lib/orders";
 import { getLoyaltySettings, pointsBalance, redeemable, syncOrderPoints } from "@/lib/loyalty";
 import { pricedColumns } from "@/lib/pricing";
 import { colorChoices, matchColor } from "@/lib/product-colors";
+import { deliveryNote } from "@/lib/availability";
 import { takeStock } from "@/lib/stock";
 import { savedOffice } from "@/lib/courier-offices";
 import { CATALOG_TAG, sellable } from "@/lib/queries";
@@ -122,7 +123,7 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
   for (const p of rows) {
     const price = unitPriceFor(p, qtyById.get(p.id)!);
     const name = `${p.name} ${p.unit}`.trim();
-    const deliveryTime = p.deliveryTime;
+    const deliveryTime = deliveryNote(p);
     if (p.colorOptions.length === 0) {
       lines.push({ productId: p.id, name, sku: p.sku, qty: qtyById.get(p.id)!, price, color: null, deliveryTime });
       continue;
