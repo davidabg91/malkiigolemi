@@ -3,6 +3,7 @@
 import { Activity, BadgePercent, Bell, MessagesSquare, BarChart3, ClipboardPaste, ExternalLink, Gift, MessageSquareText, FolderTree, LayoutDashboard, LogOut, Package, QrCode, ReceiptText, Truck, Undo2, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { logout } from "@/actions/auth";
 import { Logo } from "@/components/ui";
 import type { AdminAlerts } from "@/lib/admin-alerts";
@@ -29,6 +30,14 @@ const LINKS = [
 
 export function AdminNav({ name, alerts }: { name: string; alerts: AdminAlerts }) {
   const pathname = usePathname();
+  const nav = useRef<HTMLElement>(null);
+  // On a phone the menu is one row that scrolls sideways; bring the open tab into the middle of it.
+  useEffect(() => {
+    const row = nav.current;
+    const current = row?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!row || !current || row.scrollWidth <= row.clientWidth) return;
+    row.scrollLeft = current.offsetLeft - (row.clientWidth - current.offsetWidth) / 2;
+  }, [pathname]);
   return (
     <aside className="flex shrink-0 flex-col border-b border-line bg-paper lg:sticky lg:top-0 lg:h-dvh lg:w-64 lg:border-b-0 lg:border-r">
       {/* In the narrow sidebar the badge sits under the logo so the two never overlap. */}
@@ -36,7 +45,7 @@ export function AdminNav({ name, alerts }: { name: string; alerts: AdminAlerts }
         <Logo />
         <span className="rounded-full bg-ink px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-lime">Админ</span>
       </div>
-      <nav aria-label="Админ навигация" className="no-scrollbar flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-col lg:pb-0">
+      <nav ref={nav} aria-label="Админ навигация" className="no-scrollbar relative flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-col lg:pb-0">
         {LINKS.map(({ href, label, icon: Icon, exact }) => {
           const active = exact ? pathname === href : pathname.startsWith(href);
           const badge = href === "/admin/porachki" ? alerts.newOrders : href === "/admin/otkazi" ? alerts.withdrawals : href === "/admin/facebook" ? alerts.fbClaims : href === "/admin/plashtaniya" ? alerts.storePayments : href === "/admin/chat" ? alerts.chats : 0;

@@ -7,7 +7,7 @@ import { replaceChosenFile, shrinkImage, UPLOAD_LIMIT } from "@/lib/shrink-image
 import { optimizedImage } from "@/lib/optimized-image";
 import { isTileImage, TILE_AUTO, TILE_PRESET_LABELS, TILE_PRESETS } from "@/lib/tile-art";
 
-const option = "relative flex h-24 w-24 shrink-0 flex-col items-center justify-end gap-1 overflow-hidden rounded-2xl p-1.5 text-center text-[0.7rem] font-medium leading-tight transition active:scale-95";
+const option = "relative flex h-24 w-full flex-col items-center justify-end gap-1 overflow-hidden rounded-2xl p-1.5 text-center text-[0.7rem] font-medium leading-tight transition active:scale-95";
 
 /**
  * Chooses the picture on a category's home-page tile: the category's own products ("auto"), one of the
@@ -25,12 +25,13 @@ export function TilePicker({ value }: { value: string | null }) {
   const tick = (key: string) => choice === key && <Check className="absolute right-1.5 top-1.5 z-10 h-3.5 w-3.5" strokeWidth={3} aria-hidden />;
 
   return (
-    <fieldset>
+    // A fieldset is by default as wide as its content, which once made this wider than a phone's screen.
+    <fieldset className="min-w-0">
       <legend className="mb-1.5 block text-sm font-medium">
-        Картинка на плочката <span className="font-normal text-ink-soft">(на началната страница, само за основни категории)</span>
+        Картинка на плочката <span className="font-normal text-ink-soft">(на началната страница)</span>
       </legend>
       <input type="hidden" name="tile" value={choice} />
-      <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 py-1">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-2">
         <button type="button" onClick={() => setChoice(TILE_AUTO)} aria-pressed={choice === TILE_AUTO} className={cls(TILE_AUTO)} title="Снимки на най-новите продукти в категорията">
           {tick(TILE_AUTO)}
           <Sparkles className="mb-1 h-7 w-7" strokeWidth={1.5} aria-hidden />
@@ -42,7 +43,7 @@ export function TilePicker({ value }: { value: string | null }) {
             {tick(key)}
             {/* eslint-disable-next-line @next/next/no-img-element -- a small preview of the illustration */}
             <img {...optimizedImage(items[items.length - 1].src, 128)} alt="" loading="lazy" className="h-12 w-auto object-contain drop-shadow-sm" />
-            <span className="line-clamp-1">{TILE_PRESET_LABELS[key] ?? key}</span>
+            <span className="line-clamp-2">{TILE_PRESET_LABELS[key] ?? key}</span>
           </button>
         ))}
 
@@ -83,7 +84,7 @@ export function TilePicker({ value }: { value: string | null }) {
           }}
         />
       </div>
-      {choice === "image" && <p className="mt-1 text-sm text-ink-soft">Най-добре изглежда снимка с прозрачен фон (PNG): плочката е светла и бял фон ще се вижда като правоъгълник.</p>}
+      {choice === "image" && <p className="mt-2 text-sm text-ink-soft">Най-добре изглежда снимка с прозрачен фон (PNG): плочката е светла и бял фон ще се вижда като правоъгълник.</p>}
     </fieldset>
   );
 }

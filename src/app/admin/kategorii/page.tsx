@@ -1,5 +1,5 @@
 import { asc, sql } from "drizzle-orm";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, CornerDownRight, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { CategoryForm } from "@/components/admin/CategoryForm";
@@ -28,24 +28,43 @@ async function AdminCategories() {
     const isActive = c.active !== false;
     // The categories shown next to this one, in order: the arrows swap it with its neighbours.
     const siblings = all.filter((x) => x.parentId === c.parentId).map((x) => x.id);
+    const canDelete = n === 0 && !hasChildren;
     return (
       <details className={`group border-line ${child ? "border-t" : ""}`}>
-        <summary className={`flex min-h-14 list-none items-center gap-3 px-4 py-2 transition hover:bg-sand/60 [&::-webkit-details-marker]:hidden ${child ? "pl-12" : ""}`}>
-          {!child && (
+        {/* On a phone the name comes first, on a line of its own if it has to, with the status under it; on a wide screen all of it is one line. */}
+        <summary
+          className={`flex min-h-16 cursor-pointer list-none items-center gap-2 py-2 pr-3 transition hover:bg-sand/60 group-open:bg-sand/60 sm:min-h-14 sm:gap-3 sm:pr-4 [&::-webkit-details-marker]:hidden ${
+            child ? "pl-4 sm:pl-12" : "pl-3 sm:pl-4"
+          }`}
+        >
+          {child ? (
+            <CornerDownRight className="h-4 w-4 shrink-0 text-ink-soft/60 sm:hidden" aria-hidden />
+          ) : (
             <IconPicker value={c.icon} categoryId={c.id} categoryName={c.name} />
           )}
-          <span className={`min-w-0 flex-1 truncate ${child ? "" : "font-semibold"} ${!isActive ? "text-ink-soft opacity-60" : ""}`}>
-            {c.name}
-            {!isActive && <span className="ml-2 text-xs font-normal text-tomato">(неактивна)</span>}
+          <span className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-3">
+            <span className={`line-clamp-2 leading-snug sm:line-clamp-none sm:min-w-0 sm:flex-1 sm:truncate ${child ? "" : "font-semibold"} ${isActive ? "" : "text-ink-soft"}`}>
+              {c.name}
+            </span>
+            <span className="mt-1 flex items-center gap-2 sm:mt-0 sm:gap-3">
+              <ToggleCategoryActive id={c.id} active={isActive} />
+              <span className="whitespace-nowrap text-sm text-ink-soft tabular-nums">{n} прод.</span>
+            </span>
           </span>
           <MoveCategory ids={siblings} index={siblings.indexOf(c.id)} name={c.name} />
-          <ToggleCategoryActive id={c.id} active={isActive} />
-          <span className="text-sm text-ink-soft tabular-nums">{n} прод.</span>
-          {n === 0 && !hasChildren ? <DeleteButton id={c.id} name={c.name} kind="category" /> : <span className="w-9" aria-hidden />}
-          <ChevronDown className="h-4 w-4 shrink-0 text-ink-soft transition-transform group-open:rotate-180" aria-hidden />
+          {/* On a phone "delete" lives in the opened panel, away from the arrows. */}
+          <span className="hidden w-9 shrink-0 sm:block">{canDelete && <DeleteButton id={c.id} name={c.name} kind="category" />}</span>
+          <ChevronDown className="h-5 w-5 shrink-0 text-ink-soft transition-transform group-open:rotate-180 sm:h-4 sm:w-4" aria-hidden />
         </summary>
-        <div className="border-t border-line bg-sand/40 p-4">
+        <div className="border-t border-line bg-sand/40 p-3 sm:p-4">
           <CategoryForm category={c} roots={rootOptions} />
+          <div className="mt-3 border-t border-line pt-2 sm:hidden">
+            {canDelete ? (
+              <DeleteButton id={c.id} name={c.name} kind="category" label="Изтрий категорията" />
+            ) : (
+              <p className="px-1 py-2 text-xs text-ink-soft">Категория с продукти или подкатегории не може да се изтрие.</p>
+            )}
+          </div>
         </div>
       </details>
     );
@@ -53,14 +72,25 @@ async function AdminCategories() {
 
   return (
     <>
-      <PageTitle title="Категории" sub="Две нива: основни категории и подкатегории. Натисни ред, за да го редактираш, иконата, за да я смениш, или стрелките, за да го преместиш." />
+      <PageTitle title="Категории" sub="Натисни категория, за да я редактираш. Стрелките я местят нагоре и надолу, а иконата се сменя с едно докосване." />
 
-      <Panel className="mb-6 p-5">
-        <h2 className="mb-4 font-display text-lg font-semibold">Нова категория</h2>
-        <CategoryForm roots={rootOptions} />
+      {/* Closed until asked for, so the list itself starts at the top of a phone's screen. */}
+      <Panel className="mb-4 overflow-hidden sm:mb-6">
+        <details className="group">
+          <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 py-2 font-display text-lg font-semibold transition hover:bg-sand/60 [&::-webkit-details-marker]:hidden">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-forest text-white">
+              <Plus className="h-5 w-5" aria-hidden />
+            </span>
+            <span className="flex-1">Нова категория</span>
+            <ChevronDown className="h-5 w-5 shrink-0 text-ink-soft transition-transform group-open:rotate-180 sm:h-4 sm:w-4" aria-hidden />
+          </summary>
+          <div className="border-t border-line p-3 sm:p-5">
+            <CategoryForm roots={rootOptions} />
+          </div>
+        </details>
       </Panel>
 
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {roots.map((r) => (
           <Panel key={r.id} className="overflow-hidden">
             <Row c={r} />
