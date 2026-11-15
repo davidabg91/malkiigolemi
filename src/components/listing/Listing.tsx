@@ -30,7 +30,8 @@ export function parseFilters(sp: SearchParams): Current & { page: number } {
     origins: list(sp.origin).map((o) => o.toUpperCase()),
     min: euros(sp.min),
     max: euros(sp.max),
-    only: list(sp.only).filter((k) => k === "promo" || k === "new" || k === "stock"),
+    only: list(sp.only).filter((k) => k === "promo" || k === "new"),
+    availableFirst: one(sp.first) === "stock",
     sort: (sort in SORTS ? sort : "popular") as SortKey,
     page: Math.max(1, Math.floor(Number(one(sp.page))) || 1),
   };
@@ -103,13 +104,14 @@ export async function Listing({
     min: f.min != null ? f.min * 100 : undefined,
     max: f.max != null ? f.max * 100 : undefined,
     only: f.only,
+    availableFirst: f.availableFirst,
     sort: f.sort,
     page: f.page,
   });
 
   const hrefFor = (p: number) => {
     const qs = new URLSearchParams(preserve);
-    for (const key of ["cat", "brand", "origin", "min", "max", "only", "sort"] as const) {
+    for (const key of ["cat", "brand", "origin", "min", "max", "only", "first", "sort"] as const) {
       const v = one(searchParams[key]);
       if (v) qs.set(key, v);
     }
@@ -123,15 +125,15 @@ export async function Listing({
       basePath={basePath}
       preserve={preserve}
       total={result.total}
-      current={{ categories: f.categories, brands: f.brands, origins: f.origins, min: f.min, max: f.max, only: f.only, sort: f.sort }}
+      current={{ categories: f.categories, brands: f.brands, origins: f.origins, min: f.min, max: f.max, only: f.only, availableFirst: f.availableFirst, sort: f.sort }}
       facets={{
         categories: result.facets.categories,
         subcategories: result.facets.subcategories,
         scopeTotal: result.facets.scopeTotal,
+        onHand: result.facets.onHand,
         // A filter that would keep everything, or nothing, is not offered.
         only: (
           [
-            ["stock", "Налични сега", result.facets.stock],
             ["promo", "С намаление", result.facets.promo],
             ["new", "Нови", result.facets.fresh],
           ] as const
@@ -164,7 +166,7 @@ export async function Listing({
               <ProductCard key={p.id} product={p} />
             ))}
             // Arranging by hand makes sense in a category, in the shop's own order.
-            sortable={Boolean(scope.categoryIds?.length) && f.sort === "popular"}
+            sortable={Boolean(scope.categoryIds?.length) && f.sort === "popular" && !f.availableFirst}
           />
           <Pagination page={result.page} pages={result.pages} hrefFor={hrefFor} />
         </>

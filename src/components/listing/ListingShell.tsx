@@ -14,7 +14,9 @@ export type Facets = {
   subcategories: boolean;
   /** Products on the page before any filter. */
   scopeTotal: number;
-  /** "Show only" switches worth offering: on hand right now, discounted, new. */
+  /** Products on hand right now ("Налично"), for the "Първо наличните" switch. */
+  onHand: number;
+  /** "Show only" switches worth offering: discounted, new. */
   only: { key: string; label: string; n: number }[];
   brands: { slug: string; name: string; n: number }[];
   origins: { origin: string | null; n: number }[];
@@ -30,6 +32,8 @@ export type Current = {
   min: number | null;
   max: number | null;
   only: string[];
+  /** What is on hand comes first; the rest follow. */
+  availableFirst: boolean;
   sort: SortKey;
 };
 
@@ -134,13 +138,17 @@ export function ListingShell({
     if (c.min != null && c.min > facets.priceMin) qs.set("min", String(c.min));
     if (c.max != null && c.max < facets.priceMax) qs.set("max", String(c.max));
     if (c.only.length) qs.set("only", c.only.join(","));
+    if (c.availableFirst) qs.set("first", "stock");
     if (c.sort !== "popular") qs.set("sort", c.sort);
     const s = qs.toString();
     start(() => router.push(s ? `${basePath}?${s}` : basePath, { scroll: false }));
   };
 
   const toggle = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
-  const activeCount = current.categories.length + current.brands.length + current.origins.length + current.only.length + (current.min != null || current.max != null ? 1 : 0);
+  const activeCount =
+    current.categories.length + current.brands.length + current.origins.length + current.only.length + (current.availableFirst ? 1 : 0) + (current.min != null || current.max != null ? 1 : 0);
+  // Putting the goods on hand first changes something only when some are on hand and some are not.
+  const hasAvailableFirst = (facets.onHand > 0 && facets.onHand < facets.scopeTotal) || current.availableFirst;
   const hasPrice = facets.priceMax > facets.priceMin;
   // One brand or origin is still a filter when some products have none.
   const worth = (list: { n: number }[]) => list.length > 1 || (list.length === 1 && list[0].n < facets.scopeTotal);
@@ -148,12 +156,18 @@ export function ListingShell({
   const hasOrigins = worth(facets.origins) || current.origins.length > 0;
   const hasBrands = worth(facets.brands) || current.brands.length > 0;
   // With nothing to filter by, the panel and its button are not shown at all.
-  const hasFilters = Boolean(nav) || hasCategories || facets.only.length > 0 || hasPrice || hasOrigins || hasBrands;
+  const hasFilters = Boolean(nav) || hasCategories || hasAvailableFirst || facets.only.length > 0 || hasPrice || hasOrigins || hasBrands;
 
   const filters = (
     <div className="space-y-7">
       {nav}
-      {/* First in the panel: "only what is on hand" is the question shoppers ask most. */}
+      {/* First in the panel. It hides nothing: what is on hand moves to the front and the rest follow. */}
+      {hasAvailableFirst && (
+        <fieldset>
+          <legend className="mb-2 text-sm font-semibold uppercase tracking-[0.14em]">Наличност</legend>
+          <CheckRow label="Първо наличните" count={facets.onHand} checked={current.availableFirst} onChange={() => go({ availableFirst: !current.availableFirst })} />
+        </fieldset>
+      )}
       {facets.only.length > 0 && (
         <fieldset>
           <legend className="mb-2 text-sm font-semibold uppercase tracking-[0.14em]">Покажи само</legend>
@@ -224,7 +238,7 @@ export function ListingShell({
         </fieldset>
       )}
       {activeCount > 0 && (
-        <button type="button" onClick={() => go({ categories: [], brands: [], origins: [], only: [], min: null, max: null })} className={`${btn.sm} w-full`}>
+        <button type="button" onClick={() => go({ categories: [], brands: [], origins: [], only: [], availableFirst: false, min: null, max: null })} className={`${btn.sm} w-full`}>
           <X className="h-4 w-4" />
           Изчисти филтрите
         </button>
