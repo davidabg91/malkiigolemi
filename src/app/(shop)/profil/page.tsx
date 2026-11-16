@@ -17,6 +17,7 @@ import { btn } from "@/components/ui";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
 import { getSession } from "@/lib/auth";
+import { boxnowTrackingUrl } from "@/lib/boxnow";
 import { econtTrackingUrl, parseEvents } from "@/lib/econt";
 import { formatDate, formatPrice } from "@/lib/format";
 import { pushConfigured, vapidPublicKey } from "@/lib/push";
@@ -119,6 +120,10 @@ async function Orders() {
                     {o.courier === "econt" ? (
                       <a href={econtTrackingUrl(o.trackingNumber)} target="_blank" rel="noopener noreferrer" className="font-mono text-xs font-semibold text-forest hover:underline">
                         Еконт № {o.trackingNumber} ↗
+                      </a>
+                    ) : o.courier === "boxnow" ? (
+                      <a href={boxnowTrackingUrl(o.trackingNumber)} target="_blank" rel="noopener noreferrer" className="font-mono text-xs font-semibold text-forest hover:underline">
+                        BOX NOW № {o.trackingNumber} ↗
                       </a>
                     ) : (
                       <span className="font-mono text-xs text-ink-soft">№ {o.trackingNumber}</span>

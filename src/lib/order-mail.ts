@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, type Order, type OrderItem } from "@/db/schema";
 import { courierName } from "./couriers";
+import { boxnowTrackingUrl } from "./boxnow";
 import { econtTrackingUrl } from "./econt";
 import { formatPrice } from "./format";
 import { escapeHtml, mailLayout, sendMail } from "./mail";
@@ -75,7 +76,11 @@ ${o.note ? `<p>Бележка: ${escapeHtml(o.note)}</p>` : ""}`;
 export function orderShippedMail(o: MailOrder): Mail {
   const tracking = o.trackingNumber
     ? `<p>Товарителница: <strong>${escapeHtml(o.trackingNumber)}</strong>${
-        o.courier === "econt" ? ` — ${link(econtTrackingUrl(o.trackingNumber), "проследи пратката")}` : ""
+        o.courier === "econt"
+          ? ` — ${link(econtTrackingUrl(o.trackingNumber), "проследи пратката")}`
+          : o.courier === "boxnow"
+            ? ` — ${link(boxnowTrackingUrl(o.trackingNumber), "проследи пратката")}`
+            : ""
       }</p>`
     : "";
   const body = `<p>Здравей, ${escapeHtml(o.name.split(" ")[0])}! Поръчка <strong>${escapeHtml(o.number)}</strong> е изпратена.</p>
