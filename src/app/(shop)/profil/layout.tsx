@@ -18,7 +18,7 @@ async function Greeting() {
       </div>
       <div className="flex gap-2">
         {session.role === "admin" && (
-          <Link href="/admin" className={btn.sm}>
+          <Link href="/admin/produkti" className={btn.sm}>
             <Settings className="h-4 w-4" />
             Админ панел
           </Link>

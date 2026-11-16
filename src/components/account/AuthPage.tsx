@@ -10,7 +10,7 @@ async function Form({ mode, searchParams }: { mode: "login" | "register"; search
   const sp = await searchParams;
   const next = typeof sp.next === "string" ? safeNext(sp.next, "") : "";
   const session = await getSession();
-  if (session) redirect(next || (session.role === "admin" ? "/admin" : "/profil"));
+  if (session) redirect(next || (session.role === "admin" ? "/admin/produkti" : "/profil"));
   return mode === "login" ? <LoginForm next={next || undefined} /> : <RegisterForm next={next || undefined} />;
 }
 
