@@ -69,7 +69,7 @@ export async function destroySession() {
 /** For admin pages: bounces anyone who is not a signed-in admin. */
 export async function requireAdmin() {
   const session = await getSession();
-  if (!session) redirect("/vhod?next=/admin");
+  if (!session) redirect("/vhod?next=/admin/produkti");
   if (session.role !== "admin") redirect("/");
   return session;
 }

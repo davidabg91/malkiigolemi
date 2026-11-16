@@ -35,7 +35,7 @@ export async function login(_prev: FormState, formData: FormData): Promise<FormS
   if (!user || !ok) return { error: "Грешен имейл или парола.", fields: { email } };
 
   await createSession({ uid: user.id, role: user.role, name: user.name, email: user.email });
-  redirect(safeNext(formData.get("next"), user.role === "admin" ? "/admin" : "/profil"));
+  redirect(safeNext(formData.get("next"), user.role === "admin" ? "/admin/produkti" : "/profil"));
 }
 
 const registration = z.object({

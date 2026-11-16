@@ -160,7 +160,7 @@ function AdminAccountButton({ initial }: { initial: AdminAlerts }) {
                 Профил
               </Link>
               <Link
-                href="/admin"
+                href="/admin/produkti"
                 onClick={() => setOpen(false)}
                 className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-forest text-sm font-semibold text-white transition hover:bg-forest-deep"
               >
