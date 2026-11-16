@@ -45,7 +45,7 @@ export function BoxNowSettingsForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on open
   }, []);
 
-  const field = (name: "senderName" | "senderPhone" | "senderEmail" | "defaultWeight", label: string, props: React.InputHTMLAttributes<HTMLInputElement> = {}) => (
+  const field = (name: "senderName" | "senderPhone" | "senderEmail" | "defaultWeight" | "dropOffLocker", label: string, props: React.InputHTMLAttributes<HTMLInputElement> = {}) => (
     <div>
       <label htmlFor={`${uid}-${name}`} className="mb-1.5 block text-sm font-medium">
         {label}
@@ -128,6 +128,14 @@ export function BoxNowSettingsForm({
           <p className="text-sm text-ink-soft">{checking ? "Зареждане от BOX NOW…" : "След връзка с BOX NOW тук се показва какво позволява договорът."}</p>
         )}
         {err.originId && <p className="mt-1.5 text-sm font-medium text-tomato">{err.originId}</p>}
+        {origin.type !== "warehouse" ? (
+          <div className="mt-4 max-w-md">
+            {field("dropOffLocker", "Автомат, в който оставяш пратките", { maxLength: 160, placeholder: "напр. бул. Сторгозия 30А, Плевен" })}
+            <p className="mt-1.5 text-xs text-ink-soft">Само за напомняне в поръчката. BOX NOW приема пратката във всеки свой автомат.</p>
+          </div>
+        ) : (
+          <input type="hidden" name="dropOffLocker" value={initial.dropOffLocker} />
+        )}
       </fieldset>
 
       <fieldset>

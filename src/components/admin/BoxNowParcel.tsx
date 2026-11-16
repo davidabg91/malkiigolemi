@@ -31,6 +31,7 @@ export function BoxNowParcel({
   defaults,
   paidByCard,
   dropOff,
+  dropOffLocker,
 }: {
   orderId: number;
   configured: boolean;
@@ -41,6 +42,8 @@ export function BoxNowParcel({
   paidByCard: boolean;
   /** The shop drops parcels in a BOX NOW locker itself (origin "any-apm"); otherwise a courier collects them. */
   dropOff: boolean;
+  /** The locker the shop usually uses, for the reminder. */
+  dropOffLocker: string;
 }) {
   const uid = useId();
   const [pending, start] = useTransition();
@@ -88,7 +91,7 @@ export function BoxNowParcel({
           </p>
           {existing.trackedAt && <p className="text-xs text-ink-soft">Обновено {when(existing.trackedAt)}</p>}
           {dropOff && existing.events.length <= 1 && (
-            <p className="mt-2 rounded-xl bg-paper px-3 py-2 text-sm">Разпечатай етикета, залепи го на пратката и я остави в автомат на BOX NOW.</p>
+            <p className="mt-2 rounded-xl bg-paper px-3 py-2 text-sm">Разпечатай етикета, залепи го на пратката и я остави в автомат на BOX NOW{dropOffLocker ? ` — ${dropOffLocker}` : ""}.</p>
           )}
           <TrackingTimeline events={existing.events} />
         </div>
@@ -172,7 +175,7 @@ export function BoxNowParcel({
           type="button"
           disabled={pending}
           onClick={() => {
-            if (!confirm(`Да създам ли истинска пратка в BOX NOW? Тя се таксува по договора${dropOff ? "; после я оставяш в автомат с етикета" : " и куриер ще дойде да я вземе"}.`)) return;
+            if (!confirm(`Да създам ли истинска пратка в BOX NOW? Тя се таксува по договора${dropOff ? `; после я оставяш с етикета в автомата${dropOffLocker ? ` на ${dropOffLocker}` : ""}` : " и куриер ще дойде да я вземе"}.`)) return;
             act("create", () =>
               createBoxNowParcelAction(orderId, {
                 size: o.size,

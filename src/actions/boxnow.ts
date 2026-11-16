@@ -19,6 +19,7 @@ const settingsSchema = z.object({
   originId: z.string().trim().min(1, "Избери как предаваш пратките.").max(40),
   originName: z.string().trim().max(160),
   originType: z.string().trim().max(40),
+  dropOffLocker: z.string().trim().max(160),
   senderName: z.string().trim().min(2, "Въведи име на подателя.").max(100),
   senderPhone: z.string().trim().regex(/^[+\d][\d\s-]{5,19}$/, "Въведи телефон."),
   senderEmail: z.email("Въведи имейл.").max(120),
