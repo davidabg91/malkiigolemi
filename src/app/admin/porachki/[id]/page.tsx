@@ -306,6 +306,7 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
                   defaults={defaultParcel(order, boxnowSettings)}
                   paidByCard={order.payment === "card"}
                   dropOff={boxnowSettings.originType !== "warehouse"}
+                  dropOffLocker={boxnowSettings.dropOffLocker}
                 />
               ) : order.trackingNumber ? (
                 <div className="mt-4 rounded-xl border border-line bg-sand/40 p-3">

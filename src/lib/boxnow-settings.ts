@@ -15,6 +15,11 @@ export type BoxNowSettings = {
   originName: string;
   /** "any-apm" or "warehouse". */
   originType: string;
+  /**
+   * The locker the shop usually drops its parcels in. Only a reminder on the order page: BOX NOW's API takes
+   * no locker for drop-off (any locker works), so nothing is sent to them.
+   */
+  dropOffLocker: string;
   /** Sender shown on the label. */
   senderName: string;
   senderPhone: string;
@@ -31,6 +36,7 @@ export const DEFAULT_BOXNOW_SETTINGS: BoxNowSettings = {
   originId: "",
   originName: "",
   originType: "",
+  dropOffLocker: "бул. Сторгозия 30А, Плевен",
   senderName: COMPANY.name,
   senderPhone: site.phone,
   senderEmail: site.email,
