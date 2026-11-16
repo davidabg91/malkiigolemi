@@ -6,13 +6,14 @@ import {
   BoxNowError,
   boxnowConfig,
   boxnowEventText,
+  boxnowOrigins,
   boxnowParcel,
   cancelParcel,
   createDeliveryRequest,
   eventOutcome,
   normalizeEvent,
 } from "./boxnow";
-import { getBoxNowSettings, missingBoxNowFields, type BoxNowSettings } from "./boxnow-settings";
+import { getBoxNowSettings, missingBoxNowFields, saveBoxNowSettings, type BoxNowSettings } from "./boxnow-settings";
 import { parseEvents, type TrackingEvent } from "./econt";
 import { changeOrderStatus } from "./order-status";
 import { lineName } from "./product-colors";
@@ -60,6 +61,13 @@ async function loadOrder(orderId: number) {
   const s = await getBoxNowSettings();
   const missing = missingBoxNowFields(s);
   if (missing.length) throw new BoxNowError(`Първо попълни в Куриери → BOX NOW: ${missing.join(", ")}.`);
+  if (!s.originId) {
+    // Nothing chosen yet: a contract with a single way of handing parcels over needs no choice.
+    const origins = await boxnowOrigins();
+    if (origins.length !== 1) throw new BoxNowError("Първо избери в Куриери → BOX NOW как предаваш пратките.");
+    Object.assign(s, { originId: origins[0].id, originName: origins[0].name, originType: origins[0].type });
+    await saveBoxNowSettings(s);
+  }
   return { order, s };
 }
 

@@ -30,6 +30,7 @@ export function BoxNowParcel({
   missingSettings,
   defaults,
   paidByCard,
+  dropOff,
 }: {
   orderId: number;
   configured: boolean;
@@ -38,6 +39,8 @@ export function BoxNowParcel({
   missingSettings: string[];
   defaults: BoxNowParcelOptions;
   paidByCard: boolean;
+  /** The shop drops parcels in a BOX NOW locker itself (origin "any-apm"); otherwise a courier collects them. */
+  dropOff: boolean;
 }) {
   const uid = useId();
   const [pending, start] = useTransition();
@@ -84,6 +87,9 @@ export function BoxNowParcel({
             <strong>{existing.status ?? "—"}</strong>
           </p>
           {existing.trackedAt && <p className="text-xs text-ink-soft">Обновено {when(existing.trackedAt)}</p>}
+          {dropOff && existing.events.length <= 1 && (
+            <p className="mt-2 rounded-xl bg-paper px-3 py-2 text-sm">Разпечатай етикета, залепи го на пратката и я остави в автомат на BOX NOW.</p>
+          )}
           <TrackingTimeline events={existing.events} />
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
@@ -95,7 +101,7 @@ export function BoxNowParcel({
             type="button"
             disabled={pending}
             onClick={() => {
-              if (confirm(`Да откажа ли пратка ${existing.parcelId} в BOX NOW? Става само докато куриерът не я е взел.`)) act("cancel", () => cancelBoxNowParcelAction(orderId));
+              if (confirm(`Да откажа ли пратка ${existing.parcelId} в BOX NOW? Става само докато BOX NOW още не я е приел.`)) act("cancel", () => cancelBoxNowParcelAction(orderId));
             }}
             className={btn.smDanger}
           >
@@ -166,7 +172,7 @@ export function BoxNowParcel({
           type="button"
           disabled={pending}
           onClick={() => {
-            if (!confirm("Да създам ли истинска пратка в BOX NOW? Тя се таксува по договора и куриер ще дойде да я вземе.")) return;
+            if (!confirm(`Да създам ли истинска пратка в BOX NOW? Тя се таксува по договора${dropOff ? "; после я оставяш в автомат с етикета" : " и куриер ще дойде да я вземе"}.`)) return;
             act("create", () =>
               createBoxNowParcelAction(orderId, {
                 size: o.size,

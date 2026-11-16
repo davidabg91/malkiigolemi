@@ -31,7 +31,7 @@ export class BoxNowError extends Error {
 // Plain-language versions of the error codes in the guide (section 3) that a shop can actually hit.
 const CODES: Record<string, string> = {
   P400: "BOX NOW отказа заявката (грешни данни).",
-  P401: "Невалидна начална точка: провери склада (Warehouse ID) в Куриери → BOX NOW.",
+  P401: "Невалидна начална точка: провери в Куриери → BOX NOW как предаваш пратките.",
   P402: "Невалиден автомат на получателя. Автоматът може да е закрит — свържи се с клиента за друг.",
   P405: "Невалиден телефон на получателя (трябва да е +359…).",
   C404: "Невалиден телефон на получателя (трябва да е +359…).",

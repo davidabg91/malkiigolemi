@@ -16,8 +16,9 @@ const message = (e: unknown) => {
 export type BoxNowSettingsState = { ok?: boolean; error?: string; fieldErrors?: Record<string, string> } | undefined;
 
 const settingsSchema = z.object({
-  originId: z.string().trim().min(1, "Избери склад.").max(40),
+  originId: z.string().trim().min(1, "Избери как предаваш пратките.").max(40),
   originName: z.string().trim().max(160),
+  originType: z.string().trim().max(40),
   senderName: z.string().trim().min(2, "Въведи име на подателя.").max(100),
   senderPhone: z.string().trim().regex(/^[+\d][\d\s-]{5,19}$/, "Въведи телефон."),
   senderEmail: z.email("Въведи имейл.").max(120),
