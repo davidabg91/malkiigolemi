@@ -4,17 +4,26 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { Suspense } from "react";
 import { Listing, ListingHeader, ListingSkeleton } from "@/components/listing/Listing";
 import { getCategoryPath, getRenamedCategoryPath } from "@/lib/queries";
+import { breadcrumbJsonLd, jsonLdHtml } from "@/lib/seo";
+import { site } from "@/lib/site";
 
 type Props = PageProps<"/kategoria/[...slug]">;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const path = await getCategoryPath(slug);
-  if (!path) return { title: "Категорията не е намерена" };
+  if (!path) return { title: "Категорията не е намерена", robots: { index: false } };
   const current = path.sub ?? path.root;
+  const canonical = path.sub ? `/kategoria/${path.root.slug}/${path.sub.slug}` : `/kategoria/${path.root.slug}`;
+  const name = path.sub ? `${path.sub.name} — ${path.root.name}` : path.root.name;
   return {
-    title: path.sub ? `${path.sub.name} — ${path.root.name}` : path.root.name,
-    description: current.description ?? path.root.description ?? undefined,
+    title: `${name} — купи онлайн`,
+    description:
+      current.description ??
+      `${current.name}${path.sub ? ` от категория ${path.root.name}` : ""}: разгледай всички продукти с цени в евро и поръчай онлайн с бърза доставка до офис, адрес или автомат в цяла България.`,
+    // Sorting and filters show the same products, so they all point at the plain category address.
+    alternates: { canonical },
+    openGraph: { type: "website", siteName: site.name, locale: "bg_BG", title: name, url: canonical },
   };
 }
 
@@ -31,8 +40,14 @@ async function Content({ params, searchParams }: Props) {
   const base = `/kategoria/${root.slug}`;
   const pill = "inline-flex h-10 items-center rounded-full px-4 text-sm font-medium transition";
 
+  const crumbs = breadcrumbJsonLd([
+    { name: root.name, path: base },
+    ...(sub ? [{ name: sub.name, path: `${base}/${sub.slug}` }] : []),
+  ]);
+
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLdHtml(crumbs)} />
       <ListingHeader
         crumbs={sub ? [{ label: root.name, href: base }, { label: sub.name }] : [{ label: root.name }]}
         title={sub?.name ?? root.name}

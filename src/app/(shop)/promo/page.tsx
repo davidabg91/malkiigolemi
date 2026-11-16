@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Listing, ListingHeader, ListingSkeleton } from "@/components/listing/Listing";
 
-export const metadata: Metadata = { title: "Промоции", description: "Намалени цени и оферти за количество — докато има наличност." };
+export const metadata: Metadata = { title: "Промоции", description: "Намалени цени и оферти за количество — докато има наличност.", alternates: { canonical: "/promo" } };
 
 async function Content({ searchParams }: Pick<PageProps<"/promo">, "searchParams">) {
   return <Listing scope={{ promo: true }} searchParams={await searchParams} basePath="/promo" />;
