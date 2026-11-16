@@ -7,6 +7,7 @@ import { saveProduct } from "@/actions/admin";
 import { PackShot } from "@/components/product/PackShot";
 import { btn } from "@/components/ui";
 import { StockPill } from "@/components/product/StockPill";
+import { CategoryPicker } from "./CategoryPicker";
 import { ColorOptions } from "./ColorOptions";
 import type { Brand, Product } from "@/db/schema";
 import { AVAILABILITY_OPTIONS, availabilityOf, type Availability } from "@/lib/availability";
@@ -101,24 +102,10 @@ export function ProductForm({
           </div>
           {input("unit", "Разфасовка", { defaultValue: product?.unit, placeholder: "напр. 500 г, 1 л, 10 бр" })}
           <div>
-            <label htmlFor={`${uid}-categoryId`} className="mb-1.5 block text-sm font-medium">
+            <label htmlFor={`${uid}-categoryId-search`} className="mb-1.5 block text-sm font-medium">
               Категория <span className="text-tomato" aria-hidden>*</span>
             </label>
-            <select id={`${uid}-categoryId`} name="categoryId" required defaultValue={product?.categoryId ?? ""} className="field" aria-invalid={errors.categoryId ? true : undefined}>
-              <option value="" disabled>
-                Избери…
-              </option>
-              {categories.map((c) => (
-                <optgroup key={c.id} label={c.name}>
-                  <option value={c.id}>{c.name} (общо)</option>
-                  {c.children.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+            <CategoryPicker categories={categories} defaultValue={product?.categoryId} invalid={!!errors.categoryId} inputId={`${uid}-categoryId`} />
             {errors.categoryId && <p role="alert" className="mt-1.5 text-sm font-medium text-tomato">{errors.categoryId}</p>}
           </div>
           <div>

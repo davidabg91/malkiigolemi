@@ -57,7 +57,9 @@ const productSchema = z.object({
   sku: z.string().trim().max(40),
   unit: z.string().trim().max(60),
   description: z.string().trim().max(4000),
-  categoryId: z.coerce.number().int().positive("Избери категория."),
+  // Either an existing category id, or empty when a new one is typed (see newCategory).
+  categoryId: z.string().trim(),
+  newCategory: z.string().trim().max(80),
   brandId: z.string().trim(),
   newBrand: z.string().trim().max(80),
   price: money.refine((v) => v !== null && v > 0, "Въведи цена."),
@@ -121,8 +123,27 @@ export async function saveProduct(id: number | null, _prev: AdminFormState, form
     return { error: "Напиши срока за доставка.", fieldErrors: { deliveryTime: "Напиши срока, напр. 7 дни." } };
   }
 
-  const [category] = await db.select({ id: categories.id }).from(categories).where(eq(categories.id, d.categoryId)).limit(1);
-  if (!category) return { error: "Категорията не съществува.", fieldErrors: { categoryId: "Избери категория." } };
+  // The category: an existing one picked from the list, or a new main category typed into the search box.
+  let categoryId: number;
+  if (d.newCategory) {
+    const wanted = d.newCategory.toLocaleLowerCase("bg");
+    const roots = await db.select().from(categories).where(isNull(categories.parentId));
+    const existing = roots.find((r) => r.name.trim().toLocaleLowerCase("bg") === wanted);
+    if (existing) categoryId = existing.id;
+    else {
+      const [made] = await db
+        .insert(categories)
+        .values({ name: d.newCategory, slug: await freeCategorySlug(slugify(d.newCategory) || `kategoria-${Date.now()}`), sort: roots.length, tile: TILE_AUTO })
+        .returning({ id: categories.id });
+      categoryId = made.id;
+    }
+  } else {
+    const n = Number(d.categoryId);
+    if (!Number.isInteger(n) || n <= 0) return { error: "Избери категория.", fieldErrors: { categoryId: "Избери категория." } };
+    const [category] = await db.select({ id: categories.id }).from(categories).where(eq(categories.id, n)).limit(1);
+    if (!category) return { error: "Категорията не съществува.", fieldErrors: { categoryId: "Избери категория." } };
+    categoryId = category.id;
+  }
 
   if (!d.sku) {
     const [own] = id ? await db.select({ sku: products.sku }).from(products).where(eq(products.id, id)).limit(1) : [];
@@ -182,7 +203,7 @@ export async function saveProduct(id: number | null, _prev: AdminFormState, form
     unit: d.unit,
     description: d.description,
     searchText: searchTextOf(d.name, brandName, d.sku, d.unit),
-    categoryId: d.categoryId,
+    categoryId,
     brandId,
     price: d.price!,
     oldPrice: d.oldPrice,
