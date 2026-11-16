@@ -59,11 +59,12 @@ export function CategoryPicker({
 
   useEffect(() => {
     if (!open) return;
-    const onDown = (e: MouseEvent) => {
+    // Pointer events, not mouse ones: on iPhone a tap on plain page background sends no mouse events.
+    const onDown = (e: PointerEvent) => {
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
   }, [open]);
 
   const openList = () => {
@@ -72,10 +73,17 @@ export function CategoryPicker({
     setOpen(true);
   };
 
+  // Done choosing: the field lets go of the focus, so the next tap on it opens the list afresh
+  // (and the phone's keyboard gets out of the way).
+  const close = () => {
+    setOpen(false);
+    inputRef.current?.blur();
+  };
+
   const pick = (f: Flat) => {
     setChosenId(f.id);
     setNewName("");
-    setOpen(false);
+    close();
   };
 
   const addNew = () => {
@@ -83,7 +91,7 @@ export function CategoryPicker({
     if (name.length < 2) return;
     setNewName(name);
     setChosenId(null);
-    setOpen(false);
+    close();
   };
 
   const choose = (i: number) => {
@@ -104,23 +112,20 @@ export function CategoryPicker({
         e.preventDefault();
         choose(active);
       }
+    } else if (e.key === "Tab") {
+      // Moving on to the next field closes the list. Not done on blur: Safari (iPhone included) does not
+      // focus a tapped button, so the field's blur looks like leaving and would close the list before the tap lands.
+      setOpen(false);
     } else if (e.key === "Escape") {
       if (open) {
         e.preventDefault();
-        setOpen(false);
+        close();
       }
     }
   };
 
   return (
-    <div
-      ref={boxRef}
-      className="relative"
-      // Tabbing on to the next field closes the list, like clicking outside does.
-      onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false);
-      }}
-    >
+    <div ref={boxRef} className="relative">
       {/* These go to the server action. Exactly one carries a value. */}
       <input type="hidden" name="categoryId" value={chosen ? chosen.id : ""} />
       <input type="hidden" name="newCategory" value={chosen ? "" : newName} />
@@ -155,6 +160,8 @@ export function CategoryPicker({
         <ul
           id={`${uid}-list`}
           role="listbox"
+          // Keeps the focus (and the phone's keyboard) in the search field while a row is tapped.
+          onMouseDown={(e) => e.preventDefault()}
           className="absolute z-20 mt-1.5 max-h-72 w-full overflow-auto rounded-2xl border border-line bg-paper p-1.5 shadow-lift"
         >
           {matches.map((f, i) => (
