@@ -305,6 +305,7 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
                   missingSettings={missingBoxNowFields(boxnowSettings)}
                   defaults={defaultParcel(order, boxnowSettings)}
                   paidByCard={order.payment === "card"}
+                  dropOff={boxnowSettings.originType !== "warehouse"}
                 />
               ) : order.trackingNumber ? (
                 <div className="mt-4 rounded-xl border border-line bg-sand/40 p-3">

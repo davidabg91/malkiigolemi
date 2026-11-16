@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Loader2, PlugZap, ShieldCheck, TriangleAlert, Warehouse, XCircle } from "lucide-react";
+import { Check, Copy, Loader2, Package, PlugZap, ShieldCheck, TriangleAlert, Warehouse, XCircle } from "lucide-react";
 import { useActionState, useEffect, useId, useState, useTransition } from "react";
 import { saveBoxNowSettingsAction, testBoxNowConnectionAction, type BoxNowConnection } from "@/actions/boxnow";
 import { btn } from "@/components/ui";
@@ -25,7 +25,7 @@ export function BoxNowSettingsForm({
   const err = state?.fieldErrors ?? {};
   const [checking, startCheck] = useTransition();
   const [connection, setConnection] = useState<BoxNowConnection | null>(null);
-  const [origin, setOrigin] = useState({ id: initial.originId, name: initial.originName });
+  const [origin, setOrigin] = useState({ id: initial.originId, name: initial.originName, type: initial.originType });
   const [copied, setCopied] = useState(false);
   const origins = connection?.ok ? connection.origins : [];
 
@@ -36,7 +36,7 @@ export function BoxNowSettingsForm({
       // Nothing chosen yet, or the saved one is gone: take the first warehouse.
       if (result.ok && !result.origins.some((o) => o.id === origin.id)) {
         const pick = result.origins.find((o) => o.type === "warehouse") ?? result.origins[0];
-        if (pick) setOrigin({ id: pick.id, name: pick.name });
+        if (pick) setOrigin({ id: pick.id, name: pick.name, type: pick.type });
       }
     });
 
@@ -61,7 +61,7 @@ export function BoxNowSettingsForm({
         <p className="flex items-start gap-2.5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
           <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden />
           <span>
-            <strong>Връзка с истинската система на BOX NOW.</strong> Всяка създадена пратка се таксува по договора и куриер на BOX NOW идва да я вземе.
+            <strong>Връзка с истинската система на BOX NOW.</strong> Всяка създадена пратка е истинска и се таксува по договора.
           </span>
         </p>
       ) : (
@@ -83,7 +83,7 @@ export function BoxNowSettingsForm({
           (connection.ok ? (
             <p role="status" className="flex items-start gap-2 text-sm text-forest">
               <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-              <span>Връзката с BOX NOW работи · места за взимане: {connection.origins.length}</span>
+              <span>Връзката с BOX NOW работи · начини за предаване по договора: {connection.origins.length}</span>
             </p>
           ) : (
             <p role="alert" className="flex max-w-xl items-start gap-2 text-sm font-medium text-tomato">
@@ -95,10 +95,11 @@ export function BoxNowSettingsForm({
 
       <input type="hidden" name="originId" value={origin.id} />
       <input type="hidden" name="originName" value={origin.name} />
+      <input type="hidden" name="originType" value={origin.type} />
 
       <fieldset>
-        <legend className="mb-1 font-semibold">Откъде BOX NOW взема пратките</legend>
-        <p className="mb-3 text-sm text-ink-soft">Складът (адресът за взимане), регистриран при BOX NOW. Куриерът им идва там в договорените часове.</p>
+        <legend className="mb-1 font-semibold">Как предаваш пратките на BOX NOW</legend>
+        <p className="mb-3 text-sm text-ink-soft">Каквото позволява договорът: оставяш ги сам в автомат на BOX NOW, или техен куриер ги взема от регистриран адрес.</p>
         {origins.length > 0 ? (
           <div className="grid gap-2.5 sm:grid-cols-2">
             {origins.map((o) => (
@@ -106,14 +107,14 @@ export function BoxNowSettingsForm({
                 key={o.id}
                 className="flex cursor-pointer items-start gap-3 rounded-2xl border border-line p-3.5 transition has-[:checked]:border-forest has-[:checked]:bg-lime/20"
               >
-                <input type="radio" name="boxnowOrigin" checked={origin.id === o.id} onChange={() => setOrigin({ id: o.id, name: o.name })} className="mt-1 h-4 w-4 accent-[#33484b]" />
+                <input type="radio" name="boxnowOrigin" checked={origin.id === o.id} onChange={() => setOrigin({ id: o.id, name: o.name, type: o.type })} className="mt-1 h-4 w-4 accent-[#33484b]" />
                 <span className="min-w-0">
                   <span className="flex items-center gap-1.5 font-medium">
-                    <Warehouse className="h-4 w-4 shrink-0 text-forest" aria-hidden />
-                    {o.name}
+                    {o.type === "any-apm" ? <Package className="h-4 w-4 shrink-0 text-forest" aria-hidden /> : <Warehouse className="h-4 w-4 shrink-0 text-forest" aria-hidden />}
+                    {o.type === "any-apm" ? "Оставям ги в автомат на BOX NOW" : o.name}
                   </span>
                   <span className="block text-sm text-ink-soft">
-                    {o.type === "any-apm" ? "Оставяш пратките в произволен автомат" : o.address || "Склад"} · ID {o.id}
+                    {o.type === "any-apm" ? "В който и да е автомат, с етикета от поръчката" : `Куриер ги взема от: ${o.address || "склад"}`} · ID {o.id}
                   </span>
                 </span>
               </label>
@@ -121,10 +122,10 @@ export function BoxNowSettingsForm({
           </div>
         ) : origin.id ? (
           <p className="rounded-2xl border border-line p-3.5 text-sm">
-            Избран склад: <strong>{origin.name || origin.id}</strong> (ID {origin.id})
+            Избрано: <strong>{origin.type === "any-apm" ? "оставям ги в автомат на BOX NOW" : origin.name || origin.id}</strong> (ID {origin.id})
           </p>
         ) : (
-          <p className="text-sm text-ink-soft">{checking ? "Зареждане на складовете от BOX NOW…" : "След връзка с BOX NOW тук се показват складовете по договора."}</p>
+          <p className="text-sm text-ink-soft">{checking ? "Зареждане от BOX NOW…" : "След връзка с BOX NOW тук се показва какво позволява договорът."}</p>
         )}
         {err.originId && <p className="mt-1.5 text-sm font-medium text-tomato">{err.originId}</p>}
       </fieldset>
