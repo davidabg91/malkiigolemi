@@ -283,11 +283,14 @@ export function ProductVisual({
   product,
   className,
   size = 256,
+  priority = false,
 }: {
   product: { image: string | null; pack: string; color: string; brand: string | null; name: string };
   className?: string;
   /** Roughly how wide the photo is drawn, in CSS pixels. Picks which resized copy is downloaded. */
   size?: number;
+  /** The page's main picture: downloaded first instead of lazily, so it shows (and is measured) sooner. */
+  priority?: boolean;
 }) {
   if (product.image) {
     const isFullPhoto = /\.(jpe?g|webp)$/i.test(product.image);
@@ -299,8 +302,10 @@ export function ProductVisual({
       // eslint-disable-next-line @next/next/no-img-element -- sized by the caller's classes; the file itself is resized by optimizedImage
       <img
         {...optimizedImage(product.image, size)}
-        alt={product.name}
-        loading="lazy"
+        // Name and brand: what people search for, in Google Images too.
+        alt={product.brand && !product.name.toLowerCase().includes(product.brand.toLowerCase()) ? `${product.name} – ${product.brand}` : product.name}
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : undefined}
         decoding="async"
         className={`${className ?? ""} ${fitClass}`.trim()}
       />

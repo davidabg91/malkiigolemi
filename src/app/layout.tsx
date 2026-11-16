@@ -17,6 +17,12 @@ export const metadata: Metadata = {
   description: site.description,
   openGraph: { type: "website", siteName: site.name, locale: "bg_BG", title: site.title, description: site.description },
   twitter: { card: "summary_large_image" },
+  // Large picture previews in Google Search, Images and Discover.
+  robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } },
+  // Google Search Console ownership check.
+  verification: { google: "JQHITCDLYJ23jEB0Ez00ZxoEX8oILCSB87yNTECx_4w" },
+  applicationName: site.name,
+  category: "shopping",
   icons: {
     icon: [
       { url: "/favicon.svg", type: "image/svg+xml" },

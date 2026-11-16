@@ -12,7 +12,11 @@ import { ProductCard } from "@/components/product/ProductCard";
 import { btn, SectionHeading } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
 import { getCategoryShowcase, getCategoryTree, getHomeData } from "@/lib/queries";
+import { jsonLdHtml, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 import { ORIGIN_FLAGS, ORIGIN_LABELS } from "@/lib/site";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 const BENEFITS = [
   { icon: Truck, title: "Доставка за 24 часа", text: "Изпращаме в деня на поръчката до офис, адрес или автомат." },
@@ -35,6 +39,7 @@ export default async function HomePage() {
 
   return (
     <div className="container-shop space-y-16 pt-4 sm:space-y-24 sm:pt-6">
+      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLdHtml([organizationJsonLd(), websiteJsonLd()])} />
       <Bento tree={tree} showcase={showcase} total={total} />
 
       <PromoRibbon products={home.promo} />

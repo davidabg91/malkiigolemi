@@ -18,6 +18,7 @@ import { getSession } from "@/lib/auth";
 import { stockState } from "@/lib/availability";
 import { discountPercent, formatPrice } from "@/lib/format";
 import { getProduct } from "@/lib/queries";
+import { absoluteUrl, breadcrumbJsonLd, jsonLdHtml, organizationId, productDescription, productImageUrl, productTitle, returnPolicy, schemaAvailability, shippingDetails } from "@/lib/seo";
 import { FREE_BOXNOW_LINE, ORIGIN_LABELS, site } from "@/lib/site";
 
 type Props = PageProps<"/produkt/[slug]">;
@@ -25,13 +26,16 @@ type Props = PageProps<"/produkt/[slug]">;
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const data = await getProduct(slug);
-  if (!data || !data.product.active || data.category?.active === false || data.parent?.active === false) return { title: "Продуктът не е намерен" };
-  const { product } = data;
-  const title = `${product.name}${product.brand ? ` ${product.brand}` : ""} ${product.unit}`.trim();
-  const description = product.description.slice(0, 160) || `${title} — ${formatPrice(product.price)}`;
+  if (!data || !data.product.active || data.category?.active === false || data.parent?.active === false) {
+    return { title: "Продуктът не е намерен", robots: { index: false } };
+  }
+  const { product, category } = data;
+  const title = productTitle(product);
+  const description = productDescription(product, category?.name);
   return {
     title,
     description,
+    alternates: { canonical: `/produkt/${slug}` },
     // The share card: this product's own title, text and link (the picture comes from opengraph-image.tsx).
     openGraph: { type: "website", siteName: site.name, locale: "bg_BG", title, description, url: `/produkt/${slug}` },
   };
@@ -64,30 +68,50 @@ async function Content({ params }: Pick<Props, "params">) {
     ["Артикулен №", product.sku],
   ].filter(([, v]) => v);
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: product.name,
-    sku: product.sku,
-    description,
-    brand: product.brand ? { "@type": "Brand", name: product.brand } : undefined,
-    offers: {
-      "@type": "Offer",
-      price: (product.price / 100).toFixed(2),
-      priceCurrency: "EUR",
-      availability: product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-      seller: { "@type": "Organization", name: `${site.name} Market` },
-    },
-    aggregateRating: product.reviewCount
-      ? { "@type": "AggregateRating", ratingValue: product.rating, reviewCount: product.reviewCount, bestRating: 5, worstRating: 1 }
-      : undefined,
+  const url = absoluteUrl(`/produkt/${product.slug}`);
+  const offer = {
+    "@type": "Offer",
+    url,
+    price: (product.price / 100).toFixed(2),
+    priceCurrency: "EUR",
+    availability: schemaAvailability(product),
+    itemCondition: "https://schema.org/NewCondition",
+    seller: { "@id": organizationId },
+    shippingDetails: shippingDetails(),
+    hasMerchantReturnPolicy: returnPolicy(),
   };
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "@id": `${url}#product`,
+      name: productTitle(product),
+      url,
+      sku: product.sku,
+      mpn: product.sku,
+      image: [productImageUrl(product)],
+      description: description || productDescription(product, category?.name),
+      category: [parent?.name, category?.name].filter(Boolean).join(" > ") || undefined,
+      brand: { "@type": "Brand", name: product.brand ?? site.name },
+      countryOfOrigin: product.origin && ORIGIN_LABELS[product.origin] ? ORIGIN_LABELS[product.origin] : undefined,
+      color: product.colors.length ? product.colors.join(", ") : undefined,
+      offers: offer,
+      aggregateRating: product.reviewCount
+        ? { "@type": "AggregateRating", ratingValue: product.rating, reviewCount: product.reviewCount, bestRating: 5, worstRating: 1 }
+        : undefined,
+    },
+    breadcrumbJsonLd([
+      ...(root ? [{ name: root.name, path: `/kategoria/${root.slug}` }] : []),
+      ...(parent && category ? [{ name: category.name, path: `/kategoria/${parent.slug}/${category.slug}` }] : []),
+      { name: product.name, path: `/produkt/${product.slug}` },
+    ]),
+  ];
 
   const isFull = Boolean(product.image && /\.(jpe?g|webp)$/i.test(product.image));
 
   return (
     <div className="space-y-16 sm:space-y-20">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLdHtml(jsonLd)} />
       <div>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Breadcrumbs items={crumbs} />
@@ -107,6 +131,7 @@ async function Content({ params }: Pick<Props, "params">) {
               <ProductVisual
                 product={product}
                 size={640}
+                priority
                 className={
                   isFull
                     ? "h-full w-full object-cover transition-transform duration-500 hover:scale-105"

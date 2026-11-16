@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Listing, ListingHeader, ListingSkeleton } from "@/components/listing/Listing";
 
-export const metadata: Metadata = { title: "Нови продукти", description: "Последните попълнения в магазина." };
+export const metadata: Metadata = { title: "Нови продукти", description: "Последните попълнения в магазина.", alternates: { canonical: "/novi" } };
 
 async function Content({ searchParams }: Pick<PageProps<"/novi">, "searchParams">) {
   return <Listing scope={{ isNew: true }} searchParams={await searchParams} basePath="/novi" />;

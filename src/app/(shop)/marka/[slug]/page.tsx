@@ -12,8 +12,12 @@ const describe = (name: string, country: string | null) =>
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const brand = await getBrand((await params).slug);
-  if (!brand) return { title: "Марката не е намерена" };
-  return { title: brand.name, description: describe(brand.name, brand.country) };
+  if (!brand) return { title: "Марката не е намерена", robots: { index: false } };
+  return {
+    title: `${brand.name} — продукти и цени`,
+    description: `${describe(brand.name, brand.country)} Поръчай онлайн с бърза доставка в цяла България.`,
+    alternates: { canonical: `/marka/${brand.slug}` },
+  };
 }
 
 async function Content({ params, searchParams }: Props) {
