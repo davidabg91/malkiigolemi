@@ -81,6 +81,9 @@ export function DeliveryTable() {
           ))}
         </tbody>
       </table>
+      <p className="border-t border-line px-5 py-3 text-sm text-ink-soft">
+        С Еконт цената се изчислява за всяка пратка по тарифата на куриера и може да се различава от посочената; точната сума виждаш в касата, преди да поръчаш.
+      </p>
     </div>
   );
 }

@@ -167,7 +167,7 @@ type RawLabel = {
  * One waybill. "calculate" only prices it, "validate" checks it, "create" makes the real waybill
  * (and, with `pickup`, books the courier).
  */
-export async function econtLabel(input: EcontLabelInput, mode: "calculate" | "validate" | "create"): Promise<EcontLabelResult> {
+export async function econtLabel(input: EcontLabelInput, mode: "calculate" | "validate" | "create", timeoutMs?: number): Promise<EcontLabelResult> {
   const s = party(input.sender);
   const r = party(input.receiver);
   const label = {
@@ -193,11 +193,15 @@ export async function econtLabel(input: EcontLabelInput, mode: "calculate" | "va
       ...(input.sms ? { smsNotification: true } : {}),
     },
   };
-  const res = await call<{ label?: RawLabel }>("Shipments/LabelService.createLabel", {
-    label,
-    mode,
-    ...(mode === "create" && input.pickup ? { requestCourierTimeFrom: input.pickup.from, requestCourierTimeTo: input.pickup.to } : {}),
-  });
+  const res = await call<{ label?: RawLabel }>(
+    "Shipments/LabelService.createLabel",
+    {
+      label,
+      mode,
+      ...(mode === "create" && input.pickup ? { requestCourierTimeFrom: input.pickup.from, requestCourierTimeTo: input.pickup.to } : {}),
+    },
+    timeoutMs,
+  );
   const l = res.label ?? {};
   return {
     shipmentNumber: l.shipmentNumber || null,

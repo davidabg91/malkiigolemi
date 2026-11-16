@@ -10,7 +10,7 @@ import { orderItems, orders, products, users } from "@/db/schema";
 import { recordOrder, visitorOf } from "@/lib/analytics";
 import { getSession } from "@/lib/auth";
 import { currentPushDeviceId, notifyAdmins } from "@/lib/push";
-import { unitPriceFor } from "@/lib/format";
+import { formatPrice, unitPriceFor } from "@/lib/format";
 import { sendOrderPlaced } from "@/lib/order-mail";
 import { orderNumber } from "@/lib/orders";
 import { getLoyaltySettings, pointsBalance, redeemable, syncOrderPoints } from "@/lib/loyalty";
@@ -18,9 +18,10 @@ import { pricedColumns } from "@/lib/pricing";
 import { colorChoices, matchColor } from "@/lib/product-colors";
 import { deliveryNote } from "@/lib/availability";
 import { takeStock } from "@/lib/stock";
-import { savedOffice } from "@/lib/courier-offices";
+import { getAvailableCities, savedOffice } from "@/lib/courier-offices";
 import { CATALOG_TAG, sellable } from "@/lib/queries";
-import { DELIVERY_METHODS, shippingFor, STORE } from "@/lib/site";
+import { quoteShipping } from "@/lib/delivery-quote";
+import { DELIVERY_METHODS, STORE } from "@/lib/site";
 import { createCheckout, stripeConfigured } from "@/lib/stripe";
 
 const input = z.object({
@@ -41,6 +42,8 @@ const input = z.object({
   payment: z.enum(["cod", "card"]).default("cod"),
   /** Signed-in customers can pay part of the goods with loyalty points. */
   usePoints: z.boolean().optional(),
+  /** The delivery price the customer was looking at, in cents: the order is not taken at another price unseen. */
+  shippingShown: z.number().int().min(0).max(100000).optional(),
   items: z
     .array(z.object({ id: z.number().int().positive(), qty: z.number().int().min(1).max(99), color: z.string().trim().max(40).nullish() }))
     .min(1, "Количката е празна.")
@@ -66,10 +69,32 @@ const input = z.object({
   }
 });
 
+const quoteInput = z.object({
+  delivery: z.enum(DELIVERY_METHODS.map((d) => d.id) as [string, ...string[]]),
+  courier: z.enum(["econt", "speedy", "boxnow", "pigeon"]).optional(),
+  officeCode: z.string().trim().max(40).optional(),
+  city: z.string().trim().max(80).optional(),
+  payment: z.enum(["cod", "card"]),
+  subtotal: z.number().int().min(0).max(10_000_000),
+});
+
+/**
+ * The delivery price for what the customer has chosen so far, for the checkout summary. Placing the order
+ * asks again with the real basket, so nothing here is trusted later.
+ */
+export async function quoteDelivery(raw: z.input<typeof quoteInput>): Promise<{ shipping: number; exact: boolean } | null> {
+  const parsed = quoteInput.safeParse(raw);
+  if (!parsed.success) return null;
+  const q = parsed.data;
+  // A settlement we do not know is not sent on to the courier.
+  if (q.delivery === "address" && !(q.city && getAvailableCities().some((c) => c.toLowerCase() === q.city!.toLowerCase()))) return null;
+  return quoteShipping(q);
+}
+
 export type CheckoutInput = z.input<typeof input>;
 export type CheckoutResult =
   | { ok: true; number: string; /** Stripe's payment page, for card orders. */ payUrl?: string }
-  | { ok: false; error: string; fieldErrors?: Record<string, string> };
+  | { ok: false; error: string; fieldErrors?: Record<string, string>; /** The delivery price now, when it differs from the one shown. */ shipping?: number };
 
 export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
   const parsed = input.safeParse(raw);
@@ -151,7 +176,10 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
     }
   }
   const subtotal = lines.reduce((sum, l) => sum + l.price * l.qty, 0);
-  const shipping = shippingFor(data.delivery, subtotal, data.courier);
+  const { shipping } = await quoteShipping({ delivery: data.delivery, courier: data.courier, officeCode: office?.code, city, payment: data.payment, subtotal });
+  if (data.shippingShown != null && data.shippingShown !== shipping) {
+    return { ok: false, error: `Цената на доставката е ${shipping === 0 ? "безплатна" : formatPrice(shipping)}. Провери общата сума и потвърди отново.`, shipping };
+  }
   const session = await getSession();
   // The phone the order comes from, when it has notifications on, hears about this order too.
   const pushDeviceId = await currentPushDeviceId();
