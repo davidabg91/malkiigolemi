@@ -2,7 +2,7 @@ import "server-only";
 import { and, eq, inArray, isNotNull, notInArray } from "drizzle-orm";
 import { db } from "@/db";
 import { orders, settings, type Order } from "@/db/schema";
-import { deleteEcontLabels, EcontError, econtLabel, econtStatuses, type EcontLabelInput, type EcontLabelResult } from "./econt";
+import { deleteEcontLabels, EcontError, econtLabel, econtStatuses, type EcontLabelInput, type EcontLabelResult, type EcontParty } from "./econt";
 import { getEcontSettings, missingSenderFields, type EcontSettings } from "./econt-settings";
 import { changeOrderStatus } from "./order-status";
 import { awaitsCardPayment } from "./stripe";
@@ -42,18 +42,23 @@ export function defaultWaybill(order: OrderWithItems, s: EcontSettings): Waybill
   };
 }
 
+/** The shop as the sender of a waybill, from its Econt settings. */
+export function econtSender(s: EcontSettings): EcontParty {
+  return {
+    name: s.senderClientId ? s.senderClientName || s.senderName : s.senderName,
+    phone: s.senderPhone,
+    clientId: s.senderClientId,
+    agentName: s.senderClientCompany ? s.senderAgent : null,
+    officeCode: s.senderMode === "office" ? s.senderOfficeCode : null,
+    city: s.senderCity,
+    address: s.senderAddress,
+  };
+}
+
 function labelInput(order: Order, s: EcontSettings, o: WaybillOptions): EcontLabelInput {
   const toOffice = order.delivery === "office" || order.delivery === "box";
   return {
-    sender: {
-      name: s.senderClientId ? s.senderClientName || s.senderName : s.senderName,
-      phone: s.senderPhone,
-      clientId: s.senderClientId,
-      agentName: s.senderClientCompany ? s.senderAgent : null,
-      officeCode: s.senderMode === "office" ? s.senderOfficeCode : null,
-      city: s.senderCity,
-      address: s.senderAddress,
-    },
+    sender: econtSender(s),
     receiver: {
       name: order.name,
       phone: order.phone,

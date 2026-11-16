@@ -58,6 +58,7 @@ export async function saveEcontSettingsAction(_prev: EcontSettingsState, formDat
     senderClientCompany: Boolean(senderClientId) && company,
     inspectBeforePay: formData.get("inspectBeforePay") === "on",
     sms: formData.get("sms") === "on",
+    exactPrice: formData.get("exactPrice") === "on",
   };
   await saveEcontSettings(value);
   refresh();

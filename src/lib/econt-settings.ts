@@ -30,6 +30,8 @@ export type EcontSettings = {
   sms: boolean;
   /** Econt's code for the shop's cash-on-delivery agreement. */
   codTemplate: string;
+  /** Customers choosing Econt pay Econt's own price for their parcel (asked at checkout) instead of the shop's flat price. */
+  exactPrice: boolean;
 };
 
 export const DEFAULT_ECONT_SETTINGS: EcontSettings = {
@@ -49,6 +51,7 @@ export const DEFAULT_ECONT_SETTINGS: EcontSettings = {
   inspectBeforePay: true,
   sms: false,
   codTemplate: "",
+  exactPrice: true,
 };
 
 const KEY = "econt_settings";

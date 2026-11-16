@@ -267,6 +267,16 @@ export function EcontSettingsForm({ initial, live }: { initial: EcontSettings; l
             <span className="text-sm text-ink-soft">Допълнителна услуга на Еконт (таксува се).</span>
           </span>
         </label>
+        <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-line p-3.5 has-[:checked]:border-forest has-[:checked]:bg-lime/20 sm:col-span-2">
+          <input type="checkbox" name="exactPrice" defaultChecked={initial.exactPrice} className="mt-1 h-4 w-4 accent-[#33484b]" />
+          <span>
+            <span className="block font-medium">Точна цена на доставката от Еконт в касата</span>
+            <span className="text-sm text-ink-soft">
+              Клиентът вижда и плаща цената, която Еконт изчислява за неговия офис или населено място (по твоя договор, за тегло {String(initial.defaultWeight).replace(".", ",")} кг, с таксата за
+              наложен платеж). Изключено — важат твърдите цени на магазина.
+            </span>
+          </span>
+        </label>
       </fieldset>
 
       <div className="flex flex-wrap items-center gap-4">

@@ -3,8 +3,8 @@
 import { Banknote, CreditCard, Info, Loader2, Lock } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useId, useLayoutEffect, useState, useTransition, type FormEvent } from "react";
-import { placeOrder } from "@/actions/checkout";
+import { useEffect, useId, useLayoutEffect, useState, useTransition, type FormEvent } from "react";
+import { placeOrder, quoteDelivery } from "@/actions/checkout";
 import { ProductVisual } from "@/components/product/PackShot";
 import { StockPill } from "@/components/product/StockPill";
 import { StoreLocation } from "@/components/StoreLocation";
@@ -162,9 +162,34 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
   const redeem = loyalty ? redeemable(loyalty.balance, subtotal, loyalty.settings) : { points: 0, discount: 0 };
   const discount = usePoints ? redeem.discount : 0;
   const willEarn = loyalty ? pointsForGoods(subtotal - discount, loyalty.settings) : 0;
-  const shipping = shippingFor(delivery, subtotal, courier);
+  const flatShipping = shippingFor(delivery, subtotal, courier);
   const method = DELIVERY_METHODS.find((d) => d.id === delivery)!;
   const pickup = delivery === "store";
+
+  // Econt prices each parcel itself: ask for the price of this one once the office (or the settlement) is known.
+  const [quote, setQuote] = useState<{ key: string; shipping: number } | null>(null);
+  const toOfficeNow = delivery === "office" || delivery === "box";
+  const quoteTarget = courier !== "econt" || pickup ? "" : toOfficeNow ? (selectedOffice?.courier === "econt" ? selectedOffice.code : "") : city.trim().length >= 2 ? city.trim() : "";
+  const quoteKey = quoteTarget ? [delivery, quoteTarget, effectivePayment, subtotal].join("|") : "";
+  useEffect(() => {
+    if (!quoteKey || !hydrated || subtotal === 0) return;
+    let stale = false;
+    // A moment's wait, so typing a settlement does not ask for every letter.
+    const timer = setTimeout(() => {
+      quoteDelivery({ delivery, courier, officeCode: toOfficeNow ? quoteTarget : undefined, city: toOfficeNow ? undefined : quoteTarget, payment: effectivePayment, subtotal })
+        .then((r) => {
+          if (!stale && r?.exact) setQuote({ key: quoteKey, shipping: r.shipping });
+        })
+        .catch(() => {});
+    }, 400);
+    return () => {
+      stale = true;
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- quoteKey carries everything the price depends on
+  }, [quoteKey, hydrated]);
+  const exactShipping = quote && quote.key === quoteKey ? quote.shipping : null;
+  const shipping = exactShipping ?? flatShipping;
 
   if (!hydrated) return <div className="h-96 animate-pulse rounded-tile bg-sand" aria-hidden />;
   if (items.length === 0 && !placed) {
@@ -207,6 +232,7 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
         saveAsDefault: defaults.signedIn && saveAsDefault,
         usePoints: Boolean(defaults.loyalty) && usePoints,
         payment: effectivePayment,
+        shippingShown: shipping,
         items: items.map((i) => ({ id: i.id, qty: i.qty, color: i.chosenColor ?? null })),
       });
       if (result.ok) {
@@ -217,6 +243,8 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
         else router.push(`/porachka/${result.number}`);
         return;
       }
+      // The price moved between looking and ordering: show the new one, and let the customer confirm again.
+      if (result.shipping != null && quoteKey) setQuote({ key: quoteKey, shipping: result.shipping });
       setErrors(result.fieldErrors ?? {});
       setFormError(result.error);
       const first = Object.keys(result.fieldErrors ?? {})[0];
@@ -252,7 +280,7 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
                 if (d === "box" && !defaults.courier) setCourier("boxnow");
               }}
               // The locker tile shows the BoxNow price until lockers are chosen, then the chosen courier's.
-              priceFor={(id) => shippingFor(id, subtotal, id === "box" ? (delivery === "box" ? courier : "boxnow") : undefined)}
+              priceFor={(id) => (id === delivery && exactShipping != null ? exactShipping : shippingFor(id, subtotal, id === "box" ? (delivery === "box" ? courier : "boxnow") : undefined))}
             />
           </div>
           {pickup ? (
@@ -383,6 +411,15 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
           <div className="flex flex-wrap justify-between">
             <dt className="text-ink-soft">Доставка · {method.label.toLowerCase()}</dt>
             <dd className="font-medium tabular-nums">{shipping === 0 ? "Безплатно" : formatPrice(shipping)}</dd>
+            {courier === "econt" && !pickup && (exactShipping != null || !quoteTarget) && (
+              <dd className="mt-0.5 w-full text-xs text-ink-soft" role="status">
+                {exactShipping != null
+                  ? `Точна цена от Еконт за тази пратка${effectivePayment === "cod" ? ", с таксата за наложен платеж" : ""}.`
+                  : toOfficeNow
+                    ? `Избери ${delivery === "box" ? "автомат" : "офис"}, за да видиш точната цена от Еконт.`
+                    : "Точната цена от Еконт се показва след избор на населено място."}
+              </dd>
+            )}
             {delivery === "box" && courier === "boxnow" && subtotal < FREE_BOXNOW_FROM && (
               <dd className="mt-0.5 w-full text-xs font-medium text-forest" role="status">
                 Още {formatPrice(FREE_BOXNOW_FROM - subtotal)} до безплатна доставка с BoxNow.
