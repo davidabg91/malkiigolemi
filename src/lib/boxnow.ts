@@ -220,6 +220,8 @@ export async function parcelLabel(parcelId: string): Promise<ArrayBuffer> {
 /** BOX NOW's event names (webhook "event", parcel "state" and its history), as the customer sees them on boxnow.bg. */
 const EVENT_TEXT: Record<string, string> = {
   new: "Пратката е регистрирана в BOX NOW",
+  // Not in the guides, but in real parcel histories: the sender has dropped the parcel in a locker.
+  "accepted-to-locker": "Пратката е оставена в автомат и приета от BOX NOW",
   "in-depot": "Пратката е в склад на BOX NOW",
   "in-transit": "Пратката пътува към автомата",
   "final-destination": "Пратката е в автомата и очаква получаване",
@@ -247,7 +249,7 @@ export function boxnowEventText(event: string | null | undefined): string {
 export function eventOutcome(event: string | null | undefined): "shipped" | "delivered" | null {
   const e = normalizeEvent(event);
   if (e === "delivered") return "delivered";
-  if (e === "in-depot" || e === "in-transit" || e === "final-destination") return "shipped";
+  if (e === "accepted-to-locker" || e === "in-depot" || e === "in-transit" || e === "final-destination") return "shipped";
   return null;
 }
 
