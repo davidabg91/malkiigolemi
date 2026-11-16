@@ -7,6 +7,7 @@ import { Suspense } from "react";
 import { setOrderStatus } from "@/actions/admin";
 import { flagOrderContact, removeFlag } from "@/actions/customers";
 import { AdminSkeleton, Panel, td, th } from "@/components/admin/bits";
+import { BoxNowParcel, type ExistingParcel } from "@/components/admin/BoxNowParcel";
 import { EcontWaybill, type ExistingWaybill } from "@/components/admin/EcontWaybill";
 import { FlagBanner, FlagPanel } from "@/components/admin/Flag";
 import { ProductVisual } from "@/components/product/PackShot";
@@ -15,6 +16,9 @@ import { btn } from "@/components/ui";
 import { db } from "@/db";
 import { brands, ORDER_STATUSES, orders, products, withdrawals } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
+import { boxnowConfig, boxnowTrackingUrl } from "@/lib/boxnow";
+import { getBoxNowSettings, missingBoxNowFields } from "@/lib/boxnow-settings";
+import { boxnowBlocker, defaultParcel } from "@/lib/boxnow-shipments";
 import { courierName } from "@/lib/couriers";
 import { econtMode, econtTrackingUrl, parseEvents } from "@/lib/econt";
 import { getEcontSettings, missingSenderFields } from "@/lib/econt-settings";
@@ -60,6 +64,21 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
           events: parseEvents(order.trackingEvents),
           trackedAt: order.trackedAt?.toISOString() ?? null,
           cost: order.shippingCost,
+        }
+      : null;
+
+  // BOX NOW parcel: the one already made, or the suggested one.
+  const isBoxNow = order.courier === "boxnow" && order.delivery === "box";
+  const boxnowSettings = isBoxNow ? await getBoxNowSettings() : null;
+  const existingParcel: ExistingParcel | null =
+    isBoxNow && order.trackingNumber
+      ? {
+          parcelId: order.trackingNumber,
+          labelUrl: order.waybillUrl ?? `/api/admin/boxnow-label/${order.id}`,
+          trackingUrl: boxnowTrackingUrl(order.trackingNumber),
+          status: order.shipmentStatus,
+          events: parseEvents(order.trackingEvents),
+          trackedAt: order.trackedAt?.toISOString() ?? null,
         }
       : null;
 
@@ -276,6 +295,16 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
                   missingSettings={missingSenderFields(econtSettings)}
                   defaults={defaultWaybill(order, econtSettings)}
                   pickupPossible={econtSettings.senderMode === "address"}
+                />
+              ) : isBoxNow && boxnowSettings ? (
+                <BoxNowParcel
+                  orderId={order.id}
+                  configured={boxnowConfig().configured}
+                  existing={existingParcel}
+                  blocker={boxnowBlocker(order)}
+                  missingSettings={missingBoxNowFields(boxnowSettings)}
+                  defaults={defaultParcel(order, boxnowSettings)}
+                  paidByCard={order.payment === "card"}
                 />
               ) : order.trackingNumber ? (
                 <div className="mt-4 rounded-xl border border-line bg-sand/40 p-3">
