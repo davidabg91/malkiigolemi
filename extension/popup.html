@@ -5,7 +5,7 @@
     <title>Поръчки от Facebook</title>
     <style>
       * { box-sizing: border-box; }
-      body { width: 300px; margin: 0; padding: 16px; font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c2526; background: #fff; }
+      body { width: 320px; margin: 0; padding: 16px; font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #1c2526; background: #fff; }
       h1 { margin: 0 0 4px; font-size: 16px; }
       p { margin: 6px 0 0; color: #4a5759; }
       .state { font-weight: 600; color: #1f5c3f; }
@@ -17,6 +17,14 @@
       .ghost:hover { background: #e1e6e6; }
       button:disabled { opacity: 0.55; cursor: default; }
       small { display: block; margin-top: 12px; color: #7b8687; }
+      .auto { margin-top: 14px; padding-top: 12px; border-top: 1px solid #e1e6e6; }
+      .auto label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+      .auto .main { font-weight: 600; }
+      .auto input[type="checkbox"] { width: 18px; height: 18px; margin: 0; accent-color: #33484b; }
+      .auto .line { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+      .auto input[type="number"] { width: 58px; height: 32px; padding: 0 6px; border: 1px solid #c9d2d3; border-radius: 8px; font: inherit; text-align: center; }
+      .auto .awake { margin-top: 10px; }
+      .auto .error { color: #b3261e; }
       [hidden] { display: none !important; }
     </style>
   </head>
@@ -27,6 +35,23 @@
     <button id="all" class="primary" type="button" hidden>Събери от всички постове</button>
     <a id="admin" class="button ghost" target="_blank" rel="noopener" hidden>Отвори заявките в сайта</a>
     <a id="connect" class="button primary" target="_blank" rel="noopener" href="https://malkiigolemi.com/admin/facebook" hidden>Свържи със сайта</a>
+
+    <section id="auto" class="auto" hidden>
+      <label class="main"><input id="auto-on" type="checkbox" /> Събирай автоматично</label>
+      <div id="auto-more">
+        <div class="line">
+          През <input id="auto-min" type="number" min="10" max="235" aria-label="Най-малко минути между две събирания" /> до
+          <input id="auto-max" type="number" min="15" max="240" aria-label="Най-много минути между две събирания" /> минути
+        </div>
+        <div class="line">
+          От <input id="auto-from" type="number" min="0" max="23" aria-label="Начален час" /> до <input id="auto-to" type="number" min="1" max="24" aria-label="Краен час" /> часа
+        </div>
+        <label class="awake"><input id="auto-awake" type="checkbox" /> Не изключвай екрана между събиранията</label>
+      </div>
+      <p id="auto-note"></p>
+      <p id="auto-error" class="error" hidden></p>
+    </section>
+
     <small id="version"></small>
     <script src="popup.js"></script>
   </body>
