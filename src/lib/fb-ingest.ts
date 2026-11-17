@@ -1,11 +1,12 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { and, eq, isNull, like } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, like } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { fbClaims, fbPosts, products } from "@/db/schema";
 import { fbContactKey } from "./fb-contacts";
 import { quantityOf } from "./fb-parse";
+import { commentAgeHours, FB_REPLY_LIMITS, getFbReplySettings } from "./fb-reply";
 
 /**
  * Comments read by the browser extension (see /extension) arrive here and become fbPosts and fbClaims,
@@ -53,6 +54,10 @@ export const fbIngestSchema = z.object({
         text: z.string().max(4000),
         /** A reply under another comment. */
         reply: z.boolean().default(false),
+        /** The short date Facebook shows next to the comment ("7 м", "1 д"). */
+        time: z.string().max(40).default(""),
+        /** Somebody already replied under it. */
+        answered: z.boolean().default(false),
       }),
     )
     .max(3000),
@@ -68,7 +73,71 @@ export type FbIngestResult = {
   added: number;
   /** Claims of the post still waiting to be turned into orders. */
   pending: number;
+  /** Comments the extension should now answer on Facebook; null when there are none or answering is off. */
+  reply: FbReplyPlan | null;
 };
+
+export type FbReplyPlan = { text: string; pauseMs: number; max: number; ids: string[] };
+
+/** For long lists in "in (...)". */
+const chunks = <T,>(list: T[], size = 400) => Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, (i + 1) * size));
+
+/**
+ * Which of the post's comments get the automatic answer: claims still waiting, read with certainty, recent,
+ * not answered yet, and only while the product's stock covers them in the order they were written.
+ */
+async function replyPlan(postId: number, input: FbIngest): Promise<FbReplyPlan | null> {
+  const settings = await getFbReplySettings();
+  const text = settings.text.trim();
+  if (!settings.enabled || !text) return null;
+  const [post] = await db.select().from(fbPosts).where(eq(fbPosts.id, postId)).limit(1);
+  if (!post || post.closedAt) return null;
+
+  // How many pieces can still be promised. A hand-typed product has no stock to run out of.
+  let left = Infinity;
+  if (post.productId) {
+    const [product] = await db.select({ stock: products.stock, colorOptions: products.colorOptions }).from(products).where(eq(products.id, post.productId)).limit(1);
+    // With colours the comment has to say which one, and that is for a person to check.
+    if (!product || product.colorOptions.length > 0) return null;
+    left = product.stock;
+  } else if (post.price == null) {
+    return null;
+  }
+
+  const seen = new Map(input.comments.filter((c) => c.id).map((c) => [c.id as string, c]));
+  const waiting = await db
+    .select()
+    .from(fbClaims)
+    .where(and(eq(fbClaims.postId, postId), eq(fbClaims.status, "pending")))
+    .orderBy(asc(fbClaims.id));
+  const ids: string[] = [];
+  for (const claim of waiting) {
+    if (claim.qty > left) continue;
+    // Counted even when it gets no automatic answer: the admin may still turn it into an order.
+    left -= claim.qty;
+    if (claim.repliedAt || !claim.fbCommentId) continue;
+    const comment = seen.get(claim.fbCommentId);
+    if (!comment || comment.answered || comment.reply) continue;
+    const read = quantityOf(claim.comment);
+    if (!read.sure || read.qty !== claim.qty) continue;
+    const age = commentAgeHours(comment.time);
+    if (age === null || age >= FB_REPLY_LIMITS.maxAgeHours) continue;
+    ids.push(claim.fbCommentId);
+  }
+  return ids.length > 0 ? { text, pauseMs: FB_REPLY_LIMITS.pauseMs, max: FB_REPLY_LIMITS.perRun, ids } : null;
+}
+
+/** Records that these comments of a post now have their answer on Facebook. */
+export async function markFbReplied(fbId: string, commentIds: string[]) {
+  const [post] = await db.select({ id: fbPosts.id }).from(fbPosts).where(eq(fbPosts.fbId, fbId)).limit(1);
+  if (!post) return;
+  for (const part of chunks(commentIds)) {
+    await db
+      .update(fbClaims)
+      .set({ repliedAt: new Date() })
+      .where(and(eq(fbClaims.postId, post.id), isNull(fbClaims.repliedAt), inArray(fbClaims.fbCommentId, part)));
+  }
+}
 
 const squash = (s: string) => s.replace(/\s+/g, " ").trim();
 
@@ -146,7 +215,7 @@ export async function ingestFbPost(input: FbIngest): Promise<FbIngestResult> {
   const product = post?.productId ? null : await productOf(input);
   if (!post) {
     // Announcements and posts nobody ordered from yet are not worth a row.
-    if (!product && added === 0) return { saved: false, postId: null, product: null, added: 0, pending: 0 };
+    if (!product && added === 0) return { saved: false, postId: null, product: null, added: 0, pending: 0, reply: null };
     const values = {
       fbId: input.fbId,
       url: input.url,
@@ -179,7 +248,11 @@ export async function ingestFbPost(input: FbIngest): Promise<FbIngestResult> {
       .values(fresh.map((c) => ({ postId, ...c })))
       .onConflictDoNothing();
   }
+  // Comments somebody already replied under (by hand, or on an earlier run) are never answered again.
+  await markFbReplied(input.fbId, input.comments.filter((c) => c.id && c.answered).map((c) => c.id as string));
+
   const waiting = await db.select({ id: fbClaims.id }).from(fbClaims).where(and(eq(fbClaims.postId, post.id), eq(fbClaims.status, "pending")));
   const [saved] = await db.select({ productId: fbPosts.productId, productName: fbPosts.productName }).from(fbPosts).where(eq(fbPosts.id, post.id)).limit(1);
-  return { saved: true, postId: post.id, product: saved?.productId ? saved.productName : null, added, pending: waiting.length };
+  const reply = await replyPlan(post.id, input);
+  return { saved: true, postId: post.id, product: saved?.productId ? saved.productName : null, added, pending: waiting.length, reply };
 }

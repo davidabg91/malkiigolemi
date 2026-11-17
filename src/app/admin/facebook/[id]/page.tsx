@@ -1,5 +1,5 @@
 import { asc, desc, eq, sql } from "drizzle-orm";
-import { ArrowLeft, ExternalLink, Pause, Play, RotateCcw, Trash2, UserCheck, X } from "lucide-react";
+import { ArrowLeft, ExternalLink, MessageCircleReply, Pause, Play, RotateCcw, Trash2, UserCheck, X } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -149,6 +149,12 @@ async function AdminFbPost({ params }: Pick<PageProps<"/admin/facebook/[id]">, "
                 {c.name}
                 <span className="rounded-full bg-lime px-2.5 py-0.5 text-xs font-bold tabular-nums">{c.qty} бр</span>
                 {flag && <FlagBadge />}
+                {c.repliedAt && c.status !== "rejected" && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-sand px-2 py-0.5 text-[0.7rem] font-semibold text-ink-soft">
+                    <MessageCircleReply className="h-3 w-3" aria-hidden />
+                    Отговорено във Facebook
+                  </span>
+                )}
                 {match.known && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-sand px-2 py-0.5 text-[0.7rem] font-semibold text-forest">
                     <UserCheck className="h-3 w-3" aria-hidden />

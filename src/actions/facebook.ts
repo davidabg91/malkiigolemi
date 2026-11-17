@@ -10,6 +10,7 @@ import { assertAdmin } from "@/lib/auth";
 import { savedOffice } from "@/lib/courier-offices";
 import { isCourierId } from "@/lib/couriers";
 import { fbContactKey } from "@/lib/fb-contacts";
+import { saveFbReplySettings } from "@/lib/fb-reply";
 import { unitPriceFor } from "@/lib/format";
 import { orderNumber } from "@/lib/orders";
 import { pricedColumns } from "@/lib/pricing";
@@ -251,6 +252,16 @@ export async function setFbPostProduct(postId: number, formData: FormData): Prom
     .set({ productId: product.id, productName: `${product.name} ${product.unit}`.trim(), price: null })
     .where(eq(fbPosts.id, postId));
   refresh();
+}
+
+/** Switches the extension's automatic answer on or off and sets its wording (Админ → От Facebook). */
+export async function saveFbAutoReply(_prev: FbFormState, formData: FormData): Promise<FbFormState> {
+  await assertAdmin();
+  const text = String(formData.get("text") ?? "").replace(/\s+/g, " ").trim();
+  if (text.length < 2 || text.length > 200) return { error: "Напиши отговора (до 200 знака).", fieldErrors: { text: "Напиши отговора (до 200 знака)." } };
+  await saveFbReplySettings({ enabled: formData.get("enabled") === "on", text });
+  refresh();
+  return { ok: true };
 }
 
 /** Stops (or resumes) reading a post when the extension collects from all posts. */

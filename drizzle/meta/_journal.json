@@ -169,6 +169,13 @@
       "when": 1794938911737,
       "tag": "0023_fb_extension",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1794942479714,
+      "tag": "0024_fb_replied",
+      "breakpoints": true
     }
   ]
 }

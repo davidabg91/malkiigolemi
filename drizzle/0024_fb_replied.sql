@@ -1,0 +1,1 @@
+ALTER TABLE `fb_claims` ADD `replied_at` integer;
