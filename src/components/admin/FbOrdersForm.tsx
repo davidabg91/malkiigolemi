@@ -9,7 +9,7 @@ import { btn } from "@/components/ui";
  * Админ → От Facebook: whether a clear claim goes into its person's order by itself, and the wording of the
  * message "Готова за взимане" sends to the person's chat.
  */
-export function FbOrdersForm({ auto, message }: { auto: boolean; message: string }) {
+export function FbOrdersForm({ auto, message, since }: { auto: boolean; message: string; since: string | null }) {
   const [state, action, pending] = useActionState(saveFbOrders, undefined);
   const [on, setOn] = useState(auto);
 
@@ -36,6 +36,18 @@ export function FbOrdersForm({ auto, message }: { auto: boolean; message: string
         <li>Останалите заявки чакат в поста, както досега.</li>
         <li>Поръчка, отбелязана „Готова за взимане“, не приема повече продукти: следващият коментар на човека отваря нова.</li>
       </ul>
+
+      <div className="mt-5">
+        <label htmlFor="fb-since" className="mb-1.5 block text-sm font-medium">
+          Събирай от постове, публикувани от
+        </label>
+        <input id="fb-since" type="date" name="since" defaultValue={since ?? ""} className="field w-auto" aria-invalid={Boolean(state?.fieldErrors?.since)} />
+        {state?.fieldErrors?.since && <p className="mt-1.5 text-sm font-medium text-tomato">{state.fieldErrors.since}</p>}
+        <p className="mt-1.5 max-w-2xl text-sm text-ink-soft">
+          По-старите постове скриптът подминава, когато обхожда групата: поръчките от тях вече са записани на ръка. Остави празно, за да събира от всички. Пост, който отвориш сам и натиснеш „Вземи поръчките от този пост“, се взима
+          винаги.
+        </p>
+      </div>
 
       <div className="mt-5">
         <label htmlFor="fb-pickup-message" className="mb-1.5 block text-sm font-medium">

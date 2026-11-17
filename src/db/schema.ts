@@ -329,6 +329,11 @@ export const fbPosts = sqliteTable("fb_posts", {
   syncedAt: integer("synced_at", { mode: "timestamp" }),
   /** Set when the admin stops collecting from the post; "collect from all" then leaves it out. */
   closedAt: integer("closed_at", { mode: "timestamp" }),
+  /**
+   * About when the post was published on Facebook, worked out from the date it shows ("16 ч", "3 д") the first
+   * time the script met it. Posts from before the day collecting starts (lib/fb-orders.ts, `since`) are left out.
+   */
+  postedAt: integer("posted_at", { mode: "timestamp" }),
   createdAt: createdAt(),
 });
 
@@ -431,6 +436,8 @@ export const fbRuns = sqliteTable(
     ordered: integer("ordered").notNull().default(0),
     /** Automatic answers left under comments. */
     replied: integer("replied").notNull().default(0),
+    /** Posts met in the group but left alone because they are from before the day collecting starts. */
+    skippedOld: integer("skipped_old").notNull().default(0),
     /** Ended early: "Спри", the tab was closed, or the run got stuck. */
     stopped: integer("stopped", { mode: "boolean" }).notNull().default(false),
     /** What went wrong, in the extension's short words ("stuck", "offline", "no-button", …). */

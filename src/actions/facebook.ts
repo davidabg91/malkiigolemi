@@ -12,6 +12,7 @@ import { isCourierId } from "@/lib/couriers";
 import { fbContactKey } from "@/lib/fb-contacts";
 import { addClaimByHand, autoOrderClaims, markOrderReady, removeOrderItems, saveFbOrderSettings, splitOrder, unmarkOrderReady } from "@/lib/fb-orders";
 import { saveFbReplySettings } from "@/lib/fb-reply";
+import { startOfSofiaDay } from "@/lib/fb-since";
 import { unitPriceFor } from "@/lib/format";
 import { orderNumber } from "@/lib/orders";
 import { pricedColumns } from "@/lib/pricing";
@@ -209,7 +210,9 @@ export async function saveFbOrders(_prev: FbFormState, formData: FormData): Prom
   await assertAdmin();
   const message = String(formData.get("message") ?? "").replace(/\r\n/g, "\n").trim();
   if (message.length < 10 || message.length > 1000) return { error: "Напиши съобщението (до 1000 знака).", fieldErrors: { message: "Напиши съобщението (до 1000 знака)." } };
-  await saveFbOrderSettings({ auto: formData.get("auto") === "on", message });
+  const since = String(formData.get("since") ?? "").trim();
+  if (since && startOfSofiaDay(since) === null) return { error: "Невалидна дата.", fieldErrors: { since: "Избери дата от календара." } };
+  await saveFbOrderSettings({ auto: formData.get("auto") === "on", message, since: since || null });
   refresh();
   return { ok: true };
 }

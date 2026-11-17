@@ -38,13 +38,5 @@ export async function saveFbReplySettings(value: FbReplySettings) {
     .onConflictDoUpdate({ target: settings.key, set: { value: json, updatedAt: new Date() } });
 }
 
-const HOURS: Record<string, number> = { с: 0, сек: 0, s: 0, м: 1 / 60, мин: 1 / 60, m: 1 / 60, ч: 1, h: 1, д: 24, d: 24, седм: 168, w: 168, г: 8760, y: 8760 };
-
-/** How old a comment is, from the short date Facebook shows next to it ("7 м", "11 ч", "1 д", "2 седм."). Null when unreadable. */
-export function commentAgeHours(stamp: string): number | null {
-  const s = stamp.trim().toLowerCase();
-  if (/^(току-що|сега|just now|now)$/.test(s)) return 0;
-  const m = s.match(/^(\d{1,3})\s*([a-zа-я]+)\.?$/);
-  if (!m || !(m[2] in HOURS)) return null;
-  return Number(m[1]) * HOURS[m[2]];
-}
+// How old a comment is, from the short date Facebook shows next to it: kept with the other date reading.
+export { stampAgeHours as commentAgeHours } from "./fb-since";
