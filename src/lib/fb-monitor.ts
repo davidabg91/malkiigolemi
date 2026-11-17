@@ -35,6 +35,8 @@ export const fbReportSchema = z.object({
       added: z.number().int().min(0).max(100000),
       ordered: z.number().int().min(0).max(100000),
       replied: z.number().int().min(0).max(100000),
+      /** Posts left alone because they are from before the day collecting starts. */
+      skippedOld: z.number().int().min(0).max(1000).default(0),
       stopped: z.boolean(),
       problem: z.string().max(60).nullable(),
     })
@@ -76,6 +78,7 @@ export async function saveFbReport(report: FbReport) {
       added: r.added,
       ordered: r.ordered,
       replied: r.replied,
+      skippedOld: r.skippedOld,
       stopped: r.stopped,
       problem: r.problem,
       version: report.state?.version ?? null,
@@ -404,6 +407,8 @@ export async function fbDashboard(period: FbPeriodId) {
     demand: [...demand.values()].sort((a, b) => b.ordered + b.waiting - (a.ordered + a.waiting)),
     days: [...perDay.entries()].map(([day, v]) => ({ day, ...v })),
     openMessages: failedMessages,
+    /** The day collecting starts ("YYYY-MM-DD"), or null when every post counts. */
+    since: orderSettings.since,
   };
 }
 

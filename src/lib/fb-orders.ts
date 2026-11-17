@@ -25,10 +25,17 @@ export type FbOrderSettings = {
   auto: boolean;
   /** The message for "Готова за взимане"; {име}, {продукти}, {сума} and {адрес} are filled in. */
   message: string;
+  /**
+   * The day collecting starts ("YYYY-MM-DD", Bulgarian time): posts published before it are left alone when the
+   * script goes through the group, because their orders were taken by hand. Null collects from every post.
+   */
+  since: string | null;
 };
 
 export const DEFAULT_FB_ORDERS: FbOrderSettings = {
   auto: true,
+  // The owner asked on this day for only the posts from then on: the earlier ones were already written down by hand.
+  since: "2026-11-18",
   message: "Здравейте, {име}! Поръчката Ви е в магазина и може да я вземете:\n{продукти}\nОбщо: {сума}\nАдрес: {адрес}\nБлагодарим Ви!",
 };
 

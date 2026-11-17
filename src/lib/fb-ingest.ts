@@ -1,13 +1,14 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { and, asc, eq, inArray, isNull, like } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, like } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { fbClaims, fbPosts, products } from "@/db/schema";
 import { fbContactKey } from "./fb-contacts";
-import { autoOrderClaims } from "./fb-orders";
+import { autoOrderClaims, getFbOrderSettings } from "./fb-orders";
 import { quantityOf } from "./fb-parse";
 import { commentAgeHours, FB_REPLY_LIMITS, getFbReplySettings } from "./fb-reply";
+import { startOfSofiaDay, stampToTime } from "./fb-since";
 
 /**
  * Comments read by the browser extension (see /extension) arrive here and become fbPosts and fbClaims,
@@ -45,6 +46,13 @@ export const fbIngestSchema = z.object({
   text: z.string().max(6000).default(""),
   /** Who wrote the post; their own comments are answers, not orders. */
   author: z.string().max(120).default(""),
+  /** The date Facebook shows on the post ("16 ч", "3 д", "14 ноември"), when the extension read it. */
+  stamp: z.string().max(80).default(""),
+  /**
+   * True when the post was opened by "collect from all posts", false when an admin opened it and pressed the
+   * button. Extensions from before this was sent leave it out; they are treated like a run through the group.
+   */
+  crawl: z.boolean().optional(),
   /** Links found in the post, already unwrapped from Facebook's redirect. */
   links: z.array(z.string().max(600)).max(30).default([]),
   comments: z
@@ -81,6 +89,8 @@ export type FbIngestResult = {
   stockChanged: boolean;
   /** Comments the extension should now answer on Facebook; null when there are none or answering is off. */
   reply: FbReplyPlan | null;
+  /** True when nothing was taken because the post is from before the day collecting starts. */
+  old?: boolean;
 };
 
 export type FbReplyPlan = { text: string; pauseMs: number; max: number; ids: string[] };
@@ -186,6 +196,53 @@ async function productOf(input: FbIngest) {
   return same.length === 1 ? same[0] : null;
 }
 
+/**
+ * About when a post was published: the date it shows, and never later than its oldest comment
+ * (which also works for extensions that do not read the date of the post itself).
+ */
+function postedTime(input: FbIngest, now = Date.now()) {
+  const times = [stampToTime(input.stamp, now), ...input.comments.map((c) => stampToTime(c.time, now))].filter((t): t is number => t !== null);
+  return times.length > 0 ? Math.min(...times) : null;
+}
+
+type FoundPost = { fbId: string; url: string; stamp?: string };
+
+/**
+ * What "collect from all posts" should open: the posts the extension met in the group plus the ones the site is
+ * still collecting from, without the stopped ones and without the ones from before the day collecting starts.
+ * A post is judged once, by the date it showed the first time; `old` counts the ones left out for their age.
+ */
+export async function fbQueue(found: FoundPost[]): Promise<{ queue: { fbId: string; url: string }[]; old: number }> {
+  const now = Date.now();
+  const since = startOfSofiaDay((await getFbOrderSettings()).since);
+  const known = await db.select().from(fbPosts).where(isNotNull(fbPosts.fbId));
+  const byId = new Map(known.map((p) => [p.fbId as string, p]));
+  const collectFrom = now - FB_COLLECT_DAYS * 24 * 60 * 60 * 1000;
+  const queue = new Map<string, { fbId: string; url: string }>();
+  let old = 0;
+
+  for (const f of found) {
+    if (queue.has(f.fbId)) continue;
+    const row = byId.get(f.fbId);
+    if (row?.closedAt) continue;
+    // A post the site knows keeps the date it was given first; one read before dates were kept counts from when the site met it.
+    const posted = row?.postedAt?.getTime() ?? stampToTime(f.stamp, now) ?? (row ? row.createdAt.getTime() : null);
+    if (row && !row.postedAt && posted !== null) await db.update(fbPosts).set({ postedAt: new Date(posted) }).where(eq(fbPosts.id, row.id));
+    if (since !== null && posted !== null && posted < since) {
+      old++;
+      continue;
+    }
+    queue.set(f.fbId, { fbId: f.fbId, url: f.url });
+  }
+  // Posts the site still follows that the first screens of the group did not show this time.
+  for (const row of known) {
+    if (!row.fbId || !row.url || row.closedAt || queue.has(row.fbId) || row.createdAt.getTime() < collectFrom) continue;
+    if (since !== null && (row.postedAt ?? row.createdAt).getTime() < since) continue;
+    queue.set(row.fbId, { fbId: row.fbId, url: row.url });
+  }
+  return { queue: [...queue.values()], old };
+}
+
 export async function ingestFbPost(input: FbIngest): Promise<FbIngestResult> {
   let [post] = await db.select().from(fbPosts).where(eq(fbPosts.fbId, input.fbId)).limit(1);
   // A post added earlier by pasting its comments, with its link filled in: the same post.
@@ -195,6 +252,16 @@ export async function ingestFbPost(input: FbIngest): Promise<FbIngestResult> {
       .from(fbPosts)
       .where(and(isNull(fbPosts.fbId), like(fbPosts.url, `%/${input.fbId}%`)))
       .limit(1);
+  }
+
+  // A post from before the day collecting starts is left alone, unless an admin opened it and asked for it.
+  const posted = post?.postedAt?.getTime() ?? postedTime(input);
+  if (post && !post.postedAt && posted !== null) await db.update(fbPosts).set({ postedAt: new Date(posted) }).where(eq(fbPosts.id, post.id));
+  if (input.crawl !== false) {
+    const since = startOfSofiaDay((await getFbOrderSettings()).since);
+    if (since !== null && posted !== null && posted < since) {
+      return { saved: false, postId: post?.id ?? null, product: null, added: 0, pending: 0, ordered: 0, stockChanged: false, reply: null, old: true };
+    }
   }
 
   const existing = post ? await db.select({ name: fbClaims.name, comment: fbClaims.comment, fbCommentId: fbClaims.fbCommentId }).from(fbClaims).where(eq(fbClaims.postId, post.id)) : [];
@@ -237,6 +304,7 @@ export async function ingestFbPost(input: FbIngest): Promise<FbIngestResult> {
       productId: product?.id ?? null,
       productName: product ? `${product.name} ${product.unit}`.trim() : titleOf(input.text),
       syncedAt: new Date(),
+      postedAt: posted !== null ? new Date(posted) : null,
     };
     [post] = await db.insert(fbPosts).values(values).onConflictDoNothing({ target: fbPosts.fbId }).returning();
     // Two readings of the same new post at once: the other one made the row.

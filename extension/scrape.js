@@ -8,6 +8,8 @@
  *   - every comment is a [role="article"] labelled "Коментар от <име> …" ("Comment by …"); replies say "Отговор от"
  *   - its date is a link whose address carries comment_id (and reply_comment_id for a reply)
  *   - the comment's words are in div[dir="auto"]; the writer's name is the first link with text
+ *   - a post's date is the text of its link to itself ("16 ч", "3 д"); the full date in that link's label is in
+ *     another time zone, so only the short text is used
  *   - a menu button ("Най-уместните") switches to "Всички коментари", which lists them oldest first
  *   - a comment's replies sit next to it (not inside it), folded behind a "Вижте 1 отговор" button
  *   - "Отговор" under a comment opens a [role="textbox"] in a form next to it, already holding the person's name;
@@ -42,6 +44,9 @@
   const MESSAGE_BUTTON = /^(съобщение|message)$/i;
   const SEND_MESSAGE = /(enter.{0,12}изпрат|press enter to send)/i;
   const CLOSE_CHAT = /^(затваряне на чата|close chat)$/i;
+  // A date as Facebook writes it next to a post: "Току-що", "16 ч", "3 д", "Вчера в 10:30", "14 ноември", "November 14".
+  const STAMP = /^(току-що|сега|just now|вчера|yesterday|\d{1,3}\s*[a-zа-я]{1,5}\.?$|\d{1,2}\.? [a-zа-я]{3,}|[a-zа-я]{3,}\.? \d{1,2})/i;
+  const COMMENT_ARTICLE = '[aria-label^="Коментар"], [aria-label^="Отговор"], [aria-label^="Comment"], [aria-label^="Reply"]';
   const COMMENT_FIELD = /^(коментир|отговор|напишете|comment|reply|write)/i;
   const MESSAGE = '[data-ad-rendering-role="story_message"], [data-ad-preview="message"], [data-ad-comet-preview="message"]';
 
@@ -223,8 +228,12 @@
     const heading = text(root).split("\n")[0].match(/^Публикацията на (.+)$|^(.+?)['’]s post$/i);
     const author = first ? text(first).split("\n")[0] : (heading?.[1] ?? heading?.[2] ?? "");
 
+    // The date the post shows: its link to itself, outside the comments.
+    const dated = [...root.querySelectorAll(`a[href*="/${post.fbId}"]`)].find((a) => !/comment_id=/.test(a.href) && !commentArticles(root).some((c) => c.contains(a)) && STAMP.test(text(a)));
+
     return {
       fbId: post.fbId,
+      stamp: dated ? text(dated).slice(0, 80) : "",
       url: `https://www.facebook.com/groups/${post.group}/posts/${post.fbId}/`,
       text: text(message).replace(/\s*(Вижте по-малко|See less)\s*$/i, "").slice(0, 5000),
       author: author.slice(0, 120),
@@ -361,8 +370,13 @@
     for (let i = 0; i < 12 && found.size < limit; i++) {
       await gate();
       for (const a of feed.querySelectorAll('a[href*="/posts/"], a[href*="/permalink/"]')) {
-        const m = new URL(a.href, location.href).pathname.match(POST_URL);
-        if (m && !found.has(m[2])) found.set(m[2], { fbId: m[2], url: `https://www.facebook.com/groups/${m[1]}/posts/${m[2]}/` });
+        const url = new URL(a.href, location.href);
+        const m = url.pathname.match(POST_URL);
+        if (!m) continue;
+        if (!found.has(m[2])) found.set(m[2], { fbId: m[2], url: `https://www.facebook.com/groups/${m[1]}/posts/${m[2]}/`, stamp: "" });
+        // The post's own date is the link to it that is not a comment's ("16 ч", "3 д", "14 ноември").
+        const post = found.get(m[2]);
+        if (!post.stamp && !url.searchParams.has("comment_id") && !a.closest('[role="article"][aria-label]')?.matches(COMMENT_ARTICLE) && STAMP.test(text(a))) post.stamp = text(a).slice(0, 80);
       }
       onProgress?.({ count: found.size });
       window.scrollBy(0, window.innerHeight * 2.5);

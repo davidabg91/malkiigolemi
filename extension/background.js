@@ -5,7 +5,7 @@
  *
  * Kept in chrome.storage.local:
  *   conn   { api, token }   the site and the key it gave us (site.js, from Админ → От Facebook)
- *   crawl  { tabId, windowId, auto, stage: "scan" | "posts" | "done", group, open, closed, queue, index, results,
+ *   crawl  { tabId, windowId, auto, stage: "scan" | "posts" | "done", group, queue, skippedOld, index, results,
  *            stopped, replied, replyProblem }   replied / replyProblem: automatic answers left in this run, and
  *            why they stopped; auto / windowId: the run started by itself, in a window of its own
  *   auto   { enabled, min, max, from, to, awake }   automatic collecting: every min–max minutes (a different number
@@ -90,6 +90,7 @@ async function reportRun(crawl, problem = null) {
     added: total("added"),
     ordered: total("ordered"),
     replied: crawl.replied ?? 0,
+    skippedOld: (crawl.skippedOld ?? 0) + results.filter((r) => r.old).length,
     stopped: Boolean(crawl.stopped),
     problem: problem ?? crawl.replyProblem ?? null,
   });
@@ -114,6 +115,7 @@ async function view(crawl) {
       withNew: results.filter((r) => r.added > 0).length,
       added: results.reduce((sum, r) => sum + (r.added ?? 0), 0),
       ordered: results.reduce((sum, r) => sum + (r.ordered ?? 0), 0),
+      old: (crawl.skippedOld ?? 0) + results.filter((r) => r.old).length,
       replied: crawl.replied ?? 0,
       replyProblem: crawl.replyProblem ?? null,
     },
@@ -420,8 +422,9 @@ const handlers = {
   async collectOne({ post }) {
     const conn = await store.get("conn");
     const startedAt = Date.now();
-    const result = await ingest(post);
-    await report({ kind: "post", startedAt, finishedAt: Date.now(), visited: 1, failed: 0, added: result.added ?? 0, ordered: result.ordered ?? 0, replied: 0, stopped: false, problem: null });
+    // Opened and asked for by a person: taken whatever its date.
+    const result = await ingest({ ...post, crawl: false });
+    await report({ kind: "post", startedAt, finishedAt: Date.now(), visited: 1, failed: 0, added: result.added ?? 0, ordered: result.ordered ?? 0, replied: 0, skippedOld: 0, stopped: false, problem: null });
     return { result, adminUrl: conn.api + result.adminPath };
   },
 
@@ -454,12 +457,17 @@ const handlers = {
   async scanned({ posts }) {
     const crawl = await store.get("crawl");
     if (!crawl || crawl.stage !== "scan") throw new Error("no-run");
-    const closed = new Set(crawl.closed);
-    const queue = new Map();
-    for (const p of [...(posts ?? []), ...crawl.open]) {
-      if (p?.fbId && p.url && !closed.has(p.fbId) && !queue.has(p.fbId)) queue.set(p.fbId, { fbId: p.fbId, url: p.url });
+    // The site knows which posts are stopped and which are from before the day collecting starts.
+    const found = (posts ?? []).filter((p) => p?.fbId && p.url).map((p) => ({ fbId: p.fbId, url: p.url, stamp: p.stamp ?? "" }));
+    let answer;
+    try {
+      answer = await api("/api/fb/queue", { method: "POST", body: JSON.stringify({ posts: found }) });
+    } catch (e) {
+      await finish(crawl, true);
+      throw e;
     }
-    crawl.queue = [...queue.values()].slice(0, MAX_POSTS);
+    crawl.queue = answer.queue.slice(0, MAX_POSTS);
+    crawl.skippedOld = answer.old ?? 0;
     crawl.index = 0;
     crawl.stage = "posts";
     if (crawl.queue.length === 0) await finish(crawl);
@@ -476,7 +484,9 @@ const handlers = {
     let reply = null;
     if (post) {
       try {
-        const saved = await ingest(post);
+        const saved = await ingest({ ...post, crawl: true });
+        // A post from before the day collecting starts (the site judged it by its date): left alone, not a failure.
+        if (saved.old) result.old = true;
         result.added = saved.added;
         result.ordered = saved.ordered ?? 0;
         result.pending = saved.pending;

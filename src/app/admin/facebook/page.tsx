@@ -250,7 +250,15 @@ async function AdminFacebook({ searchParams }: Pick<PageProps<"/admin/facebook">
         <Panel>
           <div className="px-5 pt-5">
             <h2 className="font-display text-lg font-semibold">Постове</h2>
-            <p className="mt-1 text-sm text-ink-soft">Всеки пост, който скриптът е обходил, с продукта му и какво е станало с коментарите.</p>
+            <p className="mt-1 text-sm text-ink-soft">
+              Всеки пост, който скриптът е обходил, с продукта му и какво е станало с коментарите.
+              {data.since && (
+                <>
+                  {" "}
+                  Събира от постове, публикувани от <span className="font-semibold text-ink">{data.since.split("-").reverse().join(".")}</span> нататък; по-старите подминава.
+                </>
+              )}
+            </p>
           </div>
           {data.posts.length === 0 ? (
             <p className="px-5 py-10 text-center text-ink-soft">Скриптът още не е прочел нито един пост.</p>
@@ -346,6 +354,7 @@ async function AdminFacebook({ searchParams }: Pick<PageProps<"/admin/facebook">
                         {plural(r.visited, "пост", "поста")}
                         {r.failed > 0 && <span className="font-semibold text-tomato"> ({r.failed} {r.failed === 1 ? "не се отвори" : "не се отвориха"})</span>} · {plural(r.added, "нова заявка", "нови заявки")} · {r.ordered} в поръчки
                         {r.replied > 0 && ` · ${plural(r.replied, "отговор", "отговора")}`}
+                        {r.skippedOld > 0 && ` · ${plural(r.skippedOld, "стар пост подминат", "стари поста подминати")}`}
                       </p>
                       {problem && <p className="mt-0.5 font-medium text-tomato">{problem}</p>}
                     </li>
@@ -384,7 +393,7 @@ async function AdminFacebook({ searchParams }: Pick<PageProps<"/admin/facebook">
       <h2 className="mb-4 mt-10 font-display text-xl font-semibold">Настройки и инсталация</h2>
       <div className="space-y-6">
         <FbExtensionCard token={fbExtensionToken()} latest={extension.version} />
-        <FbOrdersForm auto={orderSettings.auto} message={orderSettings.message} />
+        <FbOrdersForm auto={orderSettings.auto} message={orderSettings.message} since={orderSettings.since} />
         <FbAutoReplyForm enabled={reply.enabled} text={reply.text} pauseSeconds={FB_REPLY_LIMITS.pauseMs / 1000} perRun={FB_REPLY_LIMITS.perRun} maxAgeHours={FB_REPLY_LIMITS.maxAgeHours} />
       </div>
     </>
