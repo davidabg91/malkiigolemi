@@ -358,6 +358,8 @@ export const fbClaims = sqliteTable(
     orderId: integer("order_id").references(() => orders.id, { onDelete: "set null" }),
     /** Facebook's own number of the comment (from the extension), so reading a post again adds only new comments. */
     fbCommentId: text("fb_comment_id"),
+    /** When the comment got its answer on Facebook: the extension's automatic "Записвам си!" or a reply it found there. */
+    repliedAt: integer("replied_at", { mode: "timestamp" }),
     createdAt: createdAt(),
   },
   (t) => [index("fb_claims_post_idx").on(t.postId), uniqueIndex("fb_claims_comment_idx").on(t.postId, t.fbCommentId)],

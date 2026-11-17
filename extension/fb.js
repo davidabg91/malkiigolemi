@@ -25,6 +25,40 @@
     offline: "Няма връзка със сайта. Провери интернета и опитай пак.",
   };
   const explain = (error) => ERRORS[error] ?? `Нещо не се получи (${error}).`;
+  /** Why the automatic answers stopped. */
+  const explainReply = (problem) =>
+    problem === "no-button" ? "Отговорите спряха: с този профил не може да се отговаря под коментарите." : "Отговорите спряха: Facebook не прие отговора. Опитай пак по-късно.";
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+  /** Set by "Спри": whatever is being read or answered at that moment is dropped and the tab stays where it is. */
+  let stopped = false;
+
+  /**
+   * Leaves the automatic answer under the comments the site picked (plan = { text, pauseMs, max, ids }), with a pause
+   * between two answers, and tells the site which ones are done. Stops at the first answer Facebook does not take.
+   */
+  async function answer(fbId, plan, onProgress) {
+    const ids = plan.ids.slice(0, plan.max);
+    const sent = [];
+    const found = []; // already answered there by somebody
+    let problem = null;
+    for (const [i, id] of ids.entries()) {
+      if (stopped) break;
+      onProgress?.(i + 1, ids.length);
+      const outcome = await globalThis.mgScrape.reply(id, plan.text);
+      if (outcome === "sent") {
+        sent.push(id);
+        if (i < ids.length - 1) await sleep(plan.pauseMs);
+      } else if (outcome === "answered") {
+        found.push(id);
+      } else if (outcome !== "missing") {
+        problem = outcome;
+        break;
+      }
+    }
+    const report = await send({ type: "replied", fbId, ids: [...sent, ...found], sent: sent.length, problem });
+    return { sent: sent.length, problem, report };
+  }
 
   /* ---------- the card ---------- */
 
@@ -126,8 +160,14 @@
       if (!reply.ok) return say(explain(reply.error), { error: true });
       const r = reply.result;
       if (!r.saved) return say("Под този пост още няма заявки за поръчка.");
-      const head = r.added > 0 ? `${r.added} ${r.added === 1 ? "нова заявка" : "нови заявки"}.` : "Няма нови заявки.";
-      say(`${head} Чакат общо ${r.pending}.${r.product ? "" : " Избери продукта в сайта."}`, { link: { href: reply.adminUrl, label: "Отвори в сайта" } });
+      const head = r.added > 0 ? `${plural(r.added, "нова заявка", "нови заявки")}.` : "Няма нови заявки.";
+      let answered = "";
+      if (r.reply) {
+        stopped = false;
+        const done = await answer(post.fbId, r.reply, (n, of) => say(`${head} Отговарям под коментарите: ${n} от ${of}…`));
+        answered = `${done.sent > 0 ? ` Отговорено под ${plural(done.sent, "коментар", "коментара")}.` : ""}${done.problem ? ` ${explainReply(done.problem)}` : ""}`;
+      }
+      say(`${head} Чакат общо ${r.pending}.${r.product ? "" : " Избери продукта в сайта."}${answered}`, { link: { href: reply.adminUrl, label: "Отвори в сайта" } });
     } catch (e) {
       say(explain(e?.message ?? String(e)), { error: true });
     } finally {
@@ -154,18 +194,14 @@
     barButton.onclick = onButton;
   }
 
-  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
-
   function showSummary(crawl) {
     const s = crawl.summary;
     const title = crawl.stopped ? "Събирането е спряно" : "Готово";
     const found = s.added > 0 ? `${plural(s.added, "нова заявка", "нови заявки")} от ${plural(s.withNew, "пост", "поста")}.` : "Няма нови заявки.";
     const rest = ` Прегледани ${plural(s.visited, "пост", "поста")}${s.failed > 0 ? `, ${s.failed} ${s.failed === 1 ? "не се отвори" : "не се отвориха"}` : ""}.`;
-    showBar(title, found + rest, { link: crawl.adminUrl, button: "Затвори", onButton: () => (bar.hidden = true) });
+    const answered = `${s.replied > 0 ? ` Отговорено под ${plural(s.replied, "коментар", "коментара")}.` : ""}${s.replyProblem ? ` ${explainReply(s.replyProblem)}` : ""}`;
+    showBar(title, found + rest + answered, { link: crawl.adminUrl, button: "Затвори", onButton: () => (bar.hidden = true) });
   }
-
-  /** Set by "Спри": the post being read at that moment is dropped and the tab stays where it is. */
-  let stopped = false;
 
   async function stop() {
     stopped = true;
@@ -221,7 +257,13 @@
       message = { type: "collected", fbId: crawl.current.fbId, error: e?.message ?? String(e) };
     }
     if (stopped) return;
-    return advance(await send(message));
+    let reply = await send(message);
+    if (reply.ok && reply.reply) {
+      // The post is still open: answer the comments the site picked before moving on.
+      const done = await answer(crawl.current.fbId, reply.reply, (n, of) => (barText.textContent = `${progress} · отговарям под коментарите (${n} от ${of}). Остави този раздел отворен.`));
+      if (done.report.ok && done.report.crawl) reply = done.report;
+    }
+    return advance(reply);
   }
 
   /* ---------- start ---------- */

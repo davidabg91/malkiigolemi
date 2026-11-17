@@ -3,12 +3,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { AdminSkeleton, PageTitle, Panel, td, th } from "@/components/admin/bits";
+import { FbAutoReplyForm } from "@/components/admin/FbAutoReplyForm";
 import { FbExtensionCard } from "@/components/admin/FbExtensionCard";
 import { FbImport } from "@/components/admin/FbImport";
 import { db } from "@/db";
 import { fbClaims, fbPosts, products } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { fbExtensionToken } from "@/lib/fb-ingest";
+import { FB_REPLY_LIMITS, getFbReplySettings } from "@/lib/fb-reply";
 import { formatDate } from "@/lib/format";
 import extension from "../../../../extension/manifest.json";
 
@@ -16,7 +18,8 @@ export const metadata: Metadata = { title: "Поръчки от Facebook" };
 
 async function AdminFacebook() {
   await requireAdmin();
-  const [productList, posts] = await Promise.all([
+  const [reply, productList, posts] = await Promise.all([
+    getFbReplySettings(),
     db
       .select({ id: products.id, name: products.name, unit: products.unit, stock: products.stock })
       .from(products)
@@ -46,8 +49,9 @@ async function AdminFacebook() {
     <>
       <PageTitle title="Поръчки от Facebook" sub="Коментарите под постовете в групата стават заявки: сайтът разпознава кой колко иска и ги прави на поръчки." />
 
-      <div className="mb-6">
+      <div className="mb-6 space-y-6">
         <FbExtensionCard token={fbExtensionToken()} latest={extension.version} />
+        <FbAutoReplyForm enabled={reply.enabled} text={reply.text} pauseSeconds={FB_REPLY_LIMITS.pauseMs / 1000} perRun={FB_REPLY_LIMITS.perRun} maxAgeHours={FB_REPLY_LIMITS.maxAgeHours} />
       </div>
 
       <div className="grid items-start gap-6 2xl:grid-cols-[1.4fr_1fr]">

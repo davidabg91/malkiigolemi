@@ -9,6 +9,9 @@
  *   - its date is a link whose address carries comment_id (and reply_comment_id for a reply)
  *   - the comment's words are in div[dir="auto"]; the writer's name is the first link with text
  *   - a menu button ("Най-уместните") switches to "Всички коментари", which lists them oldest first
+ *   - a comment's replies sit next to it (not inside it), folded behind a "Вижте 1 отговор" button
+ *   - "Отговор" under a comment opens a [role="textbox"] in a form next to it, already holding the person's name;
+ *     the form's send button is labelled "Публикуване на коментара"
  */
 (() => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -22,6 +25,11 @@
   // "Преглед на още коментари", "Вижте още 12 коментара", "Преглед на предишни коментари", "View more comments"
   const MORE = /(още|предишни|повече|more|previous).{0,25}(коментар|comment)/i;
   const SEE_MORE = /^(вижте повече|виж повече|see more)$/i;
+  // Under a comment: "Отговор" opens the box for a reply; "Вижте 1 отговор" / "Вижте всички 3 отговора" means it has some.
+  const REPLY_BUTTON = /^(отговор|reply)$/i;
+  const HAS_REPLIES = /^(вижте|виж|показване на|view|see)\s.{0,24}(отговор|repl)/i;
+  // The send button of the reply box: "Публикуване на коментара" ("Comment" / "Post comment").
+  const SEND = /(публикуване|^comment$|post)/i;
   const MESSAGE = '[data-ad-rendering-role="story_message"], [data-ad-preview="message"], [data-ad-comet-preview="message"]';
 
   async function waitFor(fn, ms, step = 300) {
@@ -125,7 +133,18 @@
   /** Parts of an element that belong to this comment and not to a comment nested in it. */
   const own = (article, selector) => [...article.querySelectorAll(selector)].filter((el) => el.closest('[role="article"]') === article);
 
-  function readComment(article) {
+  /** The part of the page that belongs to one comment: the comment, its replies and the box for a new reply. */
+  function blockOf(article, root) {
+    const topLevel = (el) => [...el.querySelectorAll('[role="article"][aria-label]')].filter((a) => COMMENT.test(a.getAttribute("aria-label") ?? "")).length;
+    let block = article;
+    while (block.parentElement && block.parentElement !== root && topLevel(block.parentElement) === 1) block = block.parentElement;
+    return block;
+  }
+
+  /** True when somebody already replied under the comment (shown, or folded behind "Вижте 1 отговор"). */
+  const hasReplies = (block) => [...block.querySelectorAll('[role="article"][aria-label]')].some((a) => REPLY.test(a.getAttribute("aria-label") ?? "")) || buttons(block).some((b) => HAS_REPLIES.test(text(b)));
+
+  function readComment(article, root) {
     const label = article.getAttribute("aria-label") ?? "";
     const stamp = own(article, 'a[href*="comment_id="]')[0];
     let id = null;
@@ -142,12 +161,12 @@
     const body = words.map(text).filter(Boolean).join(" ");
     const writer = own(article, "a").find((a) => a !== stamp && text(a) && !/comment_id=/.test(a.href) && !words.some((w) => w.contains(a)));
     const name = (writer ? text(writer).split("\n")[0] : label.replace(COMMENT, "").replace(REPLY, "").replace(/\s+(преди|на коментара|to\s).*$/i, "")).trim();
-    return { id: id && /^\d+$/.test(id) ? id : null, postId, name, text: body, reply };
+    return { id: id && /^\d+$/.test(id) ? id : null, postId, name, text: body, reply, time: stamp ? text(stamp).slice(0, 40) : "", answered: !reply && hasReplies(blockOf(article, root)) };
   }
 
   async function readPost(root) {
     const articles = commentArticles(root);
-    const read = articles.map(readComment).filter((c) => c.name && c.text);
+    const read = articles.map((a) => readComment(a, root)).filter((c) => c.name && c.text);
 
     // Which post this is: the address bar says it, or the comments' own links do.
     let post = postInAddress();
@@ -165,7 +184,7 @@
     // Only this post's comments. When the post did not open (deleted, or Facebook showed the group instead),
     // the page still holds comments of other posts; their links name the post they belong to.
     const inDialog = root.getAttribute("role") === "dialog";
-    const comments = read.filter((c) => (c.postId ? c.postId === post.fbId : inDialog)).map((c) => ({ id: c.id, name: c.name, text: c.text, reply: c.reply }));
+    const comments = read.filter((c) => (c.postId ? c.postId === post.fbId : inDialog)).map((c) => ({ id: c.id, name: c.name, text: c.text, reply: c.reply, time: c.time, answered: c.answered }));
 
     const message = [...root.querySelectorAll(MESSAGE)].find((m) => !m.closest('[role="article"][aria-label]')) ?? null;
     if (message) {
@@ -209,6 +228,50 @@
     return post;
   }
 
+  /**
+   * Writes a reply under one comment of the open post, the way a person does: "Отговор", the text, send.
+   * Returns "sent"; "answered" when the comment already has a reply (nothing is written); "missing" when the comment
+   * is no longer on the page; or what went wrong: "no-button" (this profile cannot reply here), "no-box", "no-type",
+   * "no-send", "not-sent".
+   */
+  async function reply(commentId, replyText) {
+    const root = postRoot();
+    if (!root) return "missing";
+    const article = commentArticles(root).find((a) => {
+      const c = readComment(a, root);
+      return c.id === commentId && !c.reply;
+    });
+    if (!article) return "missing";
+    const block = blockOf(article, root);
+    if (hasReplies(block)) return "answered";
+    const open = own(article, '[role="button"]').find((b) => REPLY_BUTTON.test(text(b)));
+    if (!open) return "no-button";
+
+    article.scrollIntoView({ block: "center" });
+    const boxes = () => [...block.querySelectorAll('[role="textbox"][contenteditable="true"]')];
+    const before = new Set(boxes());
+    open.click();
+    const box = await waitFor(() => boxes().find((b) => !before.has(b)), 5000);
+    if (!box) return "no-box";
+
+    // Facebook starts the reply with the person's name; the text goes after it.
+    box.focus();
+    const selection = getSelection();
+    selection.selectAllChildren(box);
+    selection.collapseToEnd();
+    await sleep(300);
+    const typed = document.execCommand("insertText", false, replyText);
+    await sleep(500);
+    if (!typed || !text(box).includes(replyText)) return "no-type";
+
+    const send = buttons(box.closest("form") ?? block).find((b) => SEND.test(b.getAttribute("aria-label") ?? ""));
+    if (!send) return "no-send";
+    send.click();
+    // Sent when the reply shows up under the comment, or the box is gone or empty again.
+    const sent = await waitFor(() => hasReplies(block) || !box.isConnected || !text(box).includes(replyText), 12000);
+    return sent ? "sent" : "not-sent";
+  }
+
   /** Scrolls the group's feed a few screens and returns the posts it met, newest activity first. */
   async function scanFeed(onProgress, limit = 30) {
     const feed = await waitFor(() => document.querySelector('[role="feed"]'), 15000);
@@ -227,5 +290,5 @@
     return [...found.values()].slice(0, limit);
   }
 
-  globalThis.mgScrape = { collect, scanFeed, postRoot, postInAddress };
+  globalThis.mgScrape = { collect, reply, scanFeed, postRoot, postInAddress };
 })();

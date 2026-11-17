@@ -4,7 +4,8 @@
  *
  * Kept in chrome.storage.local:
  *   conn  { api, token }   the site and the key it gave us (site.js, from Админ → От Facebook)
- *   crawl { tabId, stage: "scan" | "posts" | "done", group, open, closed, queue, index, results, stopped }
+ *   crawl { tabId, stage: "scan" | "posts" | "done", group, open, closed, queue, index, results, stopped,
+ *           replied, replyProblem }   the last two: automatic answers left in this run, and why they stopped
  */
 
 const MAX_POSTS = 40;
@@ -47,6 +48,8 @@ async function view(crawl) {
       failed: results.filter((r) => r.error).length,
       withNew: results.filter((r) => r.added > 0).length,
       added: results.reduce((sum, r) => sum + (r.added ?? 0), 0),
+      replied: crawl.replied ?? 0,
+      replyProblem: crawl.replyProblem ?? null,
     },
   };
 }
@@ -127,11 +130,15 @@ const handlers = {
     if (!crawl || crawl.stage !== "posts") throw new Error("no-run");
     if (crawl.queue[crawl.index]?.fbId !== fbId) return { crawl: await view(crawl) };
     const result = { fbId };
+    let reply = null;
     if (post) {
       try {
         const saved = await ingest(post);
         result.added = saved.added;
         result.pending = saved.pending;
+        // The site's limit on answers counts for the whole run, and one answer Facebook refused ends them for the run.
+        const left = saved.reply ? saved.reply.max - (crawl.replied ?? 0) : 0;
+        if (left > 0 && !crawl.replyProblem) reply = { ...saved.reply, max: left };
       } catch (e) {
         // Without the site there is no point in opening the remaining posts.
         if (["offline", "unauthorized", "not-connected"].includes(e.message)) {
@@ -147,6 +154,17 @@ const handlers = {
     crawl.index += 1;
     if (crawl.index >= crawl.queue.length) await finish(crawl);
     else await store.set("crawl", crawl);
+    return { crawl: await view(crawl), reply };
+  },
+
+  /** The page answered some comments (ids also holds ones it found answered already): tell the site, count them. */
+  async replied({ fbId, ids, sent, problem }, sender) {
+    if (ids?.length > 0) await api("/api/fb/replied", { method: "POST", body: JSON.stringify({ fbId, ids }) });
+    const crawl = await store.get("crawl");
+    if (!crawl || !sender.tab || crawl.tabId !== sender.tab.id) return { crawl: null };
+    crawl.replied = (crawl.replied ?? 0) + (sent ?? 0);
+    if (problem) crawl.replyProblem = problem;
+    await store.set("crawl", crawl);
     return { crawl: await view(crawl) };
   },
 
