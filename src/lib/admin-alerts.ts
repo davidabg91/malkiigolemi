@@ -1,5 +1,5 @@
 import "server-only";
-import { eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { countUnreadChats } from "./chat";
 import { fbClaims, orders, storePayments, withdrawals } from "@/db/schema";
@@ -12,7 +12,11 @@ export async function getAdminAlerts(): Promise<AdminAlerts> {
   const [[o], [w], [f], [p], chats] = await Promise.all([
     db.select({ n: count }).from(orders).where(eq(orders.status, "new")),
     db.select({ n: count }).from(withdrawals).where(isNull(withdrawals.handledAt)),
-    db.select({ n: count }).from(fbClaims).where(eq(fbClaims.status, "pending")),
+    // Facebook comments a person should look at: still waiting, or left out because no quantity was found in them.
+    db
+      .select({ n: count })
+      .from(fbClaims)
+      .where(or(eq(fbClaims.status, "pending"), and(eq(fbClaims.status, "rejected"), eq(fbClaims.skipReason, "unclear")))),
     db.select({ n: count }).from(storePayments).where(isNull(storePayments.seenAt)),
     countUnreadChats(),
   ]);
