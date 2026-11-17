@@ -1,4 +1,6 @@
+import { revalidateTag } from "next/cache";
 import { fbIngestSchema, ingestFbPost, isFbExtensionRequest } from "@/lib/fb-ingest";
+import { CATALOG_TAG } from "@/lib/queries";
 
 /**
  * The browser extension sends one Facebook post with its comments here (see /extension and lib/fb-ingest.ts).
@@ -16,6 +18,8 @@ export async function POST(request: Request) {
   if (!parsed.success) return Response.json({ ok: false, error: "bad request", issues: parsed.error.issues.slice(0, 5) }, { status: 400 });
   try {
     const result = await ingestFbPost(parsed.data);
+    // Claims that went straight into an order took stock: the shop's pages show the new numbers.
+    if (result.stockChanged) revalidateTag(CATALOG_TAG, "max");
     return Response.json({ ok: true, ...result, adminPath: result.postId ? `/admin/facebook/${result.postId}` : "/admin/facebook" });
   } catch (e) {
     console.error("fb ingest failed", e);

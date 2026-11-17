@@ -231,9 +231,18 @@ export const orders = sqliteTable(
     paidAt: integer("paid_at", { mode: "timestamp" }),
     /** When a card payment was refunded in full, e.g. after the order was cancelled. */
     refundedAt: integer("refunded_at", { mode: "timestamp" }),
+    /**
+     * An order gathered from the Facebook group: the person's name there (lower-cased, see fbContactKey) and
+     * Facebook's number of their profile when the extension read it. Everything one person asks for under
+     * the posts goes into their one open order (lib/fb-orders.ts).
+     */
+    fbName: text("fb_name"),
+    fbUserId: text("fb_user_id"),
+    /** When the admin marked the goods as waiting in the shop ("Готова за взимане"). Such an order takes no more items. */
+    readyAt: integer("ready_at", { mode: "timestamp" }),
     createdAt: createdAt(),
   },
-  (t) => [index("orders_user_idx").on(t.userId)],
+  (t) => [index("orders_user_idx").on(t.userId), index("orders_fb_name_idx").on(t.fbName)],
 );
 
 export const orderItems = sqliteTable(
@@ -358,11 +367,40 @@ export const fbClaims = sqliteTable(
     orderId: integer("order_id").references(() => orders.id, { onDelete: "set null" }),
     /** Facebook's own number of the comment (from the extension), so reading a post again adds only new comments. */
     fbCommentId: text("fb_comment_id"),
+    /** Facebook's number of the profile that wrote the comment: tells two people with one name apart, and is how the extension finds them to write to. */
+    fbUserId: text("fb_user_id"),
     /** When the comment got its answer on Facebook: the extension's automatic "Записвам си!" or a reply it found there. */
     repliedAt: integer("replied_at", { mode: "timestamp" }),
     createdAt: createdAt(),
   },
   (t) => [index("fb_claims_post_idx").on(t.postId), uniqueIndex("fb_claims_comment_idx").on(t.postId, t.fbCommentId)],
+);
+
+export const FB_MESSAGE_STATUSES = ["pending", "sent", "failed"] as const;
+export type FbMessageStatus = (typeof FB_MESSAGE_STATUSES)[number];
+
+/**
+ * A message for a customer from the Facebook group ("поръчката ти е в магазина"), waiting for the browser
+ * extension to write it in their chat. The site cannot reach Facebook itself; the extension asks for what waits.
+ */
+export const fbMessages = sqliteTable(
+  "fb_messages",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    orderId: integer("order_id")
+      .notNull()
+      .references(() => orders.id, { onDelete: "cascade" }),
+    fbUserId: text("fb_user_id").notNull(),
+    /** The person's name on Facebook; the extension checks the chat it opened is theirs before writing. */
+    name: text("name").notNull(),
+    body: text("body").notNull(),
+    status: text("status", { enum: FB_MESSAGE_STATUSES }).notNull().default("pending"),
+    /** Why it was not sent, in the extension's short words ("no-button", "wrong-person", …). */
+    error: text("error"),
+    sentAt: integer("sent_at", { mode: "timestamp" }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("fb_messages_order_idx").on(t.orderId), index("fb_messages_status_idx").on(t.status)],
 );
 
 /**
@@ -545,5 +583,6 @@ export type ChatMessage = typeof chatMessages.$inferSelect;
 export type FlaggedContact = typeof flaggedContacts.$inferSelect;
 export type FbPost = typeof fbPosts.$inferSelect;
 export type FbClaim = typeof fbClaims.$inferSelect;
+export type FbMessage = typeof fbMessages.$inferSelect;
 export type Promotion = typeof promotions.$inferSelect;
 export type Review = typeof reviews.$inferSelect;

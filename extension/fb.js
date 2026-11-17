@@ -23,6 +23,7 @@
     unauthorized: "Сайтът не прие ключа. Отвори Админ → От Facebook в сайта, за да се свърже отново.",
     "no-post": "Не виждам отворен пост. Отвори поста (кликни върху датата му) и опитай пак.",
     offline: "Няма връзка със сайта. Провери интернета и опитай пак.",
+    busy: "В момента разширението пише на клиенти. Опитай пак след минута.",
   };
   const explain = (error) => ERRORS[error] ?? `Нещо не се получи (${error}).`;
   /** Why the automatic answers stopped. */
@@ -305,6 +306,52 @@
     return advance(reply);
   }
 
+  /* ---------- writing to customers (only in the window the extension opened for it) ---------- */
+
+  /**
+   * This page is a customer's page inside the group, opened to tell them their order waits in the shop
+   * (the admin pressed "Готова за взимане" in the site). Writes the message in the chat, reports it, and
+   * goes on to the next person after a pause, or closes the window.
+   */
+  async function deliver(message, position) {
+    walking = true;
+    auto = true;
+    place();
+    const head = `Съобщение ${position.index + 1} от ${position.total}: ${message.name}`;
+    const halt = async () => {
+      stopped = true;
+      await send({ type: "outboxClose", keep: true });
+      showBar("Спряно", "Неизпратените съобщения остават да чакат.", { button: "Затвори", onButton: () => (bar.hidden = true) });
+    };
+    showBar("Пиша на клиентите", `${head}. Прозорецът се затваря сам.`, { onButton: halt });
+
+    let outcome;
+    // A page that reloaded in the middle of writing may have sent it already: never write the same message twice.
+    const mark = `mg-fb-message-${message.id}`;
+    if (sessionStorage.getItem(mark)) outcome = "unsure";
+    else {
+      sessionStorage.setItem(mark, "1");
+      try {
+        outcome = await Promise.race([globalThis.mgScrape.message(message.userId, message.name, message.text), giveUpAfter(90000)]);
+      } catch (e) {
+        outcome = e?.message === "timeout" ? "timeout" : "no-type";
+      }
+    }
+    if (stopped) return;
+    const reply = await send({ type: "messageDone", id: message.id, outcome });
+    if (stopped) return;
+    if (reply.ok && reply.next) {
+      barText.textContent = `${outcome === "sent" ? "Изпратено" : "Не се получи"}. Следващото съобщение е след малко…`;
+      await sleep(reply.pauseMs);
+      if (!stopped) location.href = reply.next.profileUrl;
+      return;
+    }
+    const sent = reply.ok ? reply.sent : outcome === "sent" ? 1 : 0;
+    const failed = reply.ok ? reply.failed : outcome === "sent" ? 0 : 1;
+    showBar("Готово", `${sent > 0 ? `Изпратени: ${sent}.` : "Нищо не е изпратено."}${failed > 0 ? ` Неуспешни: ${failed} (причината е в поръчката в сайта).` : ""}`, { button: "Затвори", onButton: () => (bar.hidden = true) });
+    setTimeout(() => send({ type: "outboxClose" }), 4000);
+  }
+
   /* ---------- start ---------- */
 
   // Facebook changes pages without reloading, so keep checking where we are.
@@ -313,5 +360,6 @@
 
   send({ type: "hello" }).then((reply) => {
     if (reply.ok && reply.crawl) walk(reply.crawl);
+    else if (reply.ok && reply.message) deliver(reply.message, reply.position);
   });
 })();

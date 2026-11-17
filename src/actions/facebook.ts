@@ -10,6 +10,7 @@ import { assertAdmin } from "@/lib/auth";
 import { savedOffice } from "@/lib/courier-offices";
 import { isCourierId } from "@/lib/couriers";
 import { fbContactKey } from "@/lib/fb-contacts";
+import { autoOrderClaims, markOrderReady, removeOrderItems, saveFbOrderSettings, splitOrder, unmarkOrderReady } from "@/lib/fb-orders";
 import { saveFbReplySettings } from "@/lib/fb-reply";
 import { unitPriceFor } from "@/lib/format";
 import { orderNumber } from "@/lib/orders";
@@ -251,6 +252,49 @@ export async function setFbPostProduct(postId: number, formData: FormData): Prom
     .update(fbPosts)
     .set({ productId: product.id, productName: `${product.name} ${product.unit}`.trim(), price: null })
     .where(eq(fbPosts.id, postId));
+  // The claims that were waiting only for the product now go into their people's orders.
+  if ((await autoOrderClaims(postId)).stockChanged) updateTag(CATALOG_TAG);
+  refresh();
+}
+
+/** Админ → От Facebook: whether claims go into orders by themselves, and the wording of the pickup message. */
+export async function saveFbOrders(_prev: FbFormState, formData: FormData): Promise<FbFormState> {
+  await assertAdmin();
+  const message = String(formData.get("message") ?? "").replace(/\r\n/g, "\n").trim();
+  if (message.length < 10 || message.length > 1000) return { error: "Напиши съобщението (до 1000 знака).", fieldErrors: { message: "Напиши съобщението (до 1000 знака)." } };
+  await saveFbOrderSettings({ auto: formData.get("auto") === "on", message });
+  refresh();
+  return { ok: true };
+}
+
+/**
+ * The order page's "Раздели поръчката": the ticked pieces go into a new order of the same customer ("split"),
+ * or out of the order and back to stock ("remove").
+ */
+export async function editOrderItems(orderId: number, _prev: FbFormState, formData: FormData): Promise<FbFormState> {
+  await assertAdmin();
+  const picks = formData
+    .getAll("item")
+    .map(Number)
+    .filter((id) => Number.isInteger(id) && id > 0)
+    .map((itemId) => ({ itemId, qty: Math.floor(Number(formData.get(`qty-${itemId}`) ?? 0)) }));
+  if (formData.get("do") === "remove") {
+    const result = await removeOrderItems(orderId, picks);
+    if (!result.ok) return { error: result.error };
+    if (result.restocked) updateTag(CATALOG_TAG);
+    refresh();
+    return { ok: true };
+  }
+  const result = await splitOrder(orderId, picks);
+  if (!result.ok) return { error: result.error };
+  redirect(`/admin/porachki/${result.orderId}`);
+}
+
+/** "Готова за взимане" on a store-pickup order, and taking it back. */
+export async function setOrderReady(orderId: number, ready: boolean): Promise<void> {
+  await assertAdmin();
+  if (ready) await markOrderReady(orderId);
+  else await unmarkOrderReady(orderId);
   refresh();
 }
 
