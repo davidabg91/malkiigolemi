@@ -10,6 +10,7 @@ const ERRORS = {
   "not-connected": "Първо свържи разширението със сайта.",
   unauthorized: "Сайтът не прие ключа. Отвори Админ → От Facebook, за да се свърже отново.",
   offline: "Няма връзка със сайта. Провери интернета и опитай пак.",
+  busy: "В момента разширението пише на клиенти. Опитай пак след минута.",
   stuck: "не приключи навреме: прозорецът му не се виждаше на екрана или Facebook не отговори.",
 };
 const explain = (error) => ERRORS[error] ?? `Нещо не се получи (${error}).`;
@@ -59,6 +60,10 @@ async function show() {
     const kind = `${crawl.auto ? "автоматично, " : ""}${crawl.finishedAt ? clock(crawl.finishedAt) : ""}${crawl.stopped ? ", спряно" : ""}`.replace(/^, |, $/g, "");
     $("note").textContent = `Последно събиране${kind ? ` (${kind})` : ""}: ${found}, прегледани ${plural(sum.visited, "пост", "поста")}.`;
   }
+  // Messages to customers ("Готова за взимане" in the site).
+  const box = s.outbox;
+  $("outbox").hidden = !box;
+  if (box) $("outbox").textContent = box.done ? `Последни съобщения до клиенти: изпратени ${box.sent}${box.failed > 0 ? `, неуспешни ${box.failed}` : ""}.` : `Пиша на клиентите: съобщение ${box.index + 1} от ${box.total}.`;
 }
 
 $("all").addEventListener("click", async () => {

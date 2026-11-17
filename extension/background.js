@@ -12,6 +12,9 @@
  *            each time), between these hours of the day, keeping the screen on meanwhile
  *   autoError { at, error }   why the last automatic run could not start
  *   unseen  new claims since the popup was last opened (the number on the icon)
+ *   outbox { tabId, windowId, list, index, sent, failed, done }   a round of messages to customers ("Готова за
+ *            взимане" in the site's admin): list holds { id, userId, name, text, profileUrl } from the site
+ *   unreported [{ id, outcome }]   messages whose outcome the site has not been told yet (it was unreachable)
  */
 
 const MAX_POSTS = 40;
@@ -23,6 +26,13 @@ const AUTO_DEFAULT = { enabled: false, min: 20, max: 40, from: 8, to: 23, awake:
 const AUTO_MAX_RUN_MS = 25 * 60000;
 /** The window an automatic run works in. Wide enough for Facebook to lay the group out the way scrape.js knows it. */
 const AUTO_WINDOW = { width: 1040, height: 780 };
+
+const OUTBOX_ALARM = "outbox-check";
+const OUTBOX_WATCHDOG = "outbox-watchdog";
+const OUTBOX_EVERY_MINUTES = 5;
+const OUTBOX_MAX_RUN_MS = 12 * 60000;
+/** Between two messages: a different pause each time, the way a person would not write ten chats in a minute. */
+const outboxPause = () => 15000 + Math.round(Math.random() * 20000);
 
 const store = {
   get: async (key) => (await chrome.storage.local.get(key))[key] ?? null,
@@ -141,9 +151,8 @@ async function closeAutoWindow(crawl) {
   if (crawl?.auto && crawl.windowId != null) await chrome.windows.remove(crawl.windowId).catch(() => {});
 }
 
-/** Opens the group in a small window of its own, next to the corner of the window the admin is using, without taking the keyboard. */
-async function startAuto() {
-  const list = await api("/api/fb/posts");
+/** Opens a small window of its own, next to the corner of the window the admin is using, without taking the keyboard. */
+async function openWindow(url) {
   const near = await chrome.windows.getLastFocused().catch(() => null);
   const place = { ...AUTO_WINDOW };
   if (near?.width && near?.height && near.state !== "minimized") {
@@ -152,13 +161,18 @@ async function startAuto() {
     place.left = Math.max(0, (near.left ?? 0) + near.width - place.width);
     place.top = Math.max(0, (near.top ?? 0) + near.height - place.height);
   }
-  let win;
   try {
-    win = await chrome.windows.create({ url: list.group, type: "popup", focused: false, ...place });
+    return await chrome.windows.create({ url, type: "popup", focused: false, ...place });
   } catch {
     // The place we worked out is off the screen (another monitor was unplugged): let Chrome choose.
-    win = await chrome.windows.create({ url: list.group, type: "popup", focused: false, ...AUTO_WINDOW });
+    return chrome.windows.create({ url, type: "popup", focused: false, ...AUTO_WINDOW });
   }
+}
+
+/** Starts a run by itself: the group in a window of its own. */
+async function startAuto() {
+  const list = await api("/api/fb/posts");
+  const win = await openWindow(list.group);
   const startedAt = Date.now();
   await store.set("crawl", { tabId: win.tabs[0].id, windowId: win.id, auto: true, stage: "scan", group: list.group, open: list.open, closed: list.closed, queue: [], index: 0, results: [], startedAt });
   await chrome.alarms.create(AUTO_WATCHDOG, { when: startedAt + AUTO_MAX_RUN_MS });
@@ -171,7 +185,7 @@ async function autoRun() {
   await schedule();
   if (!inHours(auto, new Date())) return;
   const crawl = await store.get("crawl");
-  if (await runningTab(crawl)) return;
+  if ((await runningTab(crawl)) || (await outboxTab(await store.get("outbox")))) return;
   if (crawl && crawl.stage !== "done") await finish(crawl, true);
   try {
     await startAuto();
@@ -181,8 +195,71 @@ async function autoRun() {
   }
 }
 
+/* ---------- messages to customers ("Готова за взимане") ---------- */
+
+/** The tab of a round of messages that is under way, or null. */
+async function outboxTab(outbox) {
+  if (!outbox || outbox.done) return null;
+  return chrome.tabs.get(outbox.tabId).catch(() => null);
+}
+
+/** Tells the site what happened to messages; the ones it could not be told about are kept and told next time. */
+async function reportMessages(extra = []) {
+  const waiting = [...((await store.get("unreported")) ?? []), ...extra];
+  const left = [];
+  for (const r of waiting) {
+    try {
+      await api("/api/fb/messages", { method: "POST", body: JSON.stringify(r) });
+    } catch {
+      left.push(r);
+    }
+  }
+  await store.set("unreported", left.slice(-200));
+  return left;
+}
+
+/**
+ * Asks the site for messages that wait and, when there are some and nothing else is going on, opens the first
+ * person's page inside the group in a window of its own. fb.js writes the message there and asks for the next.
+ */
+async function startOutbox() {
+  if (!(await store.get("conn"))) return;
+  if ((await runningTab(await store.get("crawl"))) || (await outboxTab(await store.get("outbox")))) return;
+  // A message that went out but could not be reported must not be written a second time.
+  const unreported = new Set((await reportMessages()).map((r) => r.id));
+  let list;
+  try {
+    list = (await api("/api/fb/messages")).messages.filter((m) => !unreported.has(m.id));
+  } catch {
+    return;
+  }
+  if (!list.length) return;
+  const win = await openWindow(list[0].profileUrl);
+  const startedAt = Date.now();
+  await store.set("outbox", { tabId: win.tabs[0].id, windowId: win.id, list, index: 0, sent: 0, failed: 0, startedAt, done: false });
+  await chrome.alarms.create(OUTBOX_WATCHDOG, { when: startedAt + OUTBOX_MAX_RUN_MS });
+}
+
+async function endOutbox(outbox, close) {
+  outbox.done = true;
+  await store.set("outbox", outbox);
+  await chrome.alarms.clear(OUTBOX_WATCHDOG);
+  if (close && outbox.windowId != null) await chrome.windows.remove(outbox.windowId).catch(() => {});
+}
+
+/** The site is asked every few minutes, so a button pressed on a phone still reaches this browser. */
+async function watchOutbox() {
+  if (!(await chrome.alarms.get(OUTBOX_ALARM))) await chrome.alarms.create(OUTBOX_ALARM, { delayInMinutes: 1, periodInMinutes: OUTBOX_EVERY_MINUTES });
+}
+
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === AUTO_ALARM) return autoRun();
+  if (alarm.name === OUTBOX_ALARM) return startOutbox();
+  if (alarm.name === OUTBOX_WATCHDOG) {
+    const outbox = await store.get("outbox");
+    if (outbox && !outbox.done) await endOutbox(outbox, true);
+    return;
+  }
   if (alarm.name !== AUTO_WATCHDOG) return;
   const crawl = await store.get("crawl");
   if (!crawl?.auto || crawl.stage === "done") return;
@@ -195,9 +272,15 @@ chrome.runtime.onStartup.addListener(async () => {
   // A run cut short by closing the browser: its tab is gone, and its number may now belong to another tab.
   const crawl = await store.get("crawl");
   if (crawl && crawl.stage !== "done") await finish(crawl, true);
+  const outbox = await store.get("outbox");
+  if (outbox && !outbox.done) await endOutbox(outbox, false);
+  await watchOutbox();
   await restore(true);
 });
-chrome.runtime.onInstalled.addListener(() => restore(false));
+chrome.runtime.onInstalled.addListener(async () => {
+  await watchOutbox();
+  await restore(false);
+});
 
 /* ---------- messages from the pages and the popup ---------- */
 
@@ -211,16 +294,18 @@ const handlers = {
   async connect({ api: origin, token }) {
     if (!/^https?:\/\/[^/]+$/.test(origin ?? "") || !/^[0-9a-f]{64}$/.test(token ?? "")) throw new Error("bad-key");
     await store.set("conn", { api: origin, token });
+    await watchOutbox();
     return { version: chrome.runtime.getManifest().version };
   },
 
   async status() {
-    const [conn, crawl, auto, alarm, autoError] = await Promise.all([store.get("conn"), store.get("crawl"), autoSettings(), chrome.alarms.get(AUTO_ALARM), store.get("autoError")]);
+    const [conn, crawl, auto, alarm, autoError, outbox] = await Promise.all([store.get("conn"), store.get("crawl"), autoSettings(), chrome.alarms.get(AUTO_ALARM), store.get("autoError"), store.get("outbox")]);
     return {
       connected: Boolean(conn),
       api: conn?.api ?? null,
       version: chrome.runtime.getManifest().version,
       crawl: crawl ? await view(crawl) : null,
+      outbox: outbox ? { done: Boolean(outbox.done), index: outbox.index, total: outbox.list.length, sent: outbox.sent, failed: outbox.failed } : null,
       auto,
       autoNext: auto.enabled ? (alarm?.scheduledTime ?? null) : null,
       autoError,
@@ -247,9 +332,45 @@ const handlers = {
 
   /** fb.js on every Facebook page load: is this the tab that walks through the posts? */
   async hello(_message, sender) {
-    const crawl = await store.get("crawl");
+    const [crawl, outbox] = await Promise.all([store.get("crawl"), store.get("outbox")]);
     const mine = crawl && sender.tab && crawl.tabId === sender.tab.id;
-    return { crawl: mine ? await view(crawl) : null };
+    // Or the window that writes to customers: this page is the person the next message is for.
+    const writing = outbox && !outbox.done && sender.tab && outbox.tabId === sender.tab.id;
+    return {
+      crawl: mine ? await view(crawl) : null,
+      message: writing ? outbox.list[outbox.index] : null,
+      position: writing ? { index: outbox.index, total: outbox.list.length } : null,
+    };
+  },
+
+  /** site.js saw that messages wait (the admin just pressed "Готова за взимане"), or the popup asked. */
+  async outbox() {
+    await startOutbox();
+    return {};
+  },
+
+  /** fb.js wrote one message (or could not): tell the site, and hand over the next person. */
+  async messageDone({ id, outcome }, sender) {
+    const outbox = await store.get("outbox");
+    if (!outbox || outbox.done || !sender.tab || outbox.tabId !== sender.tab.id) return { next: null };
+    if (outbox.list[outbox.index]?.id !== id) return { next: null };
+    await reportMessages([{ id, outcome }]);
+    if (outcome === "sent") outbox.sent += 1;
+    else outbox.failed += 1;
+    outbox.index += 1;
+    // Facebook refusing a message ends the round: the rest wait for the next one instead of piling up refusals.
+    const more = outbox.index < outbox.list.length && outcome !== "not-sent";
+    if (!more) await endOutbox(outbox, false);
+    else await store.set("outbox", outbox);
+    return { next: more ? outbox.list[outbox.index] : null, pauseMs: outboxPause(), sent: outbox.sent, failed: outbox.failed };
+  },
+
+  /** The window that wrote to customers showed its result, or "Спри" was pressed in it. */
+  async outboxClose({ keep }, sender) {
+    const outbox = await store.get("outbox");
+    if (!outbox || !sender.tab || outbox.tabId !== sender.tab.id) return {};
+    await endOutbox(outbox, !keep);
+    return {};
   },
 
   async collectOne({ post }) {
@@ -267,6 +388,7 @@ const handlers = {
       await chrome.windows.update(tab.windowId, { focused: true }).catch(() => {});
       return {};
     }
+    if (await outboxTab(await store.get("outbox"))) throw new Error("busy");
     const list = await api("/api/fb/posts");
     const fresh = await chrome.tabs.create({ url: list.group, active: true });
     await store.set("crawl", { tabId: fresh.id, stage: "scan", group: list.group, open: list.open, closed: list.closed, queue: [], index: 0, results: [], startedAt: Date.now() });
@@ -347,10 +469,12 @@ const handlers = {
    * taking the keyboard from someone who is typing would send their keys to Facebook.
    */
   async hidden(_message, sender) {
-    const crawl = await store.get("crawl");
-    if (!crawl?.auto || crawl.stage === "done" || !sender.tab || crawl.tabId !== sender.tab.id) return {};
+    const [crawl, outbox] = await Promise.all([store.get("crawl"), store.get("outbox")]);
+    const own = (job) => job && sender.tab && job.tabId === sender.tab.id && job.windowId != null;
+    const windowId = own(crawl) && crawl.auto && crawl.stage !== "done" ? crawl.windowId : own(outbox) && !outbox.done ? outbox.windowId : null;
+    if (windowId == null) return {};
     const state = await chrome.idle.queryState(15);
-    if (state === "idle") await chrome.windows.update(crawl.windowId, { focused: true, state: "normal" }).catch(() => {});
+    if (state === "idle") await chrome.windows.update(windowId, { focused: true, state: "normal" }).catch(() => {});
     return { state };
   },
 
@@ -360,6 +484,8 @@ const handlers = {
     if (!crawl?.auto || !sender.tab || crawl.tabId !== sender.tab.id) return {};
     if (crawl.stage !== "done") await finish(crawl, true);
     await closeAutoWindow(crawl);
+    // Orders marked ready in the meantime: their messages go out now.
+    await startOutbox();
     return {};
   },
 
@@ -385,4 +511,6 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
 chrome.tabs.onRemoved.addListener(async (tabId) => {
   const crawl = await store.get("crawl");
   if (crawl && crawl.tabId === tabId && crawl.stage !== "done") await finish(crawl, true);
+  const outbox = await store.get("outbox");
+  if (outbox && outbox.tabId === tabId && !outbox.done) await endOutbox(outbox, false);
 });

@@ -199,6 +199,7 @@ async function AdminOrders({ searchParams }: Pick<PageProps<"/admin/porachki">, 
                     </td>
                     <td className={td}>
                       <StatusPill status={o.status} />
+                      {o.readyAt && (o.status === "new" || o.status === "confirmed") && <p className="mt-1 text-[11px] font-semibold text-[#0f3d26]">готова за взимане</p>}
                       {o.status === "cancelled" && o.note?.includes("Отказана от клиента") && (
                         <p className="mt-1 text-[11px] font-semibold text-red-700">от клиента</p>
                       )}

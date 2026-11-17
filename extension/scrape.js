@@ -12,6 +12,11 @@
  *   - a comment's replies sit next to it (not inside it), folded behind a "Вижте 1 отговор" button
  *   - "Отговор" under a comment opens a [role="textbox"] in a form next to it, already holding the person's name;
  *     the form's send button is labelled "Публикуване на коментара"
+ *   - the writer's name links to their page inside the group, /groups/<group>/user/<number of the profile>/; that page
+ *     has a "Съобщение" button, which opens the chat with them in a small window at the bottom of the page
+ *     (the address facebook.com/messages/t/<number> does not: for some people it shows no field to write in)
+ *   - the chat's field is a [role="textbox"] labelled "Пишете на <име>"; a paste event puts text with its lines in it
+ *     (typed text loses them), and then a button labelled "Натиснете Enter, за да изпратите" appears
  *   - while the page is hidden (another tab in front, the window covered or minimised) scrolling loads nothing more:
  *     the group's feed stopped growing the moment its tab went to the background
  */
@@ -32,6 +37,12 @@
   const HAS_REPLIES = /^(вижте|виж|показване на|view|see)\s.{0,24}(отговор|repl)/i;
   // The send button of the reply box: "Публикуване на коментара" ("Comment" / "Post comment").
   const SEND = /(публикуване|^comment$|post)/i;
+  // A person's page inside the group has a "Съобщение" button; the chat it opens has a field labelled
+  // "Пишете на <име>", a send button "Натиснете Enter, за да изпратите" and "Затваряне на чата".
+  const MESSAGE_BUTTON = /^(съобщение|message)$/i;
+  const SEND_MESSAGE = /(enter.{0,12}изпрат|press enter to send)/i;
+  const CLOSE_CHAT = /^(затваряне на чата|close chat)$/i;
+  const COMMENT_FIELD = /^(коментир|отговор|напишете|comment|reply|write)/i;
   const MESSAGE = '[data-ad-rendering-role="story_message"], [data-ad-preview="message"], [data-ad-comet-preview="message"]';
 
   /**
@@ -170,7 +181,9 @@
     const body = words.map(text).filter(Boolean).join(" ");
     const writer = own(article, "a").find((a) => a !== stamp && text(a) && !/comment_id=/.test(a.href) && !words.some((w) => w.contains(a)));
     const name = (writer ? text(writer).split("\n")[0] : label.replace(COMMENT, "").replace(REPLY, "").replace(/\s+(преди|на коментара|to\s).*$/i, "")).trim();
-    return { id: id && /^\d+$/.test(id) ? id : null, postId, name, text: body, reply, time: stamp ? text(stamp).slice(0, 40) : "", answered: !reply && hasReplies(blockOf(article, root)) };
+    // The writer's link is their page inside the group: /groups/<group>/user/<number of the profile>/
+    const userId = writer ? (new URL(writer.href, location.href).pathname.match(/\/user\/(\d+)/)?.[1] ?? null) : null;
+    return { id: id && /^\d+$/.test(id) ? id : null, postId, name, userId, text: body, reply, time: stamp ? text(stamp).slice(0, 40) : "", answered: !reply && hasReplies(blockOf(article, root)) };
   }
 
   async function readPost(root) {
@@ -193,7 +206,7 @@
     // Only this post's comments. When the post did not open (deleted, or Facebook showed the group instead),
     // the page still holds comments of other posts; their links name the post they belong to.
     const inDialog = root.getAttribute("role") === "dialog";
-    const comments = read.filter((c) => (c.postId ? c.postId === post.fbId : inDialog)).map((c) => ({ id: c.id, name: c.name, text: c.text, reply: c.reply, time: c.time, answered: c.answered }));
+    const comments = read.filter((c) => (c.postId ? c.postId === post.fbId : inDialog)).map((c) => ({ id: c.id, name: c.name, userId: c.userId, text: c.text, reply: c.reply, time: c.time, answered: c.answered }));
 
     const message = [...root.querySelectorAll(MESSAGE)].find((m) => !m.closest('[role="article"][aria-label]')) ?? null;
     if (message) {
@@ -282,6 +295,63 @@
     return sent ? "sent" : "not-sent";
   }
 
+  /**
+   * Writes a private message to the person whose page inside the group is open (/groups/<group>/user/<number>/),
+   * the way a person does: "Съобщение", the text in the chat that opens, send.
+   * Returns "sent", or what stopped it: "no-profile" (this is not that person's page), "no-button" (no "Съобщение"
+   * button: the person takes no messages from this profile), "no-box", "wrong-person" (the chat that opened is
+   * labelled with another name: nothing is written), "draft" (somebody already started a message there),
+   * "no-type", "no-send", "not-sent".
+   */
+  async function message(userId, name, words) {
+    await gate();
+    if (!new RegExp(`/user/${userId}(/|$)`).test(location.pathname)) return "no-profile";
+    const open = await waitFor(() => buttons(document).find((b) => MESSAGE_BUTTON.test(b.getAttribute("aria-label") ?? "")), 20000);
+    if (!open) return "no-button";
+
+    // The chat's writing field is labelled "Пишете на <име>". Fields for comments on the page are not it.
+    const label = (box) => (box.getAttribute("aria-label") ?? "").trim().toLowerCase();
+    const chatField = (box) => !COMMENT_FIELD.test(label(box));
+    const same = (box) => chatField(box) && label(box).endsWith(name.trim().toLowerCase());
+    const boxes = () => [...document.querySelectorAll('[role="textbox"][contenteditable="true"]')];
+    const before = new Set(boxes());
+    open.click();
+    // The chat opens as a small window at the bottom of the page; one left open from before is reused.
+    const box = await waitFor(() => boxes().find(same), 15000);
+    // A chat did open, but it is labelled with another name: nothing is written there.
+    if (!box) return boxes().some((b) => !before.has(b) && chatField(b)) ? "wrong-person" : "no-box";
+    if (text(box)) return "draft";
+
+    // The whole text goes in as one paste, which keeps its lines; typing it would drop them.
+    box.focus();
+    await sleep(400);
+    const data = new DataTransfer();
+    data.setData("text/plain", words);
+    box.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }));
+    await sleep(700);
+    const first = words.split("\n")[0].slice(0, 30);
+    if (!text(box).includes(first)) {
+      // The paste was not taken: type it on one line instead.
+      document.execCommand("insertText", false, words.replace(/\s*\n\s*/g, " "));
+      await sleep(700);
+      if (!text(box).includes(first)) return "no-type";
+    }
+
+    // The chat window: the nearest part of the page around the field that also holds its close button.
+    let chat = box.parentElement;
+    while (chat && chat !== document.body && !buttons(chat).some((b) => CLOSE_CHAT.test(b.getAttribute("aria-label") ?? ""))) chat = chat.parentElement;
+    const scope = chat && chat !== document.body ? chat : document;
+    const send = await waitFor(() => [...scope.querySelectorAll("[aria-label]")].find((b) => SEND_MESSAGE.test(b.getAttribute("aria-label") ?? "")), 5000);
+    if (!send) return "no-send";
+    send.click();
+    // Sent when the field is empty again.
+    const sent = await waitFor(() => !box.isConnected || !text(box), 15000);
+    if (!sent) return "not-sent";
+    await sleep(1500);
+    if (scope !== document) buttons(scope).find((b) => CLOSE_CHAT.test(b.getAttribute("aria-label") ?? ""))?.click();
+    return "sent";
+  }
+
   /** Scrolls the group's feed a few screens and returns the posts it met, newest activity first. */
   async function scanFeed(onProgress, limit = 30) {
     await gate();
@@ -302,5 +372,5 @@
     return [...found.values()].slice(0, limit);
   }
 
-  globalThis.mgScrape = { collect, reply, scanFeed, postRoot, postInAddress };
+  globalThis.mgScrape = { collect, reply, message, scanFeed, postRoot, postInAddress };
 })();

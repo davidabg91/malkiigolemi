@@ -9,7 +9,10 @@ import { FbImport } from "@/components/admin/FbImport";
 import { db } from "@/db";
 import { fbClaims, fbPosts, products } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
+import { FbOrdersForm } from "@/components/admin/FbOrdersForm";
+import { FbOutboxMarker } from "@/components/admin/FbOutboxMarker";
 import { fbExtensionToken } from "@/lib/fb-ingest";
+import { getFbOrderSettings, pendingFbMessages } from "@/lib/fb-orders";
 import { FB_REPLY_LIMITS, getFbReplySettings } from "@/lib/fb-reply";
 import { formatDate } from "@/lib/format";
 import extension from "../../../../extension/manifest.json";
@@ -18,8 +21,10 @@ export const metadata: Metadata = { title: "Поръчки от Facebook" };
 
 async function AdminFacebook() {
   await requireAdmin();
-  const [reply, productList, posts] = await Promise.all([
+  const [reply, orderSettings, waitingMessages, productList, posts] = await Promise.all([
     getFbReplySettings(),
+    getFbOrderSettings(),
+    pendingFbMessages(1).then((m) => m.length),
     db
       .select({ id: products.id, name: products.name, unit: products.unit, stock: products.stock })
       .from(products)
@@ -51,7 +56,9 @@ async function AdminFacebook() {
 
       <div className="mb-6 space-y-6">
         <FbExtensionCard token={fbExtensionToken()} latest={extension.version} />
+        <FbOrdersForm auto={orderSettings.auto} message={orderSettings.message} />
         <FbAutoReplyForm enabled={reply.enabled} text={reply.text} pauseSeconds={FB_REPLY_LIMITS.pauseMs / 1000} perRun={FB_REPLY_LIMITS.perRun} maxAgeHours={FB_REPLY_LIMITS.maxAgeHours} />
+        <FbOutboxMarker pending={waitingMessages} />
       </div>
 
       <div className="grid items-start gap-6 2xl:grid-cols-[1.4fr_1fr]">

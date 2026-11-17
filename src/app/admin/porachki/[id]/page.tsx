@@ -1,10 +1,14 @@
 import { desc, eq, inArray } from "drizzle-orm";
-import { AlertCircle, ArrowLeft, Mail, MapPin, Package, Phone, Printer, StickyNote, Truck, Undo2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, Mail, MapPin, MessageCircle, Package, PackageCheck, Phone, Printer, Send, StickyNote, Store, Truck, Undo2 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { setOrderStatus } from "@/actions/admin";
+import { setOrderReady } from "@/actions/facebook";
+import { FbOutboxMarker } from "@/components/admin/FbOutboxMarker";
+import { OrderSplitForm } from "@/components/admin/OrderSplitForm";
+import { getFbOrderSettings, isEditableOrder, pendingFbMessages, pickupMessage } from "@/lib/fb-orders";
 import { flagOrderContact, removeFlag } from "@/actions/customers";
 import { AdminSkeleton, Panel, td, th } from "@/components/admin/bits";
 import { BoxNowParcel, type ExistingParcel } from "@/components/admin/BoxNowParcel";
@@ -14,7 +18,7 @@ import { ProductVisual } from "@/components/product/PackShot";
 import { StatusPill } from "@/components/StatusPill";
 import { btn } from "@/components/ui";
 import { db } from "@/db";
-import { brands, ORDER_STATUSES, orders, products, withdrawals } from "@/db/schema";
+import { brands, fbMessages, ORDER_STATUSES, orders, products, withdrawals } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { boxnowConfig, boxnowTrackingUrl } from "@/lib/boxnow";
 import { getBoxNowSettings, missingBoxNowFields } from "@/lib/boxnow-settings";
@@ -26,10 +30,24 @@ import { defaultWaybill, waybillBlocker } from "@/lib/shipments";
 import { stripePaymentUrl } from "@/lib/stripe";
 import { findFlag, getFlagIndex } from "@/lib/flags";
 import { formatDate, formatPrice, formatTimestamp } from "@/lib/format";
-import { DELIVERY_METHODS, ORDER_STATUS_LABELS } from "@/lib/site";
+import { DELIVERY_METHODS, ORDER_STATUS_LABELS, site } from "@/lib/site";
 import { ColorDot } from "@/components/product/ColorTag";
 
 export const metadata: Metadata = { title: "Поръчка" };
+
+/** Why the extension could not write the pickup message, in the admin's words (the codes come from extension/scrape.js). */
+const FB_MESSAGE_ERRORS: Record<string, string> = {
+  "no-button": "в профила на човека няма бутон „Съобщение“ (не приема съобщения от този профил).",
+  "no-box": "чатът с човека не се отвори.",
+  "wrong-person": "отвори се чат с друг човек, затова нищо не е написано.",
+  draft: "в чата вече има започнато, неизпратено съобщение. Довърши го или го изтрий и опитай пак.",
+  "no-type": "текстът не можа да се напише в чата.",
+  "no-send": "бутонът за изпращане не се появи.",
+  "not-sent": "Facebook не прие съобщението.",
+  "no-profile": "профилът на човека в групата не се отвори.",
+  timeout: "страницата на човека не се зареди навреме.",
+  unsure: "страницата се презареди по средата и не е сигурно дали е тръгнало. Провери в чата, преди да пратиш пак.",
+};
 
 async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "params">) {
   await requireAdmin();
@@ -39,6 +57,13 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
   if (!order) notFound();
   const flag = findFlag(await getFlagIndex(), { userId: order.userId, email: order.email, phone: order.phone });
   const [withdrawal] = await db.select().from(withdrawals).where(eq(withdrawals.orderId, order.id)).orderBy(desc(withdrawals.createdAt)).limit(1);
+  // Store pickup: "Готова за взимане", and the message it sends to a customer from the Facebook group.
+  const pickup = order.delivery === "store" && (order.readyAt != null || order.status === "new" || order.status === "confirmed");
+  const [[message], waiting, pickupSettings] = await Promise.all([
+    db.select().from(fbMessages).where(eq(fbMessages.orderId, order.id)).orderBy(desc(fbMessages.id)).limit(1),
+    pendingFbMessages(1),
+    pickup ? getFbOrderSettings() : null,
+  ]);
 
   // The products' pictures. Hand-typed Facebook items have no product, and a product may have been deleted since.
   const productIds = order.items.map((i) => i.productId).filter((v): v is number => v != null);
@@ -128,8 +153,18 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
       <header className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2">
         <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">{order.number}</h1>
         <StatusPill status={order.status} />
-        <p className="w-full text-ink-soft">{formatDate(order.createdAt)}</p>
+        {order.readyAt && order.status !== "cancelled" && order.status !== "delivered" && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#cdebd3] px-3 py-1 text-sm font-semibold text-[#0f3d26]">
+            <PackageCheck className="h-4 w-4" aria-hidden />
+            Готова за взимане
+          </span>
+        )}
+        <p className="w-full text-ink-soft">
+          {formatDate(order.createdAt)}
+          {order.source === "facebook" && " · от Facebook групата"}
+        </p>
       </header>
+      <FbOutboxMarker pending={waiting.length} />
 
       <div className="grid items-start gap-6 xl:grid-cols-[1.6fr_1fr]">
         <Panel>
@@ -225,9 +260,78 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
               </div>
             )}
           </dl>
+          {isEditableOrder(order) && <OrderSplitForm orderId={order.id} lines={order.items.map((i) => ({ id: i.id, name: i.name, qty: i.qty, color: i.color }))} />}
         </Panel>
 
         <div className="space-y-6">
+          {pickup && pickupSettings && (
+            <Panel className="p-5">
+              <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
+                <Store className="h-5 w-5 text-forest" aria-hidden />
+                Взимане от магазина
+              </h2>
+              {order.readyAt ? (
+                <>
+                  <p className="mt-3 text-sm">
+                    Отбелязана като готова на <span className="font-semibold">{formatDate(order.readyAt)}</span>. Следващите коментари на клиента отварят нова поръчка.
+                  </p>
+                  {message ? (
+                    <p
+                      role="status"
+                      className={`mt-3 rounded-2xl px-4 py-3 text-sm ${message.status === "sent" ? "bg-[#cdebd3] text-[#0f3d26]" : message.status === "failed" ? "bg-tomato/10 text-tomato" : "bg-sun/30"}`}
+                    >
+                      {message.status === "sent"
+                        ? `Съобщението е изпратено в чата на ${message.name} на ${formatDate(message.sentAt ?? message.createdAt)}.`
+                        : message.status === "failed"
+                          ? `Съобщението не беше изпратено: ${FB_MESSAGE_ERRORS[message.error ?? ""] ?? `нещо не се получи (${message.error})`}`
+                          : "Съобщението чака разширението. То го изпраща, щом Chrome с разширението е отворен (до няколко минути)."}
+                    </p>
+                  ) : (
+                    <p className="mt-3 rounded-2xl bg-sand px-4 py-3 text-sm text-ink-soft">
+                      {order.fbUserId ? "Няма изпратено съобщение." : "Профилът на клиента във Facebook не е известен, затова съобщение не се изпраща само. Обади се или му пиши на ръка."}
+                    </p>
+                  )}
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {order.fbUserId && message?.status !== "pending" && (
+                      <form action={setOrderReady.bind(null, order.id, true)}>
+                        <button type="submit" className={btn.ghost}>
+                          <Send className="h-5 w-5" aria-hidden />
+                          {message?.status === "sent" ? "Изпрати пак" : "Изпрати съобщение"}
+                        </button>
+                      </form>
+                    )}
+                    <form action={setOrderReady.bind(null, order.id, false)}>
+                      <button type="submit" className="inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold text-ink-soft transition hover:bg-sand hover:text-ink">
+                        <Undo2 className="h-4 w-4" aria-hidden />
+                        Още не е готова
+                      </button>
+                    </form>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="mt-3 text-sm text-ink-soft">
+                    {order.fbUserId
+                      ? `Когато стоката е в магазина, натисни бутона. Разширението ще напише на ${order.name} в чата във Facebook кои продукти го чакат.`
+                      : "Когато стоката е в магазина, натисни бутона. Профилът на клиента във Facebook не е известен, затова съобщение няма да се изпрати само."}
+                  </p>
+                  <form action={setOrderReady.bind(null, order.id, true)} className="mt-4">
+                    <button type="submit" className={`${btn.primary} w-full`}>
+                      <PackageCheck className="h-5 w-5" aria-hidden />
+                      Готова за взимане
+                    </button>
+                  </form>
+                  {order.fbUserId && (
+                    <details className="mt-3">
+                      <summary className="cursor-pointer text-sm font-semibold text-ink-soft hover:text-ink">Какво ще получи клиентът</summary>
+                      <p className="mt-2 whitespace-pre-line rounded-2xl bg-sand px-4 py-3 text-sm">{pickupMessage(pickupSettings.message, order, order.items)}</p>
+                    </details>
+                  )}
+                </>
+              )}
+            </Panel>
+          )}
+
           <Panel className="p-5">
             <h2 className="font-display text-lg font-semibold">Статус</h2>
             <form action={setOrderStatus.bind(null, order.id)} className="mt-4 flex gap-2">
@@ -347,18 +451,31 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
               <p className="text-sm text-ink-soft">Поръчка без регистрация</p>
             )}
             <ul className="mt-3 space-y-2.5 text-[0.95rem]">
-              <li className="flex gap-3">
-                <Phone className="mt-0.5 h-4 w-4 shrink-0 text-forest" aria-hidden />
-                <a href={`tel:${order.phone.replace(/\s/g, "")}`} className="hover:underline">
-                  {order.phone}
-                </a>
-              </li>
-              <li className="flex gap-3">
-                <Mail className="mt-0.5 h-4 w-4 shrink-0 text-forest" aria-hidden />
-                <a href={`mailto:${order.email}`} className="break-all hover:underline">
-                  {order.email}
-                </a>
-              </li>
+              {order.fbUserId && (
+                <li className="flex gap-3">
+                  <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-forest" aria-hidden />
+                  <a href={`${site.facebookUrl}/user/${order.fbUserId}/`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                    Профилът във Facebook групата
+                  </a>
+                </li>
+              )}
+              {/* An order gathered from Facebook comments may have neither. */}
+              {order.phone && (
+                <li className="flex gap-3">
+                  <Phone className="mt-0.5 h-4 w-4 shrink-0 text-forest" aria-hidden />
+                  <a href={`tel:${order.phone.replace(/\s/g, "")}`} className="hover:underline">
+                    {order.phone}
+                  </a>
+                </li>
+              )}
+              {order.email && (
+                <li className="flex gap-3">
+                  <Mail className="mt-0.5 h-4 w-4 shrink-0 text-forest" aria-hidden />
+                  <a href={`mailto:${order.email}`} className="break-all hover:underline">
+                    {order.email}
+                  </a>
+                </li>
+              )}
               <li className="flex gap-3">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-forest" aria-hidden />
                 <span>

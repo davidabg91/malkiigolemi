@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { fbClaims, fbPosts, products } from "@/db/schema";
 import { fbContactKey } from "./fb-contacts";
+import { autoOrderClaims } from "./fb-orders";
 import { quantityOf } from "./fb-parse";
 import { commentAgeHours, FB_REPLY_LIMITS, getFbReplySettings } from "./fb-reply";
 
@@ -51,6 +52,8 @@ export const fbIngestSchema = z.object({
       z.object({
         id: z.string().regex(/^\d{5,40}$/).nullable(),
         name: z.string().max(200),
+        /** Facebook's number of the writer's profile, from the link on their name. */
+        userId: z.string().regex(/^\d{3,32}$/).nullable().default(null),
         text: z.string().max(4000),
         /** A reply under another comment. */
         reply: z.boolean().default(false),
@@ -73,6 +76,9 @@ export type FbIngestResult = {
   added: number;
   /** Claims of the post still waiting to be turned into orders. */
   pending: number;
+  /** Claims this reading put into their person's order by itself (stock was taken for them). */
+  ordered: number;
+  stockChanged: boolean;
   /** Comments the extension should now answer on Facebook; null when there are none or answering is off. */
   reply: FbReplyPlan | null;
 };
@@ -105,16 +111,19 @@ async function replyPlan(postId: number, input: FbIngest): Promise<FbReplyPlan |
   }
 
   const seen = new Map(input.comments.filter((c) => c.id).map((c) => [c.id as string, c]));
-  const waiting = await db
+  const claims = await db
     .select()
     .from(fbClaims)
-    .where(and(eq(fbClaims.postId, postId), eq(fbClaims.status, "pending")))
+    .where(and(eq(fbClaims.postId, postId), inArray(fbClaims.status, ["pending", "ordered"])))
     .orderBy(asc(fbClaims.id));
   const ids: string[] = [];
-  for (const claim of waiting) {
-    if (claim.qty > left) continue;
-    // Counted even when it gets no automatic answer: the admin may still turn it into an order.
-    left -= claim.qty;
+  for (const claim of claims) {
+    // A claim already in an order has its stock; one still waiting has to fit in what is left.
+    if (claim.status === "pending") {
+      if (claim.qty > left) continue;
+      // Counted even when it gets no automatic answer: the admin may still turn it into an order.
+      left -= claim.qty;
+    }
     if (claim.repliedAt || !claim.fbCommentId) continue;
     const comment = seen.get(claim.fbCommentId);
     if (!comment || comment.answered || comment.reply) continue;
@@ -195,11 +204,14 @@ export async function ingestFbPost(input: FbIngest): Promise<FbIngestResult> {
   const seenKeys = new Set(existing.filter((c) => !c.fbCommentId).map((c) => key(c.name, c.comment)));
 
   const author = fbContactKey(input.author);
-  const fresh: { name: string; comment: string; qty: number; status: "pending" | "rejected"; fbCommentId: string | null }[] = [];
+  const fresh: { name: string; comment: string; qty: number; status: "pending" | "rejected"; fbCommentId: string | null; fbUserId: string | null }[] = [];
+  /** Comments saved before the extension read who wrote them: their profile is filled in now. */
+  const profiles: { commentId: string; userId: string }[] = [];
   for (const c of input.comments) {
     const name = squash(c.name).slice(0, 120);
     const comment = squash(c.text).slice(0, 1000);
     if (!name || !comment) continue;
+    if (c.id && c.userId && seenIds.has(c.id)) profiles.push({ commentId: c.id, userId: c.userId });
     if (c.id ? seenIds.has(c.id) : false) continue;
     const k = key(name, comment);
     if (seenKeys.has(k)) continue;
@@ -208,14 +220,14 @@ export async function ingestFbPost(input: FbIngest): Promise<FbIngestResult> {
     const { qty } = quantityOf(comment);
     // Replies and the post author's own comments are answers ("записана си 2 бр"), kept aside as skipped.
     const order = qty > 0 && !c.reply && fbContactKey(name) !== author;
-    fresh.push({ name, comment, qty: Math.max(1, qty), status: order ? "pending" : "rejected", fbCommentId: c.id });
+    fresh.push({ name, comment, qty: Math.max(1, qty), status: order ? "pending" : "rejected", fbCommentId: c.id, fbUserId: c.userId });
   }
   const added = fresh.filter((c) => c.status === "pending").length;
 
   const product = post?.productId ? null : await productOf(input);
   if (!post) {
     // Announcements and posts nobody ordered from yet are not worth a row.
-    if (!product && added === 0) return { saved: false, postId: null, product: null, added: 0, pending: 0, reply: null };
+    if (!product && added === 0) return { saved: false, postId: null, product: null, added: 0, pending: 0, ordered: 0, stockChanged: false, reply: null };
     const values = {
       fbId: input.fbId,
       url: input.url,
@@ -248,11 +260,20 @@ export async function ingestFbPost(input: FbIngest): Promise<FbIngestResult> {
       .values(fresh.map((c) => ({ postId, ...c })))
       .onConflictDoNothing();
   }
+  for (const p of profiles) {
+    await db
+      .update(fbClaims)
+      .set({ fbUserId: p.userId })
+      .where(and(eq(fbClaims.postId, post.id), eq(fbClaims.fbCommentId, p.commentId), isNull(fbClaims.fbUserId)));
+  }
   // Comments somebody already replied under (by hand, or on an earlier run) are never answered again.
   await markFbReplied(input.fbId, input.comments.filter((c) => c.id && c.answered).map((c) => c.id as string));
+
+  // What needs no person to look at it goes straight into each commenter's own order.
+  const auto = await autoOrderClaims(post.id);
 
   const waiting = await db.select({ id: fbClaims.id }).from(fbClaims).where(and(eq(fbClaims.postId, post.id), eq(fbClaims.status, "pending")));
   const [saved] = await db.select({ productId: fbPosts.productId, productName: fbPosts.productName }).from(fbPosts).where(eq(fbPosts.id, post.id)).limit(1);
   const reply = await replyPlan(post.id, input);
-  return { saved: true, postId: post.id, product: saved?.productId ? saved.productName : null, added, pending: waiting.length, reply };
+  return { saved: true, postId: post.id, product: saved?.productId ? saved.productName : null, added, pending: waiting.length, ordered: auto.ordered, stockChanged: auto.stockChanged, reply };
 }
