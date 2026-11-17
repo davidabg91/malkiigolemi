@@ -32,6 +32,8 @@
 
   /** Set by "Спри": whatever is being read or answered at that moment is dropped and the tab stays where it is. */
   let stopped = false;
+  /** True in the window of a run that started by itself (automatic collecting): it closes when the run is over. */
+  let auto = false;
 
   /**
    * Leaves the automatic answer under the comments the site picked (plan = { text, pauseMs, max, ids }), with a pause
@@ -43,6 +45,7 @@
     const found = []; // already answered there by somebody
     let problem = null;
     for (const [i, id] of ids.entries()) {
+      await shown();
       if (stopped) break;
       onProgress?.(i + 1, ids.length);
       const outcome = await globalThis.mgScrape.reply(id, plan.text);
@@ -179,7 +182,7 @@
     say("Отварям нов раздел, в който ще мина през постовете…");
     const reply = await send({ type: "startCrawl" });
     if (!reply.ok) say(explain(reply.error), { error: true });
-    else say("Събирането върви в новия раздел. Остави го отворен, докато приключи.");
+    else say("Събирането върви в новия раздел. Остави го отворен и на преден план, докато приключи.");
   });
 
   /* ---------- walking through the posts (only in the tab the extension opened for it) ---------- */
@@ -194,7 +197,40 @@
     barButton.onclick = onButton;
   }
 
+  /**
+   * Facebook loads no more posts or comments into a page nobody can see (another tab in front, the window covered
+   * or minimised). Reading waits here until the page is on the screen again; scrape.js asks before every step.
+   */
+  async function shown() {
+    if (document.visibilityState === "visible") return;
+    const before = barText.textContent;
+    barText.textContent = auto ? "На пауза: този прозорец трябва да се вижда на екрана." : "На пауза: този раздел трябва да е на преден план.";
+    for (let i = 0; document.visibilityState !== "visible" && !stopped; i++) {
+      // The run's own window comes forward by itself once nobody is using the computer (background.js).
+      if (i % 5 === 0) send({ type: "hidden" });
+      await sleep(1000);
+    }
+    barText.textContent = before;
+    await sleep(500);
+  }
+  globalThis.mgScrape.gate = shown;
+
+  /** Fails after this much time with the page on the screen; time spent waiting to be seen does not count. */
+  async function giveUpAfter(ms) {
+    for (let left = ms; left > 0; ) {
+      await sleep(1000);
+      if (document.visibilityState === "visible") left -= 1000;
+    }
+    throw new Error("timeout");
+  }
+
+  /** An automatic run is over: its window has nothing more to show. Not when the admin pressed "Спри" in it. */
+  function closeAuto() {
+    if (auto && !stopped) setTimeout(() => send({ type: "autoClose" }), 4000);
+  }
+
   function showSummary(crawl) {
+    closeAuto();
     const s = crawl.summary;
     const title = crawl.stopped ? "Събирането е спряно" : "Готово";
     const found = s.added > 0 ? `${plural(s.added, "нова заявка", "нови заявки")} от ${plural(s.withNew, "пост", "поста")}.` : "Няма нови заявки.";
@@ -212,7 +248,10 @@
   /** After a step: go to the next post, or show what was gathered. */
   async function advance(reply) {
     if (stopped) return;
-    if (!reply.ok) return showBar("Събирането спря", explain(reply.error), { button: "Затвори", onButton: () => (bar.hidden = true) });
+    if (!reply.ok) {
+      closeAuto();
+      return showBar("Събирането спря", explain(reply.error), { button: "Затвори", onButton: () => (bar.hidden = true) });
+    }
     const crawl = reply.crawl;
     if (crawl.stage === "done") return showSummary(crawl);
     // A short pause so the pages are not opened faster than a person would open them.
@@ -222,11 +261,14 @@
 
   async function walk(crawl) {
     walking = true;
+    auto = crawl.auto;
     place();
     if (crawl.stage === "done") return showSummary(crawl);
+    const heading = auto ? "Автоматично събиране на поръчките" : "Събирам поръчките";
+    const keep = auto ? "Прозорецът се затваря сам." : "Остави този раздел отворен и на преден план.";
 
     if (crawl.stage === "scan") {
-      showBar("Събирам поръчките", "Гледам кои постове в групата имат коментари…", { onButton: stop });
+      showBar(heading, "Гледам кои постове в групата имат коментари…", { onButton: stop });
       const posts = await globalThis.mgScrape.scanFeed(({ count }) => (barText.textContent = `Гледам кои постове в групата имат коментари… ${count}`));
       return advance(await send({ type: "scanned", posts }));
     }
@@ -244,14 +286,11 @@
     }
 
     const progress = `Пост ${crawl.index + 1} от ${crawl.total}`;
-    showBar("Събирам поръчките", `${progress}. Остави този раздел отворен.`, { onButton: stop });
+    showBar(heading, `${progress}. ${keep}`, { onButton: stop });
     let message;
     try {
       // A post that will not finish loading is given up on, so one bad page cannot hold up the rest.
-      const post = await Promise.race([
-        globalThis.mgScrape.collect(({ count }) => (barText.textContent = `${progress} · ${plural(count, "коментар", "коментара")}. Остави този раздел отворен.`)),
-        sleep(240000).then(() => Promise.reject(new Error("timeout"))),
-      ]);
+      const post = await Promise.race([globalThis.mgScrape.collect(({ count }) => (barText.textContent = `${progress} · ${plural(count, "коментар", "коментара")}. ${keep}`)), giveUpAfter(240000)]);
       message = { type: "collected", fbId: crawl.current.fbId, post };
     } catch (e) {
       message = { type: "collected", fbId: crawl.current.fbId, error: e?.message ?? String(e) };
@@ -260,7 +299,7 @@
     let reply = await send(message);
     if (reply.ok && reply.reply) {
       // The post is still open: answer the comments the site picked before moving on.
-      const done = await answer(crawl.current.fbId, reply.reply, (n, of) => (barText.textContent = `${progress} · отговарям под коментарите (${n} от ${of}). Остави този раздел отворен.`));
+      const done = await answer(crawl.current.fbId, reply.reply, (n, of) => (barText.textContent = `${progress} · отговарям под коментарите (${n} от ${of}). ${keep}`));
       if (done.report.ok && done.report.crawl) reply = done.report;
     }
     return advance(reply);

@@ -12,6 +12,8 @@
  *   - a comment's replies sit next to it (not inside it), folded behind a "Вижте 1 отговор" button
  *   - "Отговор" under a comment opens a [role="textbox"] in a form next to it, already holding the person's name;
  *     the form's send button is labelled "Публикуване на коментара"
+ *   - while the page is hidden (another tab in front, the window covered or minimised) scrolling loads nothing more:
+ *     the group's feed stopped growing the moment its tab went to the background
  */
 (() => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -31,6 +33,12 @@
   // The send button of the reply box: "Публикуване на коментара" ("Comment" / "Post comment").
   const SEND = /(публикуване|^comment$|post)/i;
   const MESSAGE = '[data-ad-rendering-role="story_message"], [data-ad-preview="message"], [data-ad-comet-preview="message"]';
+
+  /**
+   * Facebook loads no more posts or comments into a page that is not on the screen, so before every step that
+   * needs them fb.js gets the chance to wait until it is (mgScrape.gate).
+   */
+  const gate = () => globalThis.mgScrape.gate?.();
 
   async function waitFor(fn, ms, step = 300) {
     const until = Date.now() + ms;
@@ -99,6 +107,7 @@
     const scrollers = [...root.querySelectorAll("div")].filter((d) => d.scrollHeight > d.clientHeight + 40 && /auto|scroll/.test(getComputedStyle(d).overflowY));
     let quiet = 0;
     for (let round = 0; round < 150 && quiet < 2; round++) {
+      await gate();
       const before = commentArticles(root).length;
       let clicked = 0;
       for (const b of buttons(root)) {
@@ -216,6 +225,7 @@
    * onProgress gets { count } while the comments load.
    */
   async function collect(onProgress) {
+    await gate();
     const root = await waitFor(postRoot, 15000);
     if (!root) throw new Error("no-post");
     // The post's own text (or its first comment) shows that it finished loading.
@@ -274,10 +284,12 @@
 
   /** Scrolls the group's feed a few screens and returns the posts it met, newest activity first. */
   async function scanFeed(onProgress, limit = 30) {
+    await gate();
     const feed = await waitFor(() => document.querySelector('[role="feed"]'), 15000);
     if (!feed) return [];
     const found = new Map();
     for (let i = 0; i < 12 && found.size < limit; i++) {
+      await gate();
       for (const a of feed.querySelectorAll('a[href*="/posts/"], a[href*="/permalink/"]')) {
         const m = new URL(a.href, location.href).pathname.match(POST_URL);
         if (m && !found.has(m[2])) found.set(m[2], { fbId: m[2], url: `https://www.facebook.com/groups/${m[1]}/posts/${m[2]}/` });
