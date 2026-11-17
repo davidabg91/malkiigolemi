@@ -1,15 +1,16 @@
 import { asc, desc, eq, sql } from "drizzle-orm";
-import { ArrowLeft, ExternalLink, RotateCcw, Trash2, UserCheck, X } from "lucide-react";
+import { ArrowLeft, ExternalLink, Pause, Play, RotateCcw, Trash2, UserCheck, X } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { deleteFbPost, setClaimStatus } from "@/actions/facebook";
+import { deleteFbPost, setClaimStatus, setFbPostClosed, setFbPostProduct } from "@/actions/facebook";
 import { AdminSkeleton, Panel } from "@/components/admin/bits";
 import { ClaimOrderForm, type ClaimPrefill } from "@/components/admin/ClaimOrderForm";
 import { FlagBadge } from "@/components/admin/Flag";
+import { btn } from "@/components/ui";
 import { db } from "@/db";
-import { fbClaims, fbContacts, fbPosts, orders, products, users } from "@/db/schema";
+import { type FbClaim, fbClaims, fbContacts, fbPosts, orders, products, users } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { savedOffice } from "@/lib/courier-offices";
 import { isCourierId } from "@/lib/couriers";
@@ -56,6 +57,11 @@ async function AdminFbPost({ params }: Pick<PageProps<"/admin/facebook/[id]">, "
     db.select().from(fbContacts),
   ]);
   const rememberedByKey = new Map(remembered.map((r) => [r.key, r]));
+  // A post read by the extension that points to no product of the shop: the admin picks one before ordering.
+  const needsProduct = !post.productId && post.price == null;
+  const productChoices = needsProduct
+    ? await db.select({ id: products.id, name: products.name, unit: products.unit, stock: products.stock }).from(products).where(eq(products.active, true)).orderBy(asc(products.name))
+    : [];
 
   const userByName = new Map<string, (typeof people)[number]>();
   for (const u of people) if (!userByName.has(key(u.name))) userByName.set(key(u.name), u);
@@ -123,8 +129,66 @@ async function AdminFbPost({ params }: Pick<PageProps<"/admin/facebook/[id]">, "
       ? { label: "Наличност", value: `${product.stock} бр`, hint: formatPrice(product.price) }
       : post.productId
         ? { label: "Наличност", value: "—", hint: "Продуктът е изтрит от сайта" }
+        : needsProduct
+          ? { label: "Продукт", value: "—", hint: "Още не е избран" }
         : { label: "Ръчно въведен продукт", value: post.price != null ? formatPrice(post.price) : "—", hint: "Цена за брой · без наличност" },
   ];
+
+  const shown = claims.filter((c) => c.status !== "rejected");
+  const skipped = claims.filter((c) => c.status === "rejected");
+  const renderClaim = (c: FbClaim, i: number) => {
+    const match = prefillFor(c.name);
+    const flag = findFlag(flags, { userId: match.userId, email: match.prefill.email, phone: match.prefill.phone });
+    return (
+      <li key={c.id}>
+        <Panel className={`p-5 ${c.status === "rejected" ? "opacity-55" : ""} ${flag && c.status === "pending" ? "ring-2 ring-tomato" : ""}`}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="flex flex-wrap items-center gap-2 font-semibold">
+                <span className="text-sm tabular-nums text-ink-soft">{i + 1}.</span>
+                {c.name}
+                <span className="rounded-full bg-lime px-2.5 py-0.5 text-xs font-bold tabular-nums">{c.qty} бр</span>
+                {flag && <FlagBadge />}
+                {match.known && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-sand px-2 py-0.5 text-[0.7rem] font-semibold text-forest">
+                    <UserCheck className="h-3 w-3" aria-hidden />
+                    {match.known === "user" ? "Регистриран клиент" : "Поръчвал преди"}
+                  </span>
+                )}
+              </p>
+              <p className="mt-1 text-sm text-ink-soft">„{c.comment}“</p>
+            </div>
+            {c.status === "pending" && (
+              <form action={setClaimStatus.bind(null, c.id, "rejected")}>
+                <button type="submit" className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-ink-soft transition hover:bg-sand hover:text-tomato">
+                  <X className="h-4 w-4" aria-hidden />
+                  Пропусни
+                </button>
+              </form>
+            )}
+            {c.status === "rejected" && (
+              <form action={setClaimStatus.bind(null, c.id, "pending")}>
+                <button type="submit" className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-ink-soft transition hover:bg-sand hover:text-ink">
+                  <RotateCcw className="h-4 w-4" aria-hidden />
+                  Върни
+                </button>
+              </form>
+            )}
+            {c.status === "ordered" && c.orderId && (
+              <Link href={`/admin/porachki/${c.orderId}`} className="rounded-full bg-[#cdebd3] px-3 py-1.5 text-sm font-semibold text-[#0f3d26] hover:underline">
+                Поръчката е създадена
+              </Link>
+            )}
+          </div>
+          {c.status === "pending" && !needsProduct && (
+            <div className="mt-4 border-t border-line pt-4">
+              <ClaimOrderForm claimId={c.id} qty={c.qty} prefill={match.prefill} colors={product ? colorChoices({ colors: product.colorOptions, colorStock: product.colorStock }) : []} />
+            </div>
+          )}
+        </Panel>
+      </li>
+    );
+  };
 
   return (
     <>
@@ -138,6 +202,7 @@ async function AdminFbPost({ params }: Pick<PageProps<"/admin/facebook/[id]">, "
           <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">{post.productName}</h1>
           <p className="mt-1 text-ink-soft">
             Добавен на {formatDate(post.createdAt)}
+            {post.syncedAt && <> · коментарите са четени на {formatDate(post.syncedAt)}</>}
             {post.url && (
               <>
                 {" · "}
@@ -148,13 +213,54 @@ async function AdminFbPost({ params }: Pick<PageProps<"/admin/facebook/[id]">, "
             )}
           </p>
         </div>
-        <form action={deleteFbPost.bind(null, post.id)}>
-          <button type="submit" className="inline-flex h-10 items-center gap-2 rounded-full border border-line bg-paper px-4 text-sm font-semibold text-ink-soft transition hover:border-tomato hover:text-tomato">
-            <Trash2 className="h-4 w-4" aria-hidden />
-            Изтрий поста
-          </button>
-        </form>
+        <div className="flex flex-wrap gap-2">
+          {post.fbId && (
+            <form action={setFbPostClosed.bind(null, post.id, !post.closedAt)}>
+              <button
+                type="submit"
+                title={post.closedAt ? "Разширението пак ще чете коментарите под този пост" : "Разширението спира да чете коментарите под този пост"}
+                className="inline-flex h-10 items-center gap-2 rounded-full border border-line bg-paper px-4 text-sm font-semibold text-ink-soft transition hover:border-ink/40 hover:text-ink"
+              >
+                {post.closedAt ? <Play className="h-4 w-4" aria-hidden /> : <Pause className="h-4 w-4" aria-hidden />}
+                {post.closedAt ? "Събирай отново" : "Спри събирането"}
+              </button>
+            </form>
+          )}
+          <form action={deleteFbPost.bind(null, post.id)}>
+            <button type="submit" className="inline-flex h-10 items-center gap-2 rounded-full border border-line bg-paper px-4 text-sm font-semibold text-ink-soft transition hover:border-tomato hover:text-tomato">
+              <Trash2 className="h-4 w-4" aria-hidden />
+              Изтрий поста
+            </button>
+          </form>
+        </div>
       </header>
+
+      {post.closedAt && (
+        <p className="mb-4 rounded-2xl bg-sand px-4 py-3 text-sm text-ink-soft">Събирането от този пост е спряно. Новите коментари под него не се добавят.</p>
+      )}
+
+      {needsProduct && (
+        <form action={setFbPostProduct.bind(null, post.id)} className="mb-6 rounded-card border-2 border-sun bg-sun/15 p-5">
+          <p className="font-semibold">Кой продукт от сайта е в този пост?</p>
+          <p className="mt-1 text-sm text-ink-soft">В поста няма линк към продукт от сайта, затова не е разпознат сам. Избери го, за да правиш поръчки от заявките.</p>
+          {post.text && <p className="mt-3 line-clamp-3 whitespace-pre-line rounded-2xl bg-paper px-4 py-3 text-sm text-ink-soft">{post.text}</p>}
+          <div className="mt-3 flex flex-wrap gap-3">
+            <select name="productId" required defaultValue="" aria-label="Продукт" className="field min-w-0 flex-1 sm:max-w-md">
+              <option value="" disabled>
+                Избери продукт…
+              </option>
+              {productChoices.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {`${p.name} ${p.unit}`.trim()} · {p.stock} бр
+                </option>
+              ))}
+            </select>
+            <button type="submit" className={btn.primary}>
+              Запази продукта
+            </button>
+          </div>
+        </form>
+      )}
 
       <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {tiles.map((t) => (
@@ -167,61 +273,16 @@ async function AdminFbPost({ params }: Pick<PageProps<"/admin/facebook/[id]">, "
         ))}
       </ul>
 
-      <ol className="mt-6 space-y-4">
-        {claims.map((c, i) => {
-          const match = prefillFor(c.name);
-          const flag = findFlag(flags, { userId: match.userId, email: match.prefill.email, phone: match.prefill.phone });
-          return (
-            <li key={c.id}>
-              <Panel className={`p-5 ${c.status === "rejected" ? "opacity-55" : ""} ${flag && c.status === "pending" ? "ring-2 ring-tomato" : ""}`}>
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="flex flex-wrap items-center gap-2 font-semibold">
-                      <span className="text-sm tabular-nums text-ink-soft">{i + 1}.</span>
-                      {c.name}
-                      <span className="rounded-full bg-lime px-2.5 py-0.5 text-xs font-bold tabular-nums">{c.qty} бр</span>
-                      {flag && <FlagBadge />}
-                      {match.known && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-sand px-2 py-0.5 text-[0.7rem] font-semibold text-forest">
-                          <UserCheck className="h-3 w-3" aria-hidden />
-                          {match.known === "user" ? "Регистриран клиент" : "Поръчвал преди"}
-                        </span>
-                      )}
-                    </p>
-                    <p className="mt-1 text-sm text-ink-soft">„{c.comment}“</p>
-                  </div>
-                  {c.status === "pending" && (
-                    <form action={setClaimStatus.bind(null, c.id, "rejected")}>
-                      <button type="submit" className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-ink-soft transition hover:bg-sand hover:text-tomato">
-                        <X className="h-4 w-4" aria-hidden />
-                        Пропусни
-                      </button>
-                    </form>
-                  )}
-                  {c.status === "rejected" && (
-                    <form action={setClaimStatus.bind(null, c.id, "pending")}>
-                      <button type="submit" className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-ink-soft transition hover:bg-sand hover:text-ink">
-                        <RotateCcw className="h-4 w-4" aria-hidden />
-                        Върни
-                      </button>
-                    </form>
-                  )}
-                  {c.status === "ordered" && c.orderId && (
-                    <Link href={`/admin/porachki/${c.orderId}`} className="rounded-full bg-[#cdebd3] px-3 py-1.5 text-sm font-semibold text-[#0f3d26] hover:underline">
-                      Поръчката е създадена
-                    </Link>
-                  )}
-                </div>
-                {c.status === "pending" && (
-                  <div className="mt-4 border-t border-line pt-4">
-                    <ClaimOrderForm claimId={c.id} qty={c.qty} prefill={match.prefill} colors={product ? colorChoices({ colors: product.colorOptions, colorStock: product.colorStock }) : []} />
-                  </div>
-                )}
-              </Panel>
-            </li>
-          );
-        })}
-      </ol>
+      <ol className="mt-6 space-y-4">{shown.map(renderClaim)}</ol>
+
+      {skipped.length > 0 && (
+        <details className="mt-6">
+          <summary className="cursor-pointer rounded-full px-1 py-2 text-sm font-semibold text-ink-soft hover:text-ink">
+            Пропуснати коментари ({skipped.length}): въпроси, отговори и отказани заявки
+          </summary>
+          <ol className="mt-3 space-y-4">{skipped.map(renderClaim)}</ol>
+        </details>
+      )}
     </>
   );
 }

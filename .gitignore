@@ -47,4 +47,6 @@ next-env.d.ts
 /data/*
 !/data/couriers/
 /public/uploads/
+# the packed browser extension, made at build time from /extension
+/public/razshirenie/
 .claude/

@@ -63,7 +63,7 @@ const WORD_NUMBERS: Record<string, number> = {
   два: 2, две: 2,
   три: 3, четири: 4, пет: 5, шест: 6, седем: 7, осем: 8, девет: 9, десет: 10,
 };
-const UNIT = "(?:бр\\.?|броя|брой|бройки|бройка|комплекта|комплект|к-та|пакета|пакет|кутии|кутия|опаковки|опаковка|чифта|чифт|кг|kg|pcs?)";
+const UNIT = "(?:бр\\.?|броя|брой|бройки|бройка|комплекта|комплект|к-та|к-кт|к-т|пакета|пакет|кутии|кутия|опаковки|опаковка|чифта|чифт|кг|kg|pcs?)";
 const WORDS = Object.keys(WORD_NUMBERS).join("|");
 
 /** How many items a single comment asks for. */
@@ -91,6 +91,10 @@ export function quantityOf(comment: string): { qty: number; sure: boolean } {
 
   // Questions are not orders, even when they mention a quantity word.
   if (/\?\s*$/.test(text) && !/за мен/.test(text)) return { qty: 0, sure: false };
+
+  // "един за мен", "две моля", "три"
+  const bareWord = text.match(new RegExp(`^(${WORDS})(?:\\s+(?:за|моля|и за|също)(?:\\s|$)|\\s*$|[!.,])`));
+  if (bareWord) return { qty: WORD_NUMBERS[bareWord[1]] ?? 1, sure: true };
 
   // "за мен", "искам", "и аз" without a number: one piece.
   if (/(за мен|искам|и аз|аз също|запази|запазете|резервирай|поръчвам|вземам|взимам|желая|\bбр\b|брой\b)/.test(text)) {

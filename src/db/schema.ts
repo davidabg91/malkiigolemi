@@ -312,6 +312,14 @@ export const fbPosts = sqliteTable("fb_posts", {
   /** Price in cents for a product typed in by hand (productId is then null); such items take no stock. */
   price: integer("price"),
   url: text("url"),
+  /** Facebook's own number of the post, set when the browser extension reads it; one row per post. */
+  fbId: text("fb_id").unique(),
+  /** The beginning of the post's own text, as the extension read it. */
+  text: text("text"),
+  /** When the extension last read the comments. */
+  syncedAt: integer("synced_at", { mode: "timestamp" }),
+  /** Set when the admin stops collecting from the post; "collect from all" then leaves it out. */
+  closedAt: integer("closed_at", { mode: "timestamp" }),
   createdAt: createdAt(),
 });
 
@@ -348,9 +356,11 @@ export const fbClaims = sqliteTable(
     comment: text("comment").notNull(),
     status: text("status", { enum: FB_CLAIM_STATUSES }).notNull().default("pending"),
     orderId: integer("order_id").references(() => orders.id, { onDelete: "set null" }),
+    /** Facebook's own number of the comment (from the extension), so reading a post again adds only new comments. */
+    fbCommentId: text("fb_comment_id"),
     createdAt: createdAt(),
   },
-  (t) => [index("fb_claims_post_idx").on(t.postId)],
+  (t) => [index("fb_claims_post_idx").on(t.postId), uniqueIndex("fb_claims_comment_idx").on(t.postId, t.fbCommentId)],
 );
 
 /**

@@ -134,7 +134,7 @@ export async function orderFromClaim(claimId: number, _prev: FbFormState, formDa
     ? await db.select({ ...getTableColumns(products), ...pricedColumns }).from(products).where(eq(products.id, post.productId)).limit(1)
     : [];
   if (post.productId && !product) return { error: "Продуктът от поста вече не съществува." };
-  if (!product && post.price == null) return { error: "Постът няма цена." };
+  if (!product && post.price == null) return { error: "Първо избери продукта на поста (най-горе на страницата)." };
   if (product && product.stock < d.qty) return { error: `Няма достатъчна наличност (остават ${product.stock} бр).` };
   // A product sold in several colours is counted per colour, so the order has to say which.
   let color: string | null = null;
@@ -237,6 +237,29 @@ export async function setClaimStatus(claimId: number, status: "pending" | "rejec
     .update(fbClaims)
     .set({ status })
     .where(and(eq(fbClaims.id, claimId), sql`${fbClaims.status} != 'ordered'`));
+  refresh();
+}
+
+/** Picks the shop product for a post the extension could not match by itself. */
+export async function setFbPostProduct(postId: number, formData: FormData): Promise<void> {
+  await assertAdmin();
+  const id = Number(formData.get("productId"));
+  const [product] = Number.isInteger(id) && id > 0 ? await db.select().from(products).where(eq(products.id, id)).limit(1) : [];
+  if (!product) return;
+  await db
+    .update(fbPosts)
+    .set({ productId: product.id, productName: `${product.name} ${product.unit}`.trim(), price: null })
+    .where(eq(fbPosts.id, postId));
+  refresh();
+}
+
+/** Stops (or resumes) reading a post when the extension collects from all posts. */
+export async function setFbPostClosed(postId: number, closed: boolean): Promise<void> {
+  await assertAdmin();
+  await db
+    .update(fbPosts)
+    .set({ closedAt: closed ? new Date() : null })
+    .where(eq(fbPosts.id, postId));
   refresh();
 }
 
