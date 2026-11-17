@@ -3,11 +3,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { AdminSkeleton, PageTitle, Panel, td, th } from "@/components/admin/bits";
+import { FbExtensionCard } from "@/components/admin/FbExtensionCard";
 import { FbImport } from "@/components/admin/FbImport";
 import { db } from "@/db";
 import { fbClaims, fbPosts, products } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
+import { fbExtensionToken } from "@/lib/fb-ingest";
 import { formatDate } from "@/lib/format";
+import extension from "../../../../extension/manifest.json";
 
 export const metadata: Metadata = { title: "Поръчки от Facebook" };
 
@@ -23,6 +26,9 @@ async function AdminFacebook() {
       .select({
         id: fbPosts.id,
         productName: fbPosts.productName,
+        productId: fbPosts.productId,
+        price: fbPosts.price,
+        closedAt: fbPosts.closedAt,
         createdAt: fbPosts.createdAt,
         claims: sql<number>`count(${fbClaims.id})`,
         units: sql<number>`coalesce(sum(case when ${fbClaims.status} != 'rejected' then ${fbClaims.qty} else 0 end), 0)`,
@@ -38,11 +44,16 @@ async function AdminFacebook() {
 
   return (
     <>
-      <PageTitle title="Поръчки от Facebook" sub="Постави коментарите под пост от групата. Сайтът разпознава кой колко иска и ги прави на поръчки." />
+      <PageTitle title="Поръчки от Facebook" sub="Коментарите под постовете в групата стават заявки: сайтът разпознава кой колко иска и ги прави на поръчки." />
+
+      <div className="mb-6">
+        <FbExtensionCard token={fbExtensionToken()} latest={extension.version} />
+      </div>
 
       <div className="grid items-start gap-6 2xl:grid-cols-[1.4fr_1fr]">
         <Panel className="p-5 sm:p-6">
-          <h2 className="mb-4 font-display text-lg font-semibold">Нов пост</h2>
+          <h2 className="font-display text-lg font-semibold">Нов пост с копирани коментари</h2>
+          <p className="mb-4 mt-1 text-sm text-ink-soft">За телефон или когато разширението го няма: копирай коментарите под поста и ги постави тук.</p>
           <FbImport products={productList.map((p) => ({ id: p.id, label: `${p.name} ${p.unit}`.trim(), stock: p.stock }))} />
         </Panel>
 
@@ -67,7 +78,11 @@ async function AdminFacebook() {
                         <Link href={`/admin/facebook/${p.id}`} className="font-semibold hover:text-forest">
                           {p.productName}
                         </Link>
-                        <p className="text-xs text-ink-soft">{formatDate(p.createdAt)}</p>
+                        <p className="text-xs text-ink-soft">
+                          {formatDate(p.createdAt)}
+                          {p.closedAt && " · събирането е спряно"}
+                        </p>
+                        {!p.productId && p.price == null && <p className="mt-0.5 text-xs font-semibold text-tomato">Избери продукта от сайта</p>}
                       </td>
                       <td className={`${td} text-right tabular-nums`}>
                         {p.claims}

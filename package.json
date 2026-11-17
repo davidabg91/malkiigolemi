@@ -5,14 +5,15 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "vercel-build": "npm run db:setup && (npm run sync:couriers || echo 'sync:couriers failed, keeping the saved office lists') && next build",
+    "vercel-build": "npm run db:setup && (npm run sync:couriers || echo 'sync:couriers failed, keeping the saved office lists') && npm run pack:extension && next build",
     "start": "next start",
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
     "db:setup": "tsx src/db/setup.ts",
     "db:seed": "tsx src/db/seed.ts",
     "db:studio": "drizzle-kit studio",
-    "sync:couriers": "node scripts/sync-couriers.mjs"
+    "sync:couriers": "node scripts/sync-couriers.mjs",
+    "pack:extension": "node scripts/pack-extension.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",
