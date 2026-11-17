@@ -106,12 +106,21 @@ const pricedProduct = async (id: number) =>
  * Puts one claim into its person's open order (making the order when there is none) and takes the stock.
  * Throws "ALREADY_DONE" when the claim is no longer waiting and "OUT_OF_STOCK" when the goods ran out meanwhile.
  */
-async function addClaimToOrder(tx: Tx, claim: FbClaim, post: FbPost, product: PricedProduct | undefined) {
+async function addClaimToOrder(
+  tx: Tx,
+  claim: FbClaim,
+  post: FbPost,
+  product: PricedProduct | undefined,
+  /** Set when an admin adds it: their number of pieces and colour, a comment the script had left out is fine, and stock may run short. */
+  byHand?: { qty: number; color: string | null },
+) {
+  const qty = byHand?.qty ?? claim.qty;
+  const color = byHand?.color ?? null;
   // Claim it first and only while still waiting, so two readings at once cannot add it twice.
   const taken = await tx
     .update(fbClaims)
-    .set({ status: "ordered" })
-    .where(and(eq(fbClaims.id, claim.id), eq(fbClaims.status, "pending")))
+    .set({ status: "ordered", qty, orderedBy: byHand ? "hand" : "auto", skipReason: null })
+    .where(and(eq(fbClaims.id, claim.id), byHand ? inArray(fbClaims.status, ["pending", "rejected"]) : eq(fbClaims.status, "pending")))
     .returning({ id: fbClaims.id });
   if (taken.length === 0) throw new Error("ALREADY_DONE");
 
@@ -144,9 +153,9 @@ async function addClaimToOrder(tx: Tx, claim: FbClaim, post: FbPost, product: Pr
     await tx.update(orders).set({ fbUserId: claim.fbUserId }).where(eq(orders.id, order.id));
   }
 
-  const price = product ? unitPriceFor(product, claim.qty) : post.price!;
+  const price = product ? unitPriceFor(product, qty) : post.price!;
   const name = product ? `${product.name} ${product.unit}`.trim() : post.productName;
-  // The same product at the same price is one line with a bigger number.
+  // The same product (and colour) at the same price is one line with a bigger number.
   const [line] = await tx
     .select()
     .from(orderItems)
@@ -155,14 +164,14 @@ async function addClaimToOrder(tx: Tx, claim: FbClaim, post: FbPost, product: Pr
         eq(orderItems.orderId, order.id),
         product ? eq(orderItems.productId, product.id) : and(isNull(orderItems.productId), eq(orderItems.name, name)),
         eq(orderItems.price, price),
-        isNull(orderItems.color),
+        color ? eq(orderItems.color, color) : isNull(orderItems.color),
       ),
     )
     .limit(1);
   if (line) {
     await tx
       .update(orderItems)
-      .set({ qty: line.qty + claim.qty })
+      .set({ qty: line.qty + qty })
       .where(eq(orderItems.id, line.id));
   } else {
     await tx.insert(orderItems).values({
@@ -171,12 +180,16 @@ async function addClaimToOrder(tx: Tx, claim: FbClaim, post: FbPost, product: Pr
       name,
       sku: product?.sku ?? "FB",
       price,
-      qty: claim.qty,
-      color: null,
+      qty,
+      color,
       deliveryTime: product ? deliveryNote(product) : null,
     });
   }
-  if (product && (await takeStock(tx, product, claim.qty, null)) === null) throw new Error("OUT_OF_STOCK");
+  if (product && (await takeStock(tx, product, qty, color)) === null) {
+    if (!byHand) throw new Error("OUT_OF_STOCK");
+    // The admin knows the goods are coming: the order is taken, and the shop's stock goes down to what it has (never below zero).
+    await moveStock(tx, product.id, -qty, color);
+  }
   await tx.update(fbClaims).set({ orderId: order.id }).where(eq(fbClaims.id, claim.id));
   await recalc(tx, order.id);
   return order.id;
@@ -214,6 +227,34 @@ export async function autoOrderClaims(postId: number): Promise<{ ordered: number
     }
   }
   return { ordered, stockChanged: ordered > 0 && Boolean(product) };
+}
+
+/**
+ * An admin puts a comment into its person's order by hand: one the script was not sure about, or one it did not
+ * take for an order at all. `color` is needed for a product sold in several colours.
+ */
+export async function addClaimByHand(claimId: number, qty: number, color: string | null): Promise<{ ok: true; orderId: number; stockChanged: boolean } | { ok: false; error: string; field?: "qty" | "color" }> {
+  const [claim] = await db.select().from(fbClaims).where(eq(fbClaims.id, claimId)).limit(1);
+  if (!claim) return { ok: false, error: "Коментарът не е намерен." };
+  if (claim.status === "ordered") return { ok: false, error: "Този коментар вече е в поръчка." };
+  if (!Number.isInteger(qty) || qty < 1 || qty > 99) return { ok: false, error: "Въведи брой от 1 до 99.", field: "qty" };
+  const [post] = await db.select().from(fbPosts).where(eq(fbPosts.id, claim.postId)).limit(1);
+  if (!post) return { ok: false, error: "Постът не е намерен." };
+  const product = post.productId ? await pricedProduct(post.productId) : undefined;
+  if (post.productId ? !product : post.price == null) return { ok: false, error: "Първо избери продукта на поста." };
+  let picked: string | null = null;
+  if (product && product.colorOptions.length > 0) {
+    picked = color && product.colorOptions.includes(color) ? color : null;
+    if (!picked) return { ok: false, error: "Избери цвят.", field: "color" };
+  }
+  try {
+    const orderId = await db.transaction((tx) => addClaimToOrder(tx, claim, post, product, { qty, color: picked }));
+    return { ok: true, orderId, stockChanged: Boolean(product) };
+  } catch (e) {
+    if (e instanceof Error && e.message === "ALREADY_DONE") return { ok: false, error: "Този коментар вече е обработен." };
+    console.error("adding a claim by hand failed", claimId, e);
+    return { ok: false, error: "Неуспешно добавяне към поръчката." };
+  }
 }
 
 export type ItemPick = { itemId: number; qty: number };

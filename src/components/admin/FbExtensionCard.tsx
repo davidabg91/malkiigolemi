@@ -33,7 +33,7 @@ export function FbExtensionCard({ token, latest }: { token: string; latest: stri
             Събиране с едно натискане
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-ink-soft">
-            Разширение за Chrome, което чете коментарите под постовете в групата и ги праща тук като заявки, без копиране. Работи на компютър, в Chrome, в който си влязъл във Facebook.
+            Разширение за Chrome, което чете коментарите под постовете в групата и ги праща тук. Работи на компютър, в Chrome, в който си влязъл във Facebook.
           </p>
           <p className="mt-3 text-sm font-semibold" role="status">
             {installed ? (

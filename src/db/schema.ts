@@ -369,6 +369,14 @@ export const fbClaims = sqliteTable(
     fbCommentId: text("fb_comment_id"),
     /** Facebook's number of the profile that wrote the comment: tells two people with one name apart, and is how the extension finds them to write to. */
     fbUserId: text("fb_user_id"),
+    /**
+     * Why a comment was left out (status "rejected"): "reply" (an answer under another comment), "author" (the
+     * post's own writer), "unclear" (no quantity was found in it: a person should look), "admin" (a person said
+     * it is not an order). Null on rows from before this was kept.
+     */
+    skipReason: text("skip_reason", { enum: ["reply", "author", "unclear", "admin"] }),
+    /** How an ordered claim got into its order: "auto" (by itself when the comment was read) or "hand" (an admin added it). */
+    orderedBy: text("ordered_by", { enum: ["auto", "hand"] }),
     /** When the comment got its answer on Facebook: the extension's automatic "Записвам си!" or a reply it found there. */
     repliedAt: integer("replied_at", { mode: "timestamp" }),
     createdAt: createdAt(),
@@ -401,6 +409,36 @@ export const fbMessages = sqliteTable(
     createdAt: createdAt(),
   },
   (t) => [index("fb_messages_order_idx").on(t.orderId), index("fb_messages_status_idx").on(t.status)],
+);
+
+/**
+ * One time the browser extension went through the group ("auto": by itself, "manual": "Събери от всички постове")
+ * or read a single post ("post"), as the extension reported it afterwards. This is what Админ → От Facebook
+ * shows as the script's diary, and how it tells whether the script still works.
+ */
+export const fbRuns = sqliteTable(
+  "fb_runs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    kind: text("kind", { enum: ["auto", "manual", "post"] }).notNull(),
+    startedAt: integer("started_at", { mode: "timestamp" }).notNull(),
+    finishedAt: integer("finished_at", { mode: "timestamp" }).notNull(),
+    /** Posts opened, and how many of them could not be read. */
+    visited: integer("visited").notNull().default(0),
+    failed: integer("failed").notNull().default(0),
+    /** New order-like comments found, and how many of them went into orders by themselves. */
+    added: integer("added").notNull().default(0),
+    ordered: integer("ordered").notNull().default(0),
+    /** Automatic answers left under comments. */
+    replied: integer("replied").notNull().default(0),
+    /** Ended early: "Спри", the tab was closed, or the run got stuck. */
+    stopped: integer("stopped", { mode: "boolean" }).notNull().default(false),
+    /** What went wrong, in the extension's short words ("stuck", "offline", "no-button", …). */
+    problem: text("problem"),
+    version: text("version"),
+    createdAt: createdAt(),
+  },
+  (t) => [index("fb_runs_finished_idx").on(t.finishedAt)],
 );
 
 /**
@@ -584,5 +622,6 @@ export type FlaggedContact = typeof flaggedContacts.$inferSelect;
 export type FbPost = typeof fbPosts.$inferSelect;
 export type FbClaim = typeof fbClaims.$inferSelect;
 export type FbMessage = typeof fbMessages.$inferSelect;
+export type FbRun = typeof fbRuns.$inferSelect;
 export type Promotion = typeof promotions.$inferSelect;
 export type Review = typeof reviews.$inferSelect;

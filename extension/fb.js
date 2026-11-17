@@ -231,10 +231,11 @@
   }
 
   function showSummary(crawl) {
+    send({ type: "runDone" });
     closeAuto();
     const s = crawl.summary;
     const title = crawl.stopped ? "Събирането е спряно" : "Готово";
-    const found = s.added > 0 ? `${plural(s.added, "нова заявка", "нови заявки")} от ${plural(s.withNew, "пост", "поста")}.` : "Няма нови заявки.";
+    const found = s.added > 0 ? `${plural(s.added, "нова заявка", "нови заявки")} от ${plural(s.withNew, "пост", "поста")}${s.ordered > 0 ? `, ${s.ordered} добавени в поръчки` : ""}.` : "Няма нови заявки.";
     const rest = ` Прегледани ${plural(s.visited, "пост", "поста")}${s.failed > 0 ? `, ${s.failed} ${s.failed === 1 ? "не се отвори" : "не се отвориха"}` : ""}.`;
     const answered = `${s.replied > 0 ? ` Отговорено под ${plural(s.replied, "коментар", "коментара")}.` : ""}${s.replyProblem ? ` ${explainReply(s.replyProblem)}` : ""}`;
     showBar(title, found + rest + answered, { link: crawl.adminUrl, button: "Затвори", onButton: () => (bar.hidden = true) });
@@ -250,6 +251,7 @@
   async function advance(reply) {
     if (stopped) return;
     if (!reply.ok) {
+      send({ type: "runDone", problem: reply.error });
       closeAuto();
       return showBar("Събирането спря", explain(reply.error), { button: "Затвори", onButton: () => (bar.hidden = true) });
     }

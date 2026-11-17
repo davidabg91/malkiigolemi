@@ -10,7 +10,7 @@ import { assertAdmin } from "@/lib/auth";
 import { savedOffice } from "@/lib/courier-offices";
 import { isCourierId } from "@/lib/couriers";
 import { fbContactKey } from "@/lib/fb-contacts";
-import { autoOrderClaims, markOrderReady, removeOrderItems, saveFbOrderSettings, splitOrder, unmarkOrderReady } from "@/lib/fb-orders";
+import { addClaimByHand, autoOrderClaims, markOrderReady, removeOrderItems, saveFbOrderSettings, splitOrder, unmarkOrderReady } from "@/lib/fb-orders";
 import { saveFbReplySettings } from "@/lib/fb-reply";
 import { unitPriceFor } from "@/lib/format";
 import { orderNumber } from "@/lib/orders";
@@ -22,72 +22,6 @@ import { deliveryNote } from "@/lib/availability";
 import { takeStock } from "@/lib/stock";
 
 export type FbFormState = { ok?: boolean; error?: string; fieldErrors?: Record<string, string>; orderNumber?: string } | undefined;
-
-/** "12,50" or "12.50" euros → cents. */
-const euros = z
-  .string()
-  .trim()
-  .transform((v, ctx) => {
-    const n = Number(v.replace(",", "."));
-    if (!v || !Number.isFinite(n) || n <= 0 || n > 100000) {
-      ctx.addIssue({ code: "custom", message: "Въведи цена." });
-      return z.NEVER;
-    }
-    return Math.round(n * 100);
-  });
-
-const claimsSchema = z
-  .array(
-    z.object({
-      name: z.string().trim().min(1).max(120),
-      qty: z.number().int().min(1).max(99),
-      comment: z.string().trim().max(1000),
-    }),
-  )
-  .min(1, "Няма избрани заявки.");
-
-/** Saves a post and the claims picked in the preview, then opens the post. */
-export async function importFbPost(_prev: FbFormState, formData: FormData): Promise<FbFormState> {
-  await assertAdmin();
-  let raw: unknown;
-  try {
-    raw = JSON.parse(String(formData.get("claims") ?? "[]"));
-  } catch {
-    return { error: "Неуспешно четене на заявките. Постави коментарите отново." };
-  }
-  const claims = claimsSchema.safeParse(raw);
-  if (!claims.success) return { error: claims.error.issues[0]?.message ?? "Провери заявките." };
-
-  const url = String(formData.get("url") ?? "").trim();
-  if (url && !/^https:\/\/(www\.|m\.|web\.)?facebook\.com\//i.test(url)) {
-    return { error: "Линкът трябва да е към facebook.com.", fieldErrors: { url: "Линкът трябва да е към facebook.com." } };
-  }
-
-  // The product is either one from the shop or one typed in by hand (not sold on the site).
-  let values: { productId: number | null; productName: string; price: number | null };
-  if (formData.get("productSource") === "manual") {
-    const name = String(formData.get("manualName") ?? "").trim();
-    if (name.length < 2 || name.length > 160) return { error: "Въведи име на продукта.", fieldErrors: { manualName: "Въведи име на продукта." } };
-    const price = euros.safeParse(String(formData.get("manualPrice") ?? ""));
-    if (!price.success) return { error: "Въведи цена.", fieldErrors: { manualPrice: "Въведи цена за брой." } };
-    values = { productId: null, productName: name, price: price.data };
-  } else {
-    const id = Number(formData.get("productId"));
-    const [product] = Number.isInteger(id) && id > 0 ? await db.select().from(products).where(eq(products.id, id)).limit(1) : [];
-    if (!product) return { error: "Избери продукт.", fieldErrors: { productId: "Избери продукт." } };
-    values = { productId: product.id, productName: `${product.name} ${product.unit}`.trim(), price: null };
-  }
-
-  const postId = await db.transaction(async (tx) => {
-    const [post] = await tx
-      .insert(fbPosts)
-      .values({ ...values, url: url || null })
-      .returning({ id: fbPosts.id });
-    await tx.insert(fbClaims).values(claims.data.map((c) => ({ postId: post.id, name: c.name, qty: c.qty, comment: c.comment })));
-    return post.id;
-  });
-  redirect(`/admin/facebook/${postId}`);
-}
 
 const orderSchema = z
   .object({
@@ -165,7 +99,7 @@ export async function orderFromClaim(claimId: number, _prev: FbFormState, formDa
       // Claim it first and only while still pending, so a double click cannot create two orders.
       const taken = await tx
         .update(fbClaims)
-        .set({ status: "ordered", qty: d.qty })
+        .set({ status: "ordered", qty: d.qty, orderedBy: "hand", skipReason: null })
         .where(and(eq(fbClaims.id, claim.id), eq(fbClaims.status, "pending")))
         .returning({ id: fbClaims.id });
       if (taken.length === 0) throw new Error("ALREADY_DONE");
@@ -237,9 +171,22 @@ export async function setClaimStatus(claimId: number, status: "pending" | "rejec
   // An ordered claim is changed through its order, never back to pending from here.
   await db
     .update(fbClaims)
-    .set({ status })
+    .set({ status, skipReason: status === "rejected" ? "admin" : null })
     .where(and(eq(fbClaims.id, claimId), sql`${fbClaims.status} != 'ordered'`));
   refresh();
+}
+
+/**
+ * Админ → От Facebook, "За проверка": an admin puts a comment into its person's order, with the number of
+ * pieces (and the colour) they read in it.
+ */
+export async function addClaimToPersonOrder(claimId: number, _prev: FbFormState, formData: FormData): Promise<FbFormState> {
+  await assertAdmin();
+  const result = await addClaimByHand(claimId, Math.floor(Number(formData.get("qty") ?? 0)), String(formData.get("color") ?? "").trim() || null);
+  if (!result.ok) return { error: result.error, fieldErrors: result.field ? { [result.field]: result.error } : undefined };
+  if (result.stockChanged) updateTag(CATALOG_TAG);
+  refresh();
+  return { ok: true };
 }
 
 /** Picks the shop product for a post the extension could not match by itself. */

@@ -204,7 +204,7 @@ export async function ingestFbPost(input: FbIngest): Promise<FbIngestResult> {
   const seenKeys = new Set(existing.filter((c) => !c.fbCommentId).map((c) => key(c.name, c.comment)));
 
   const author = fbContactKey(input.author);
-  const fresh: { name: string; comment: string; qty: number; status: "pending" | "rejected"; fbCommentId: string | null; fbUserId: string | null }[] = [];
+  const fresh: { name: string; comment: string; qty: number; status: "pending" | "rejected"; skipReason: "reply" | "author" | "unclear" | null; fbCommentId: string | null; fbUserId: string | null }[] = [];
   /** Comments saved before the extension read who wrote them: their profile is filled in now. */
   const profiles: { commentId: string; userId: string }[] = [];
   for (const c of input.comments) {
@@ -220,7 +220,9 @@ export async function ingestFbPost(input: FbIngest): Promise<FbIngestResult> {
     const { qty } = quantityOf(comment);
     // Replies and the post author's own comments are answers ("записана си 2 бр"), kept aside as skipped.
     const order = qty > 0 && !c.reply && fbContactKey(name) !== author;
-    fresh.push({ name, comment, qty: Math.max(1, qty), status: order ? "pending" : "rejected", fbCommentId: c.id, fbUserId: c.userId });
+    // Why it is left out, so the admin's page can show the ones worth a look (no quantity found) apart from plain answers.
+    const skipReason = order ? null : c.reply ? "reply" : fbContactKey(name) === author ? "author" : "unclear";
+    fresh.push({ name, comment, qty: Math.max(1, qty), status: order ? "pending" : "rejected", skipReason, fbCommentId: c.id, fbUserId: c.userId });
   }
   const added = fresh.filter((c) => c.status === "pending").length;
 

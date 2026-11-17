@@ -56,6 +56,45 @@ async function api(path, init = {}) {
 
 const ingest = (post) => api("/api/fb/ingest", { method: "POST", body: JSON.stringify(post) });
 
+/**
+ * Tells the site how this extension is doing (its version, automatic collecting and when it starts next) and,
+ * with `run`, what a finished run did. Админ → От Facebook shows it; when the site cannot be reached it is simply not told.
+ */
+async function report(run) {
+  try {
+    const [auto, alarm] = await Promise.all([autoSettings(), chrome.alarms.get(AUTO_ALARM)]);
+    const state = {
+      version: chrome.runtime.getManifest().version,
+      auto: { enabled: auto.enabled, min: auto.min, max: auto.max, from: auto.from, to: auto.to },
+      nextAt: auto.enabled ? (alarm?.scheduledTime ?? null) : null,
+    };
+    await api("/api/fb/report", { method: "POST", body: JSON.stringify(run ? { state, run } : { state }) });
+  } catch {
+    // Not connected or offline: the next report carries the news.
+  }
+}
+
+/** Reports a run that is over, once. */
+async function reportRun(crawl, problem = null) {
+  if (!crawl || crawl.reported) return;
+  crawl.reported = true;
+  await store.set("crawl", crawl);
+  const results = crawl.results ?? [];
+  const total = (key) => results.reduce((sum, r) => sum + (r[key] ?? 0), 0);
+  await report({
+    kind: crawl.auto ? "auto" : "manual",
+    startedAt: crawl.startedAt,
+    finishedAt: crawl.finishedAt ?? Date.now(),
+    visited: results.length,
+    failed: results.filter((r) => r.error).length,
+    added: total("added"),
+    ordered: total("ordered"),
+    replied: crawl.replied ?? 0,
+    stopped: Boolean(crawl.stopped),
+    problem: problem ?? crawl.replyProblem ?? null,
+  });
+}
+
 /** What a page needs to know about the run it is part of. */
 async function view(crawl) {
   const conn = await store.get("conn");
@@ -74,6 +113,7 @@ async function view(crawl) {
       failed: results.filter((r) => r.error).length,
       withNew: results.filter((r) => r.added > 0).length,
       added: results.reduce((sum, r) => sum + (r.added ?? 0), 0),
+      ordered: results.reduce((sum, r) => sum + (r.ordered ?? 0), 0),
       replied: crawl.replied ?? 0,
       replyProblem: crawl.replyProblem ?? null,
     },
@@ -128,6 +168,7 @@ async function schedule(minutes) {
   if (!auto.enabled) {
     await chrome.alarms.clear(AUTO_ALARM);
     chrome.power.releaseKeepAwake();
+    await report();
     return null;
   }
   const at = nextTime(auto, minutes);
@@ -136,6 +177,7 @@ async function schedule(minutes) {
   // Overnight (the next run is hours away) it may go off as usual.
   if (auto.awake && at - Date.now() <= (auto.max + 5) * 60000) chrome.power.requestKeepAwake("display");
   else chrome.power.releaseKeepAwake();
+  await report();
   return at;
 }
 
@@ -266,6 +308,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   await finish(crawl, true);
   await closeAutoWindow(crawl);
   await store.set("autoError", { at: Date.now(), error: "stuck" });
+  await reportRun(crawl, "stuck");
 });
 
 chrome.runtime.onStartup.addListener(async () => {
@@ -295,6 +338,7 @@ const handlers = {
     if (!/^https?:\/\/[^/]+$/.test(origin ?? "") || !/^[0-9a-f]{64}$/.test(token ?? "")) throw new Error("bad-key");
     await store.set("conn", { api: origin, token });
     await watchOutbox();
+    await report();
     return { version: chrome.runtime.getManifest().version };
   },
 
@@ -375,8 +419,19 @@ const handlers = {
 
   async collectOne({ post }) {
     const conn = await store.get("conn");
+    const startedAt = Date.now();
     const result = await ingest(post);
+    await report({ kind: "post", startedAt, finishedAt: Date.now(), visited: 1, failed: 0, added: result.added ?? 0, ordered: result.ordered ?? 0, replied: 0, stopped: false, problem: null });
     return { result, adminUrl: conn.api + result.adminPath };
+  },
+
+  /** The page of a run showed how it ended (or why it stopped): the site gets the run's numbers. */
+  async runDone({ problem }, sender) {
+    const crawl = await store.get("crawl");
+    if (!crawl || !sender.tab || crawl.tabId !== sender.tab.id) return {};
+    if (crawl.stage !== "done") await finish(crawl, true);
+    await reportRun(crawl, problem ?? null);
+    return {};
   },
 
   async startCrawl() {
@@ -423,6 +478,7 @@ const handlers = {
       try {
         const saved = await ingest(post);
         result.added = saved.added;
+        result.ordered = saved.ordered ?? 0;
         result.pending = saved.pending;
         // The site's limit on answers counts for the whole run, and one answer Facebook refused ends them for the run.
         const left = saved.reply ? saved.reply.max - (crawl.replied ?? 0) : 0;
@@ -510,7 +566,10 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
 // Closing the tab in the middle ends the run.
 chrome.tabs.onRemoved.addListener(async (tabId) => {
   const crawl = await store.get("crawl");
-  if (crawl && crawl.tabId === tabId && crawl.stage !== "done") await finish(crawl, true);
+  if (crawl && crawl.tabId === tabId && crawl.stage !== "done") {
+    await finish(crawl, true);
+    await reportRun(crawl);
+  }
   const outbox = await store.get("outbox");
   if (outbox && outbox.tabId === tabId && !outbox.done) await endOutbox(outbox, false);
 });
