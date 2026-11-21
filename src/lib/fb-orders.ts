@@ -40,11 +40,14 @@ export const DEFAULT_FB_ORDERS: FbOrderSettings = {
   // The owner asked on this day for only the posts from then on: the earlier ones were already written down by hand.
   since: "2026-11-18",
   message:
-    "Здравейте, {име}! Пристигнаха продуктите от Вашата поръчка:\n{продукти}\nОбщо: {сума}\nВижте поръчката си тук: {линк}\nМоже да я вземете от магазина ({адрес}) или на същия линк да оставите данни за доставка с куриер.\nБлагодарим Ви!",
+    "Здравейте, {име}! Пристигнаха продуктите от Вашата поръчка:\n{продукти}\nОбщо: {сума}\nВижте поръчката си тук: {линк}\nМоже да я вземете от магазина ({адрес}) или на същия линк да оставите данни за доставка с куриер.\nРаботно време: Вторник - Петък / 11:30-18:30ч\nБлагодарим Ви!",
 };
 
-/** The wording before the order got its public page: a shop that never changed it gets the new one. */
-const FIRST_MESSAGE = "Здравейте, {име}! Поръчката Ви е в магазина и може да я вземете:\n{продукти}\nОбщо: {сума}\nАдрес: {адрес}\nБлагодарим Ви!";
+/** The wordings the shop was given before (without the order's link, then without the opening hours): one that was never changed gets the current one. */
+const EARLIER_MESSAGES = [
+  "Здравейте, {име}! Поръчката Ви е в магазина и може да я вземете:\n{продукти}\nОбщо: {сума}\nАдрес: {адрес}\nБлагодарим Ви!",
+  "Здравейте, {име}! Пристигнаха продуктите от Вашата поръчка:\n{продукти}\nОбщо: {сума}\nВижте поръчката си тук: {линк}\nМоже да я вземете от магазина ({адрес}) или на същия линк да оставите данни за доставка с куриер.\nБлагодарим Ви!",
+];
 
 const KEY = "fb_orders";
 
@@ -53,7 +56,7 @@ export async function getFbOrderSettings(): Promise<FbOrderSettings> {
   if (!row) return { ...DEFAULT_FB_ORDERS };
   try {
     const saved = { ...DEFAULT_FB_ORDERS, ...(JSON.parse(row.value) as Partial<FbOrderSettings>) };
-    return saved.message.replace(/\r\n/g, "\n").trim() === FIRST_MESSAGE ? { ...saved, message: DEFAULT_FB_ORDERS.message } : saved;
+    return EARLIER_MESSAGES.includes(saved.message.replace(/\r\n/g, "\n").trim()) ? { ...saved, message: DEFAULT_FB_ORDERS.message } : saved;
   } catch {
     return { ...DEFAULT_FB_ORDERS };
   }
