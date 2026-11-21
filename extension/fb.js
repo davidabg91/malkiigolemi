@@ -215,6 +215,11 @@
     await sleep(500);
   }
   globalThis.mgScrape.gate = shown;
+  // Text would not go into a field while this window is behind another one: the window is brought forward.
+  globalThis.mgScrape.needFocus = async () => {
+    await send({ type: "focusMe" });
+    await sleep(800);
+  };
 
   /** Fails after this much time with the page on the screen; time spent waiting to be seen does not count. */
   async function giveUpAfter(ms) {
@@ -340,7 +345,7 @@
       }
     }
     if (stopped) return;
-    const reply = await send({ type: "messageDone", id: message.id, outcome });
+    const reply = await send({ type: "messageDone", id: message.id, outcome, detail: outcome === "sent" ? "" : (globalThis.mgScrape.note ?? "") });
     if (stopped) return;
     if (reply.ok && reply.next) {
       barText.textContent = `${outcome === "sent" ? "Изпратено" : "Не се получи"}. Следващото съобщение е след малко…`;

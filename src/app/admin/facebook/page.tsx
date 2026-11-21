@@ -13,7 +13,7 @@ import { FbReviewItem } from "@/components/admin/FbReviewItem";
 import { requireAdmin } from "@/lib/auth";
 import { fbExtensionToken } from "@/lib/fb-ingest";
 import { ago, FB_PERIODS, fbDashboard, fbHealth, type FbPeriodId, runProblem } from "@/lib/fb-monitor";
-import { getFbOrderSettings } from "@/lib/fb-orders";
+import { fbMessageError, getFbOrderSettings } from "@/lib/fb-orders";
 import { FB_REPLY_LIMITS, getFbReplySettings } from "@/lib/fb-reply";
 import { formatDate, formatPrice } from "@/lib/format";
 import extension from "../../../../extension/manifest.json";
@@ -34,6 +34,10 @@ const MESSAGE_PROBLEMS: Record<string, string> = {
   "wrong-person": "отвори се чат с друг човек",
   draft: "в чата има започнато съобщение",
   "not-sent": "Facebook не прие съобщението",
+  "no-type": "текстът не можа да се напише в чата",
+  "no-focus": "прозорецът на скрипта остана зад друг прозорец",
+  "no-send": "бутонът за изпращане не се появи",
+  "no-profile": "профилът на човека не се отвори",
   timeout: "страницата не се зареди навреме",
   unsure: "не е сигурно дали е тръгнало",
 };
@@ -376,7 +380,7 @@ async function AdminFacebook({ searchParams }: Pick<PageProps<"/admin/facebook">
                     <span>
                       <span className="font-semibold">{message.name}</span>{" "}
                       <span className={message.status === "failed" ? "font-medium text-tomato" : "text-ink-soft"}>
-                        {message.status === "failed" ? `не е изпратено: ${MESSAGE_PROBLEMS[message.error ?? ""] ?? message.error}` : "чака разширението"}
+                        {message.status === "failed" ? `не е изпратено: ${MESSAGE_PROBLEMS[fbMessageError(message.error).code] ?? message.error}` : "чака разширението"}
                       </span>
                     </span>
                     <Link href={`/admin/porachki/${order.id}`} className="font-semibold text-forest hover:underline">

@@ -396,11 +396,11 @@ const handlers = {
   },
 
   /** fb.js wrote one message (or could not): tell the site, and hand over the next person. */
-  async messageDone({ id, outcome }, sender) {
+  async messageDone({ id, outcome, detail }, sender) {
     const outbox = await store.get("outbox");
     if (!outbox || outbox.done || !sender.tab || outbox.tabId !== sender.tab.id) return { next: null };
     if (outbox.list[outbox.index]?.id !== id) return { next: null };
-    await reportMessages([{ id, outcome }]);
+    await reportMessages([detail ? { id, outcome, detail: String(detail).slice(0, 120) } : { id, outcome }]);
     if (outcome === "sent") outbox.sent += 1;
     else outbox.failed += 1;
     outbox.index += 1;
@@ -534,6 +534,20 @@ const handlers = {
    * A run that started by itself brings its window forward, but only while nobody is using the computer:
    * taking the keyboard from someone who is typing would send their keys to Facebook.
    */
+  /**
+   * The page of a run tried every way to put its text into a field and none worked while its window was behind
+   * another one. This is the last thing to try before giving the message up, so the window comes forward at once:
+   * the page checks that nothing but its own text is in the field before it sends.
+   */
+  async focusMe(_message, sender) {
+    const [crawl, outbox] = await Promise.all([store.get("crawl"), store.get("outbox")]);
+    const mine = (job) => job && sender.tab && job.tabId === sender.tab.id;
+    if (!mine(crawl) && !mine(outbox)) return {};
+    await chrome.tabs.update(sender.tab.id, { active: true }).catch(() => {});
+    await chrome.windows.update(sender.tab.windowId, { focused: true, state: "normal" }).catch(() => {});
+    return {};
+  },
+
   async hidden(_message, sender) {
     const [crawl, outbox] = await Promise.all([store.get("crawl"), store.get("outbox")]);
     const own = (job) => job && sender.tab && job.tabId === sender.tab.id && job.windowId != null;

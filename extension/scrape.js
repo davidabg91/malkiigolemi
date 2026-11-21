@@ -261,6 +261,64 @@
   }
 
   /**
+   * Puts text into one of Facebook's writing fields (a reply under a comment, a chat) and tells whether it is
+   * there. `find` gives the field as it is at that moment, because Facebook may replace it while it loads;
+   * `there` says whether a field holds what it should. Several ways are tried, each only while the text is not
+   * in yet, so nothing is ever written twice:
+   *   1. a paste made by page.js in the page's own world, which is how a person's paste arrives (keeps the lines);
+   *   2. the same paste made from here;
+   *   3. the text handed over as a drop (keeps the lines too);
+   *   4. typed on one line.
+   * If none works the window may be behind another one: fb.js is asked to bring it forward, and it is tried again.
+   */
+  async function typeInto(find, words, there) {
+    const caret = (box) => {
+      box.focus();
+      const selection = getSelection();
+      selection.selectAllChildren(box);
+      selection.collapseToEnd();
+    };
+    const data = () => {
+      const d = new DataTransfer();
+      d.setData("text/plain", words);
+      return d;
+    };
+    const ways = [
+      (box) => {
+        const token = Math.random().toString(36).slice(2);
+        box.setAttribute("data-mg-type", token);
+        window.dispatchEvent(new CustomEvent("mg-fb-type", { detail: JSON.stringify({ token, words }) }));
+      },
+      (box) => box.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data(), bubbles: true, cancelable: true })),
+      (box) => box.dispatchEvent(new InputEvent("beforeinput", { inputType: "insertFromDrop", dataTransfer: data(), bubbles: true, cancelable: true })),
+      () => document.execCommand("insertText", false, words.replace(/\s*\n\s*/g, " ")),
+    ];
+    for (let round = 0; round < 3; round++) {
+      for (const way of ways) {
+        const box = find();
+        if (!box) break;
+        if (there(box)) return true;
+        const had = text(box);
+        caret(box);
+        await sleep(250);
+        try {
+          way(box);
+        } catch {
+          // This way is not available here: the next one is tried.
+        }
+        if (await waitFor(() => { const now = find(); return now && there(now); }, 1500, 150)) return true;
+        // Something went in but not what should be there (half of it, or twice): give it a moment, then stop rather than send it.
+        const now = find();
+        if (now && text(now) !== had) return Boolean(await waitFor(() => { const later = find(); return later && there(later); }, 2000, 200));
+      }
+      if (!document.hasFocus()) await globalThis.mgScrape.needFocus?.();
+      await sleep(2000);
+    }
+    const last = find();
+    return Boolean(last && there(last));
+  }
+
+  /**
    * Writes a reply under one comment of the open post, the way a person does: "Отговор", the text, send.
    * Returns "sent"; "answered" when the comment already has a reply (nothing is written); "missing" when the comment
    * is no longer on the page; or what went wrong: "no-button" (this profile cannot reply here), "no-box", "no-type",
@@ -286,15 +344,10 @@
     const box = await waitFor(() => boxes().find((b) => !before.has(b)), 5000);
     if (!box) return "no-box";
 
-    // Facebook starts the reply with the person's name; the text goes after it.
-    box.focus();
-    const selection = getSelection();
-    selection.selectAllChildren(box);
-    selection.collapseToEnd();
-    await sleep(300);
-    const typed = document.execCommand("insertText", false, replyText);
-    await sleep(500);
-    if (!typed || !text(box).includes(replyText)) return "no-type";
+    // Facebook starts the reply with the person's name; the text goes after it, once.
+    const times = (b) => text(b).split(replyText).length - 1;
+    const typed = await typeInto(() => (box.isConnected ? box : boxes().find((b) => !before.has(b))), replyText, (b) => times(b) === 1);
+    if (!typed) return "no-type";
 
     const send = buttons(box.closest("form") ?? block).find((b) => SEND.test(b.getAttribute("aria-label") ?? ""));
     if (!send) return "no-send";
@@ -310,7 +363,8 @@
    * Returns "sent", or what stopped it: "no-profile" (this is not that person's page), "no-button" (no "Съобщение"
    * button: the person takes no messages from this profile), "no-box", "wrong-person" (the chat that opened is
    * labelled with another name: nothing is written), "draft" (somebody already started a message there),
-   * "no-type", "no-send", "not-sent".
+   * "no-type" (the text would not go into the field), "no-focus" (the same, with the window behind another one),
+   * "no-send", "not-sent".
    */
   async function message(userId, name, words) {
     await gate();
@@ -326,25 +380,33 @@
     const before = new Set(boxes());
     open.click();
     // The chat opens as a small window at the bottom of the page; one left open from before is reused.
-    const box = await waitFor(() => boxes().find(same), 15000);
+    const field = () => boxes().find(same);
+    const first = await waitFor(field, 15000);
     // A chat did open, but it is labelled with another name: nothing is written there.
-    if (!box) return boxes().some((b) => !before.has(b) && chatField(b)) ? "wrong-person" : "no-box";
-    if (text(box)) return "draft";
-
-    // The whole text goes in as one paste, which keeps its lines; typing it would drop them.
-    box.focus();
-    await sleep(400);
-    const data = new DataTransfer();
-    data.setData("text/plain", words);
-    box.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }));
-    await sleep(700);
-    const first = words.split("\n")[0].slice(0, 30);
-    if (!text(box).includes(first)) {
-      // The paste was not taken: type it on one line instead.
-      document.execCommand("insertText", false, words.replace(/\s*\n\s*/g, " "));
-      await sleep(700);
-      if (!text(box).includes(first)) return "no-type";
+    if (!first) return boxes().some((b) => !before.has(b) && chatField(b)) ? "wrong-person" : "no-box";
+    // While the chat loads Facebook may put a new field in place of the first one: wait until it stays the same.
+    let box = first;
+    let swaps = 0;
+    for (let calm = 0, i = 0; calm < 3 && i < 20; i++) {
+      await sleep(600);
+      const now = field();
+      if (now && now !== box) swaps++;
+      calm = now && now === box ? calm + 1 : 0;
+      if (now) box = now;
     }
+    if (!field()) return "no-box";
+    if (text(field())) return "draft";
+
+    // The text goes in whole and must be there exactly, lines apart or not, before anything is sent.
+    const squash = (s) => s.replace(/\s+/g, " ").trim();
+    const whole = (b) => squash(text(b)) === squash(words);
+    if (!(await typeInto(field, words, whole))) {
+      // What the page looked like, kept with the failure so the cause can be found afterwards.
+      const now = field();
+      globalThis.mgScrape.note = `focus ${Number(document.hasFocus())}, visible ${Number(document.visibilityState === "visible")}, swaps ${swaps}, field ${now ? (text(now) ? `holds ${text(now).length} of ${words.length}` : "empty") : "gone"}`;
+      return document.hasFocus() ? "no-type" : "no-focus";
+    }
+    box = field();
 
     // The chat window: the nearest part of the page around the field that also holds its close button.
     let chat = box.parentElement;
@@ -352,9 +414,11 @@
     const scope = chat && chat !== document.body ? chat : document;
     const send = await waitFor(() => [...scope.querySelectorAll("[aria-label]")].find((b) => SEND_MESSAGE.test(b.getAttribute("aria-label") ?? "")), 5000);
     if (!send) return "no-send";
+    // Nothing but the message may be in the field at the moment it goes.
+    if (!field() || !whole(field())) return "no-type";
     send.click();
-    // Sent when the field is empty again.
-    const sent = await waitFor(() => !box.isConnected || !text(box), 15000);
+    // Sent when the field is empty again (or the chat closed itself).
+    const sent = await waitFor(() => !field() || !text(field()), 15000);
     if (!sent) return "not-sent";
     await sleep(1500);
     if (scope !== document) buttons(scope).find((b) => CLOSE_CHAT.test(b.getAttribute("aria-label") ?? ""))?.click();
