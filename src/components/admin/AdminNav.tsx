@@ -11,6 +11,8 @@ import type { AdminAlerts } from "@/lib/admin-alerts";
 const LINKS = [
   // The most used tabs come first.
   { href: "/admin/produkti", label: "Продукти", icon: Package },
+  { href: "/admin/posetiteli", label: "Посетители", icon: Activity },
+  { href: "/admin/statistika", label: "Статистика", icon: BarChart3 },
   { href: "/admin/kategorii", label: "Категории", icon: FolderTree },
   { href: "/admin", label: "Табло", icon: LayoutDashboard, exact: true },
   { href: "/admin/porachki", label: "Поръчки", icon: ReceiptText },
@@ -22,8 +24,6 @@ const LINKS = [
   { href: "/admin/otzivi", label: "Отзиви", icon: MessageSquareText },
   { href: "/admin/lojalnost", label: "Точки", icon: Gift },
   { href: "/admin/potrebiteli", label: "Потребители", icon: Users },
-  { href: "/admin/statistika", label: "Статистика", icon: BarChart3 },
-  { href: "/admin/posetiteli", label: "Посетители", icon: Activity },
   { href: "/admin/kurieri", label: "Куриери", icon: Truck },
   { href: "/admin/izvestiya", label: "Известия", icon: Bell },
 ];
