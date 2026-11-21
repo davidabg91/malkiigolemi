@@ -10,14 +10,18 @@ import { StoreLocation } from "@/components/StoreLocation";
 import { btn } from "@/components/ui";
 import { db } from "@/db";
 import { orders } from "@/db/schema";
-import { courierName } from "@/lib/couriers";
+import { OrderDeliveryChoice, type DeliveryNow } from "@/components/OrderDeliveryChoice";
+import { savedOffice } from "@/lib/courier-offices";
+import { courierName, isCourierId } from "@/lib/couriers";
+import { canChooseDelivery } from "@/lib/fb-orders";
 import { formatPrice } from "@/lib/format";
-import { DELIVERY_METHODS, site } from "@/lib/site";
+import { DELIVERY_METHODS, type DeliveryId, site } from "@/lib/site";
 import { pushConfigured, vapidPublicKey } from "@/lib/push";
 import { awaitsCardPayment, syncPayment } from "@/lib/stripe";
 import { lineName } from "@/lib/product-colors";
 
-export const metadata: Metadata = { title: "Благодарим за поръчката", robots: { index: false } };
+// Anybody with the link sees the order, without an account: the number in the address is the key to it.
+export const metadata: Metadata = { title: "Вашата поръчка", robots: { index: false } };
 
 type Props = PageProps<"/porachka/[number]">;
 
@@ -31,6 +35,19 @@ async function Confirmation({ params, searchParams }: Props) {
   const unpaid = awaitsCardPayment(order) && !justPaid;
   const delivery = DELIVERY_METHODS.find((d) => d.id === order.delivery);
   const pickup = order.delivery === "store";
+  const fromGroup = order.source === "facebook";
+  // The customer of an order from the group chooses here: from the shop, or sent by courier.
+  const deliveryNow: DeliveryNow | null = canChooseDelivery(order)
+    ? {
+        delivery: (delivery?.id ?? "store") as DeliveryId,
+        courier: isCourierId(order.courier) ? order.courier : "",
+        office: savedOffice(order.delivery, order.courier, order.officeCode),
+        city: pickup ? "" : order.city,
+        address: pickup ? "" : order.address,
+        name: order.name,
+        phone: order.phone,
+      }
+    : null;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -39,15 +56,35 @@ async function Confirmation({ params, searchParams }: Props) {
         <span className="mx-auto grid h-16 w-16 animate-rise place-items-center rounded-full bg-lime text-ink">
           <Check className="h-8 w-8" strokeWidth={2.5} aria-hidden />
         </span>
-        <h1 className="mt-6 font-display text-3xl font-semibold tracking-tight">Благодарим, {order.name.split(" ")[0]}!</h1>
+        <h1 className="mt-6 font-display text-3xl font-semibold tracking-tight">
+          {fromGroup ? "Здравейте" : "Благодарим"}, {order.name.split(" ")[0]}!
+        </h1>
         <p className="mt-3 text-cream/75">
-          {unpaid ? (
+          {fromGroup ? (
+            // An order gathered from the Facebook group: this page is where its customer follows it.
+            <>
+              Поръчка <strong className="text-lime">{order.number}</strong>{" "}
+              {order.status === "cancelled"
+                ? "е отказана."
+                : order.status === "delivered"
+                  ? "е получена. Благодарим Ви!"
+                  : order.status === "shipped"
+                    ? "е изпратена с куриер."
+                    : pickup
+                      ? order.readyAt
+                        ? "е в магазина и Ви чака."
+                        : "е записана. Ще Ви пишем, когато продуктите пристигнат."
+                      : order.readyAt
+                        ? "ще бъде изпратена с куриер на посочените от Вас данни."
+                        : "е записана за доставка с куриер. Изпращаме я, щом продуктите пристигнат."}
+            </>
+          ) : unpaid ? (
             <>
               Поръчка <strong className="text-lime">{order.number}</strong> е записана и чака плащане с карта.
             </>
           ) : (
             <>
-              Поръчка <strong className="text-lime">{order.number}</strong> е {paid ? "платена и " : ""}приета. Ще ти се обадим на {order.phone} за потвърждение.
+              Поръчка <strong className="text-lime">{order.number}</strong> е {paid ? "платена и " : ""}приета.{order.phone ? ` Ще ти се обадим на ${order.phone} за потвърждение.` : ""}
             </>
           )}
         </p>
@@ -148,6 +185,8 @@ async function Confirmation({ params, searchParams }: Props) {
           </div>
         )}
       </div>
+
+      {deliveryNow && <OrderDeliveryChoice key={`${order.delivery}-${order.officeCode ?? ""}`} number={order.number} now={deliveryNow} />}
 
       <div className="mt-6 flex flex-wrap justify-center gap-3">
         <Link href="/" className={btn.primary}>

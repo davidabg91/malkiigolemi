@@ -1,5 +1,5 @@
 import { desc, eq, inArray } from "drizzle-orm";
-import { AlertCircle, ArrowLeft, Mail, MapPin, MessageCircle, Package, PackageCheck, Phone, Printer, Send, StickyNote, Store, Truck, Undo2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, Link as LinkIcon, Mail, MapPin, MessageCircle, Package, PackageCheck, Phone, Printer, Send, StickyNote, Store, Truck, Undo2 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -454,6 +454,12 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
               <p className="text-sm text-ink-soft">Поръчка без регистрация</p>
             )}
             <ul className="mt-3 space-y-2.5 text-[0.95rem]">
+              <li className="flex gap-3">
+                <LinkIcon className="mt-0.5 h-4 w-4 shrink-0 text-forest" aria-hidden />
+                <a href={`/porachka/${order.number}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                  Страницата на поръчката за клиента
+                </a>
+              </li>
               {order.fbUserId && (
                 <li className="flex gap-3">
                   <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-forest" aria-hidden />

@@ -56,7 +56,8 @@ export function FbOrdersForm({ auto, message, since }: { auto: boolean; message:
         <textarea id="fb-pickup-message" name="message" defaultValue={message} rows={6} maxLength={1000} className="field h-auto py-3 leading-relaxed" />
         {state?.fieldErrors?.message && <p className="mt-1.5 text-sm font-medium text-tomato">{state.fieldErrors.message}</p>}
         <p className="mt-1.5 text-sm text-ink-soft">
-          Вместо {"{име}"}, {"{продукти}"}, {"{сума}"} и {"{адрес}"} се слагат името на човека, продуктите от поръчката, сумата и адресът на магазина. Разширението го пише в чата на човека във Facebook от профила, с който си влязъл.
+          Вместо {"{име}"}, {"{продукти}"}, {"{сума}"}, {"{адрес}"} и {"{линк}"} се слагат името на човека, продуктите от поръчката, сумата, адресът на магазина и линкът към поръчката му. На този линк човекът вижда какво е поръчал
+          и избира дали да я вземе от магазина, или да остави данни за доставка. Ако в текста няма {"{линк}"}, линкът се добавя накрая. Разширението го пише в чата на човека във Facebook от профила, с който си влязъл.
         </p>
       </div>
 
