@@ -1,15 +1,18 @@
 import "server-only";
-import { and, asc, eq, getTableColumns, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { type FbClaim, fbClaims, fbContacts, fbMessages, type FbPost, fbPosts, type Order, type OrderItem, orderItems, orders, products, settings } from "@/db/schema";
 import { deliveryNote } from "./availability";
 import { fbContactKey } from "./fb-contacts";
 import { quantityOf } from "./fb-parse";
-import { formatPrice, unitPriceFor } from "./format";
+import { savedOffice } from "./courier-offices";
+import { quoteShipping } from "./delivery-quote";
+import { formatPrice, formatTimestamp, unitPriceFor } from "./format";
 import { changeOrderStatus } from "./order-status";
 import { orderNumber } from "./orders";
 import { pricedColumns } from "./pricing";
-import { shippingFor, STORE } from "./site";
+import { notifyAdmins } from "./push";
+import { shippingFor, site, STORE } from "./site";
 import { moveStock, takeStock } from "./stock";
 
 /**
@@ -36,8 +39,12 @@ export const DEFAULT_FB_ORDERS: FbOrderSettings = {
   auto: true,
   // The owner asked on this day for only the posts from then on: the earlier ones were already written down by hand.
   since: "2026-11-18",
-  message: "Здравейте, {име}! Поръчката Ви е в магазина и може да я вземете:\n{продукти}\nОбщо: {сума}\nАдрес: {адрес}\nБлагодарим Ви!",
+  message:
+    "Здравейте, {име}! Пристигнаха продуктите от Вашата поръчка:\n{продукти}\nОбщо: {сума}\nВижте поръчката си тук: {линк}\nМоже да я вземете от магазина ({адрес}) или на същия линк да оставите данни за доставка с куриер.\nБлагодарим Ви!",
 };
+
+/** The wording before the order got its public page: a shop that never changed it gets the new one. */
+const FIRST_MESSAGE = "Здравейте, {име}! Поръчката Ви е в магазина и може да я вземете:\n{продукти}\nОбщо: {сума}\nАдрес: {адрес}\nБлагодарим Ви!";
 
 const KEY = "fb_orders";
 
@@ -45,7 +52,8 @@ export async function getFbOrderSettings(): Promise<FbOrderSettings> {
   const [row] = await db.select().from(settings).where(eq(settings.key, KEY)).limit(1);
   if (!row) return { ...DEFAULT_FB_ORDERS };
   try {
-    return { ...DEFAULT_FB_ORDERS, ...(JSON.parse(row.value) as Partial<FbOrderSettings>) };
+    const saved = { ...DEFAULT_FB_ORDERS, ...(JSON.parse(row.value) as Partial<FbOrderSettings>) };
+    return saved.message.replace(/\r\n/g, "\n").trim() === FIRST_MESSAGE ? { ...saved, message: DEFAULT_FB_ORDERS.message } : saved;
   } catch {
     return { ...DEFAULT_FB_ORDERS };
   }
@@ -372,14 +380,20 @@ export async function removeOrderItems(orderId: number, picks: ItemPick[]): Prom
 }
 
 /** The message for "Готова за взимане", with the order's own products in it. */
-export function pickupMessage(template: string, order: Pick<Order, "name" | "total">, items: Pick<OrderItem, "name" | "qty" | "color">[]) {
+/** The page anybody with the link can open to see the order, without an account (app/(shop)/porachka/[number]). */
+export const publicOrderUrl = (number: string) => `${site.url}/porachka/${encodeURIComponent(number)}`;
+
+export function pickupMessage(template: string, order: Pick<Order, "name" | "total" | "number">, items: Pick<OrderItem, "name" | "qty" | "color">[]) {
   const first = order.name.trim().split(/\s+/)[0] ?? "";
   const list = items.map((i) => `• ${i.name}${i.color ? ` (${i.color})` : ""} × ${i.qty} бр`).join("\n");
-  return template
+  // The link to the order is the point of the message: a wording without it gets it at the end.
+  const wording = template.includes("{линк}") ? template : `${template.trimEnd()}\nПоръчката Ви: {линк}`;
+  return wording
     .replaceAll("{име}", first)
     .replaceAll("{продукти}", list)
     .replaceAll("{сума}", formatPrice(order.total))
     .replaceAll("{адрес}", STORE.address)
+    .replaceAll("{линк}", publicOrderUrl(order.number))
     .replace(/\n{3,}/g, "\n\n")
     .trim()
     .slice(0, 1900);
@@ -389,10 +403,73 @@ export function pickupMessage(template: string, order: Pick<Order, "name" | "tot
 async function queuePickupMessage(tx: Tx, order: Order, template: string) {
   if (!order.fbUserId) return false;
   const items = await tx.select().from(orderItems).where(eq(orderItems.orderId, order.id));
+  // The chat is recognised by the person's name on Facebook, which is the one on their comments: the name on
+  // the order may since have become the one they gave for the courier.
+  const [comment] = await tx.select({ name: fbClaims.name }).from(fbClaims).where(eq(fbClaims.fbUserId, order.fbUserId)).orderBy(desc(fbClaims.id)).limit(1);
   // One waiting message per order: pressing again replaces it with the current products.
   await tx.delete(fbMessages).where(and(eq(fbMessages.orderId, order.id), eq(fbMessages.status, "pending")));
-  await tx.insert(fbMessages).values({ orderId: order.id, fbUserId: order.fbUserId, name: order.name, body: pickupMessage(template, order, items) });
+  await tx.insert(fbMessages).values({ orderId: order.id, fbUserId: order.fbUserId, name: comment?.name ?? order.name, body: pickupMessage(template, order, items) });
   return true;
+}
+
+/** Whether the customer may still say how they want an order gathered from the group: from the shop or by courier. */
+export const canChooseDelivery = (o: Pick<Order, "source" | "status" | "trackingNumber" | "payment" | "discount">) => o.source === "facebook" && isEditableOrder(o);
+
+export type DeliveryChoice = { delivery: string; courier: string | null; officeCode: string | null; city: string; address: string; name: string; phone: string };
+
+/**
+ * The customer chose, on the order's public page, to take it from the shop or to have it sent: the order gets
+ * the delivery, the contact and the delivery price that goes with them, and the shop is told.
+ */
+export async function chooseOrderDelivery(number: string, choice: DeliveryChoice): Promise<{ ok: true } | { ok: false; error: string; field?: string }> {
+  const [order] = await db.select().from(orders).where(eq(orders.number, number)).limit(1);
+  if (!order) return { ok: false, error: "Поръчката не е намерена." };
+  if (!canChooseDelivery(order)) return { ok: false, error: "Доставката на тази поръчка вече не може да се променя. Обадете ни се." };
+
+  const pickup = choice.delivery === "store";
+  const office = savedOffice(choice.delivery, choice.courier, choice.officeCode);
+  if ((choice.delivery === "office" || choice.delivery === "box") && !office) return { ok: false, error: "Изберете офис от списъка.", field: "office" };
+  const city = pickup ? STORE.city : (office?.city ?? choice.city);
+  const address = pickup ? STORE.address : (office?.address ?? choice.address);
+  const lines = await db.select().from(orderItems).where(eq(orderItems.orderId, order.id));
+  const subtotal = lines.reduce((sum, l) => sum + l.price * l.qty, 0);
+  const { shipping } = await quoteShipping({ delivery: choice.delivery, courier: pickup ? null : choice.courier, officeCode: office?.code, city, payment: "cod", subtotal });
+  const how = pickup ? "взимане от магазина" : `доставка ${choice.delivery === "address" ? "до адрес" : choice.delivery === "box" ? "до автомат" : "до офис"}`;
+  const note = `Клиентът избра ${how} на ${formatTimestamp(new Date())}.`;
+
+  const changed = await db
+    .update(orders)
+    .set({
+      delivery: choice.delivery,
+      courier: pickup ? null : choice.courier,
+      officeCode: office?.code ?? null,
+      officeName: office?.name ?? null,
+      city,
+      address,
+      name: choice.name || order.name,
+      phone: choice.phone || order.phone,
+      subtotal,
+      shipping,
+      total: Math.max(0, subtotal + shipping - order.discount),
+      note: order.note ? `${order.note}\n${note}` : note,
+    })
+    // Only while it is still as it was read: not shipped or cancelled in the meantime.
+    .where(and(eq(orders.id, order.id), eq(orders.status, order.status), isNull(orders.trackingNumber)))
+    .returning({ id: orders.id });
+  if (changed.length === 0) return { ok: false, error: "Поръчката току-що се промени. Опитайте отново." };
+
+  // Next time this person orders in the group, their details are known.
+  if (order.fbName && choice.phone) {
+    const remembered = { name: choice.name || order.name, phone: choice.phone, delivery: choice.delivery, courier: pickup ? null : choice.courier, officeCode: office?.code ?? null, city: pickup ? "" : city, address: choice.delivery === "address" ? address : "", updatedAt: new Date() };
+    await db.insert(fbContacts).values({ key: order.fbName, email: "", ...remembered }).onConflictDoUpdate({ target: fbContacts.key, set: remembered });
+  }
+  await notifyAdmins("order", {
+    title: pickup ? `${order.number}: ще се вземе от магазина` : `${order.number}: клиентът иска доставка`,
+    body: pickup ? `${order.name} ще вземе поръчката от магазина.` : `${choice.name || order.name} · ${choice.phone} · ${office?.name ?? `${city}, ${address}`}`,
+    url: `/admin/porachki/${order.id}`,
+    tag: `order-delivery-${order.id}`,
+  });
+  return { ok: true };
 }
 
 /**
