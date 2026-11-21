@@ -13,7 +13,7 @@ export const site = {
   phoneHref: "tel:+359877915191",
   email: "krisonionline@gmail.com",
   address: "България · Доставка до всяка точка на страната",
-  workHours: "Пон – Пет, 9:00 – 18:00 (Поръчки денонощно)",
+  workHours: "Вторник – Петък, 11:30 – 18:30 (Поръчки денонощно)",
   announcement: "Официален сайт на Facebook групата „Поръчки за малки и големи“",
   facebookUrl: "https://www.facebook.com/groups/322039525838054",
   facebookGroupName: "Поръчки за малки и големи",
