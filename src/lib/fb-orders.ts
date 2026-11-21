@@ -414,11 +414,19 @@ export async function pendingFbMessages(limit = 10) {
   return db.select().from(fbMessages).where(eq(fbMessages.status, "pending")).orderBy(asc(fbMessages.id)).limit(limit);
 }
 
-export async function reportFbMessage(id: number, outcome: string) {
+/** The short reason in a stored error ("no-type" from "no-type (focus 0, swaps 2)"), and the details after it. */
+export const fbMessageError = (error: string | null) => {
+  const [code, detail] = (error ?? "").split(" (");
+  return { code, detail: detail ? detail.replace(/\)$/, "") : null };
+};
+
+export async function reportFbMessage(id: number, outcome: string, detail?: string) {
   const sent = outcome === "sent";
+  // The details are kept after the reason, so a failure on somebody's computer can be understood afterwards.
+  const error = `${outcome}${detail ? ` (${detail.replace(/[()]/g, "")})` : ""}`.slice(0, 180);
   await db
     .update(fbMessages)
-    .set(sent ? { status: "sent", sentAt: new Date(), error: null } : { status: "failed", error: outcome.slice(0, 60) })
+    .set(sent ? { status: "sent", sentAt: new Date(), error: null } : { status: "failed", error })
     .where(and(eq(fbMessages.id, id), eq(fbMessages.status, "pending")));
 }
 

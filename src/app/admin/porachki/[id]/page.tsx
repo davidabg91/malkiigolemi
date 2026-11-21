@@ -8,7 +8,7 @@ import { setOrderStatus } from "@/actions/admin";
 import { setOrderReady } from "@/actions/facebook";
 import { FbOutboxMarker } from "@/components/admin/FbOutboxMarker";
 import { OrderSplitForm } from "@/components/admin/OrderSplitForm";
-import { getFbOrderSettings, isEditableOrder, pendingFbMessages, pickupMessage } from "@/lib/fb-orders";
+import { fbMessageError, getFbOrderSettings, isEditableOrder, pendingFbMessages, pickupMessage } from "@/lib/fb-orders";
 import { flagOrderContact, removeFlag } from "@/actions/customers";
 import { AdminSkeleton, Panel, td, th } from "@/components/admin/bits";
 import { BoxNowParcel, type ExistingParcel } from "@/components/admin/BoxNowParcel";
@@ -42,6 +42,7 @@ const FB_MESSAGE_ERRORS: Record<string, string> = {
   "wrong-person": "отвори се чат с друг човек, затова нищо не е написано.",
   draft: "в чата вече има започнато, неизпратено съобщение. Довърши го или го изтрий и опитай пак.",
   "no-type": "текстът не можа да се напише в чата.",
+  "no-focus": "текстът не можа да се напише в чата, защото прозорецът на скрипта остана зад друг прозорец.",
   "no-send": "бутонът за изпращане не се появи.",
   "not-sent": "Facebook не прие съобщението.",
   "no-profile": "профилът на човека в групата не се отвори.",
@@ -283,7 +284,9 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
                       {message.status === "sent"
                         ? `Съобщението е изпратено в чата на ${message.name} на ${formatDate(message.sentAt ?? message.createdAt)}.`
                         : message.status === "failed"
-                          ? `Съобщението не беше изпратено: ${FB_MESSAGE_ERRORS[message.error ?? ""] ?? `нещо не се получи (${message.error})`}`
+                          ? `Съобщението не беше изпратено: ${FB_MESSAGE_ERRORS[fbMessageError(message.error).code] ?? `нещо не се получи (${message.error})`}${
+                              fbMessageError(message.error).detail ? ` [${fbMessageError(message.error).detail}]` : ""
+                            }`
                           : "Съобщението чака разширението. То го изпраща, щом Chrome с разширението е отворен (до няколко минути)."}
                     </p>
                   ) : (

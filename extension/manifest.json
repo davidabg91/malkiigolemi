@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Малки и Големи: поръчки от Facebook",
   "short_name": "Поръчки от Facebook",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Чете коментарите под постовете в групата и ги праща в сайта като заявки за поръчка.",
   "icons": {
     "16": "icons/icon-16.png",
@@ -29,6 +29,12 @@
       "matches": ["https://www.facebook.com/*", "https://web.facebook.com/*"],
       "js": ["scrape.js", "fb.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.facebook.com/*", "https://web.facebook.com/*"],
+      "js": ["page.js"],
+      "run_at": "document_idle",
+      "world": "MAIN"
     },
     {
       "matches": ["https://malkiigolemi.com/*", "https://www.malkiigolemi.com/*", "http://localhost:3000/*"],

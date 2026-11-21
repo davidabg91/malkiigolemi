@@ -25,6 +25,8 @@ const schema = z.object({
   id: z.number().int().positive(),
   /** "sent", or in a word why not ("no-button", "wrong-person", "not-sent", …). */
   outcome: z.string().regex(/^[a-z-]{2,40}$/),
+  /** What the page looked like when it failed ("focus 0, swaps 2, field empty"), for finding the cause later. */
+  detail: z.string().max(120).optional(),
 });
 
 /** The extension reports what happened to one message. */
@@ -33,7 +35,7 @@ export async function POST(request: Request) {
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ ok: false, error: "bad request" }, { status: 400 });
   try {
-    await reportFbMessage(parsed.data.id, parsed.data.outcome);
+    await reportFbMessage(parsed.data.id, parsed.data.outcome, parsed.data.detail);
     return Response.json({ ok: true });
   } catch (e) {
     console.error("fb message report failed", e);
