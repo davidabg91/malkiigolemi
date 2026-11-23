@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, inArray, like, lt, sql, type SQL } from "drizzle-orm";
-import { Eye, Pencil, Plus, Search } from "lucide-react";
+import { ExternalLink, Eye, Pencil, Plus, Search } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -170,6 +170,9 @@ async function AdminProducts({ searchParams }: Pick<PageProps<"/admin/produkti">
                     </td>
                     <td className={td}>
                       <div className="flex justify-end">
+                        <Link href={`/produkt/${p.slug}`} className="grid h-9 w-9 place-items-center rounded-full text-ink-soft transition hover:bg-sand hover:text-ink" aria-label={`Виж обявата: ${p.name}`} title="Виж обявата в сайта">
+                          <ExternalLink className="h-4 w-4" />
+                        </Link>
                         <Link href={`/admin/produkti/${p.id}`} className="grid h-9 w-9 place-items-center rounded-full text-ink-soft transition hover:bg-sand hover:text-ink" aria-label={`Редактирай: ${p.name}`} title="Редактирай">
                           <Pencil className="h-4 w-4" />
                         </Link>

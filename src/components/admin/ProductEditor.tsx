@@ -1,10 +1,13 @@
 import { asc, eq } from "drizzle-orm";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ExternalLink, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { brands, categories, products } from "@/db/schema";
+import { ShareButton } from "@/components/product/ShareButton";
+import { btn } from "@/components/ui";
 import { requireAdmin } from "@/lib/auth";
+import { absoluteUrl, productTitle } from "@/lib/seo";
 import { ProductForm } from "./ProductForm";
 
 /** Shared by the "new" and "edit" admin pages. */
@@ -31,7 +34,31 @@ export async function ProductEditor({ id, returnUrl }: { id?: number; returnUrl?
         <ArrowLeft className="h-4 w-4" />
         {returnUrl ? "Назад към обявата в сайта" : "Всички продукти"}
       </Link>
-      <h1 className="mb-6 font-display text-2xl font-semibold tracking-tight sm:text-3xl">{product[0]?.name ?? "Нов продукт"}</h1>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        <h1 className="min-w-0 font-display text-2xl font-semibold tracking-tight sm:text-3xl">{product[0]?.name ?? "Нов продукт"}</h1>
+        {/* The listing as customers see it, and its link to send on. It shows what is saved, not what is being typed. */}
+        {product[0] && (
+          <div className="flex flex-wrap items-center gap-2">
+            {!product[0].active && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-sun/50 px-3 py-1.5 text-xs font-semibold" title="Обявата е скрита: вижда я само администратор.">
+                <EyeOff className="h-3.5 w-3.5" aria-hidden />
+                Скрита от клиенти
+              </span>
+            )}
+            <Link href={`/produkt/${product[0].slug}`} className={btn.sm}>
+              <ExternalLink className="h-4 w-4" aria-hidden />
+              Виж обявата
+            </Link>
+            {/* A hidden listing opens only for an admin, so there is nothing to send to a customer. */}
+            {product[0].active && (
+              <ShareButton
+                url={absoluteUrl(`/produkt/${product[0].slug}`)}
+                title={productTitle({ name: product[0].name, unit: product[0].unit, brand: allBrands.find((b) => b.id === product[0].brandId)?.name ?? null })}
+              />
+            )}
+          </div>
+        )}
+      </div>
       <ProductForm
         key={product[0]?.id ?? "new"}
         // What the form shows; the view counter and the place in the listings change without it.
