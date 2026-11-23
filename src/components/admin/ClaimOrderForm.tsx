@@ -7,6 +7,7 @@ import { orderFromClaim } from "@/actions/facebook";
 import { CourierOfficePicker } from "@/components/checkout/CourierOfficePicker";
 import { btn } from "@/components/ui";
 import type { CourierId, CourierOffice } from "@/lib/couriers";
+import { formatPrice } from "@/lib/format";
 import type { ColorChoice } from "@/lib/product-colors";
 import { DELIVERY_METHODS, STORE, type DeliveryId } from "@/lib/site";
 
@@ -90,6 +91,7 @@ export function ClaimOrderForm({ claimId, qty, prefill, colors = [] }: { claimId
               {colors.map((c) => (
                 <option key={c.name} value={c.name} disabled={c.stock <= 0}>
                   {c.name} — {c.stock > 0 ? `${c.stock} бр` : "изчерпан"}
+                  {c.price ? ` · ${formatPrice(c.price)}` : ""}
                 </option>
               ))}
             </select>

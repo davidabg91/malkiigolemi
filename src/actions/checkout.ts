@@ -172,7 +172,8 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
           error: left === 0 ? `Цвят „${color}“ на „${p.name}“ е изчерпан. Избери друг цвят или го махни от количката.` : `От „${p.name}“ в цвят „${color}“ остават само ${left} бр.`,
         };
       }
-      lines.push({ productId: p.id, name, sku: p.sku, qty, price, color, deliveryTime });
+      // A colour with a price of its own costs that, whatever the product's price for quantity is.
+      lines.push({ productId: p.id, name, sku: p.sku, qty, price: unitPriceFor(p, qtyById.get(p.id)!, color), color, deliveryTime });
     }
   }
   const subtotal = lines.reduce((sum, l) => sum + l.price * l.qty, 0);

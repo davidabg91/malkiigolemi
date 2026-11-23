@@ -5,6 +5,7 @@ import { track } from "./track";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { unitPriceFor } from "./format";
+import { ownColorPrice } from "./product-colors";
 import type { ProductCardData } from "./queries";
 
 /** `chosenColor` is set for a product sold in several colours: each colour is its own line in the cart. */
@@ -84,10 +85,13 @@ export function cartTotals(items: CartItem[]) {
   // The price for quantity counts every colour of a product together, as the order does.
   const perProduct = productQty(items);
   for (const i of items) {
-    const unit = unitPriceFor(i, perProduct.get(i.id)!);
+    const unit = unitPriceFor(i, perProduct.get(i.id)!, i.chosenColor);
+    // What it costs without any discount: for a colour with its own price, that colour's regular price.
+    const own = ownColorPrice(i, i.chosenColor);
+    const full = own ? (own.oldPrice ?? own.price) : i.oldPrice && i.oldPrice > i.price ? i.oldPrice : i.price;
     subtotal += unit * i.qty;
     count += i.qty;
-    savings += ((i.oldPrice && i.oldPrice > i.price ? i.oldPrice : i.price) - unit) * i.qty;
+    savings += (full - unit) * i.qty;
   }
   return { subtotal, count, savings };
 }

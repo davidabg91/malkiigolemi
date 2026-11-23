@@ -10,7 +10,7 @@ import { btn } from "@/components/ui";
 import { formatPrice, unitPriceFor } from "@/lib/format";
 import { ColorTag } from "@/components/product/ColorTag";
 import { StockPill } from "@/components/product/StockPill";
-import { colorChoices } from "@/lib/product-colors";
+import { colorChoices, ownColorPrice } from "@/lib/product-colors";
 import { cartTotals, lineKey, useCart, useHydrated, type CartItem } from "@/lib/store";
 
 export function CartLine({ item, onNavigate }: { item: CartItem; onNavigate?: () => void }) {
@@ -18,7 +18,8 @@ export function CartLine({ item, onNavigate }: { item: CartItem; onNavigate?: ()
   const remove = useCart((s) => s.remove);
   // All colours of a product count together towards its price for quantity.
   const together = useCart((s) => s.items.reduce((n, i) => (i.id === item.id ? n + i.qty : n), 0));
-  const unit = unitPriceFor(item, together);
+  const unit = unitPriceFor(item, together, item.chosenColor);
+  const ownPrice = ownColorPrice(item, item.chosenColor);
   const key = lineKey(item);
   // How many there are of this line: of its colour for a product with colours, otherwise of the product.
   const left = item.colors?.length ? (colorChoices(item).find((c) => c.name === item.chosenColor)?.stock ?? 0) : item.stock;
@@ -57,7 +58,7 @@ export function CartLine({ item, onNavigate }: { item: CartItem; onNavigate?: ()
           <QtyStepper size="sm" qty={item.qty} onChange={(q) => setQty(key, q)} label={item.name} />
           <div className="text-right leading-tight">
             <p className="font-bold tabular-nums">{formatPrice(unit * item.qty)}</p>
-            {unit < item.price && <p className="text-xs font-medium text-forest">цена за количество</p>}
+            {!ownPrice && unit < item.price && <p className="text-xs font-medium text-forest">цена за количество</p>}
           </div>
         </div>
       </div>

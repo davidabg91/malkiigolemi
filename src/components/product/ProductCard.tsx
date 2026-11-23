@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ViewCount } from "@/components/admin/ProductViews";
 import { LogoArt } from "@/components/ui";
 import { discountPercent, formatPrice } from "@/lib/format";
+import { priceRange } from "@/lib/product-colors";
 import type { ProductCardData } from "@/lib/queries";
 import { CardAddButton, WishlistButton } from "./AddToCart";
 import { ProductVisual } from "./PackShot";
@@ -40,6 +41,7 @@ export function ProductStamp({ className = "" }: { className?: string }) {
 }
 
 export function ProductCard({ product }: { product: ProductCardData }) {
+  const range = priceRange(product);
   const href = `/produkt/${product.slug}`;
   const isFull = Boolean(product.image && /\.(jpe?g|webp)$/i.test(product.image));
   return (
@@ -93,12 +95,20 @@ export function ProductCard({ product }: { product: ProductCardData }) {
         ) : null}
         <div className="relative z-10 mt-auto flex items-end justify-between gap-2 pt-3">
           <div className="leading-tight">
-            {product.oldPrice && product.oldPrice > product.price && (
-              <p className="text-xs text-ink-soft line-through tabular-nums">{formatPrice(product.oldPrice)}</p>
+            {range.min < range.max ? (
+              // Colours (or sizes) that cost differently: the lowest price, as on the product's page.
+              <p className="text-lg font-bold tabular-nums">
+                <span className="mr-1 text-xs font-medium text-ink-soft">от</span>
+                {formatPrice(range.min)}
+              </p>
+            ) : (
+              <>
+                {product.oldPrice && product.oldPrice > product.price && (
+                  <p className="text-xs text-ink-soft line-through tabular-nums">{formatPrice(product.oldPrice)}</p>
+                )}
+                <p className={`text-lg font-bold tabular-nums ${product.oldPrice ? "text-tomato" : ""}`}>{formatPrice(product.price)}</p>
+              </>
             )}
-            <p className={`text-lg font-bold tabular-nums ${product.oldPrice ? "text-tomato" : ""}`}>
-              {formatPrice(product.price)}
-            </p>
           </div>
           <CardAddButton product={product} />
         </div>

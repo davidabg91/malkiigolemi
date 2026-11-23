@@ -75,6 +75,11 @@ export const products = sqliteTable(
     colorOptions: text("color_options", { mode: "json" }).$type<string[]>().notNull().default([]),
     /** How many there are of each colour, in the order of `colorOptions`; `stock` is then their sum (see lib/stock.ts). */
     colorStock: text("color_stock", { mode: "json" }).$type<number[]>().notNull().default([]),
+    /**
+     * A colour's (or size's) own regular price in cents, in the order of `colorOptions`; null, or no entry,
+     * means it costs what the product does (see `ownColorPrice` in lib/product-colors.ts).
+     */
+    colorPrices: text("color_prices", { mode: "json" }).$type<(number | null)[]>().notNull().default([]),
     /** How long delivery takes when it is longer than usual ("7–10 работни дни"), e.g. goods ordered in for the customer. Null = the usual. */
     deliveryTime: text("delivery_time"),
     /**

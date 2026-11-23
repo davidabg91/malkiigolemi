@@ -28,6 +28,7 @@ const card = {
   color: products.color,
   colors: products.colorOptions,
   colorStock: products.colorStock,
+  colorPrices: products.colorPrices,
   deliveryTime: products.deliveryTime,
   availability: products.availability,
   origin: products.origin,
@@ -55,6 +56,10 @@ export type ProductCardData = {
   colors?: string[];
   /** How many there are of each colour, in the order of `colors`. */
   colorStock?: number[];
+  /** A colour's own regular price, in the order of `colors`; null where it costs what the product does. */
+  colorPrices?: (number | null)[];
+  /** The live promotion's percent, when there is one: it comes off a colour's own price too. */
+  promoPercent?: number | null;
   /** A longer than usual delivery time, when the product has one. */
   deliveryTime?: string | null;
   /** "available", "delivery" or "expected" (see lib/availability.ts); missing on cart lines saved earlier. */

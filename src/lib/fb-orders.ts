@@ -171,7 +171,7 @@ async function addClaimToOrder(
     await tx.update(orders).set({ fbUserId: claim.fbUserId }).where(eq(orders.id, order.id));
   }
 
-  const price = product ? unitPriceFor(product, qty) : post.price!;
+  const price = product ? unitPriceFor(product, qty, color) : post.price!;
   const name = product ? `${product.name} ${product.unit}`.trim() : post.productName;
   // The same product (and colour) at the same price is one line with a bigger number.
   const [line] = await tx

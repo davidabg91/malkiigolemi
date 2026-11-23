@@ -219,6 +219,8 @@ export async function saveProduct(id: number | null, _prev: AdminFormState, form
     color: d.color,
     colorOptions: colours.map((c) => c.name),
     colorStock: colours.map((c) => c.stock),
+    // A colour priced like the product has no price of its own.
+    colorPrices: colours.map((c) => (c.price && c.price !== d.price ? c.price : null)),
     image,
     isNew: formData.get("isNew") === "on",
     isFeatured: formData.get("isFeatured") === "on",

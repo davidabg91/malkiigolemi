@@ -1,7 +1,8 @@
 /**
  * Colours a product is sold in. The admin lists them by name on the product ("Червен", "Син"…); a product
  * with a list makes the customer choose one before it goes in the cart, and the choice travels with the
- * order line. A product without a list is sold as before.
+ * order line. A product without a list is sold as before. The same list is used for sizes ("Малка",
+ * "Голяма"), so each entry may have a price of its own.
  */
 
 /** Ready-made colours for the admin's picker; the dot next to the name is painted from here. */
@@ -52,26 +53,66 @@ export function cleanColors(input: unknown): string[] {
   return out;
 }
 
-/** A colour with how many of it there are. */
-export type ColorChoice = { name: string; stock: number };
+/** A colour with how many of it there are and, when it does not cost what the product does, its regular price in cents. */
+export type ColorChoice = { name: string; stock: number; price?: number | null };
 
 const wholeNumber = (v: unknown) => Math.min(99_999, Math.max(0, Math.floor(Number(v) || 0)));
 
-/** A product's colours with their quantities. A colour without a recorded quantity counts as none left. */
-export function colorChoices(p: { colors?: readonly string[] | null; colorStock?: readonly number[] | null }): ColorChoice[] {
-  return (p.colors ?? []).map((name, i) => ({ name, stock: wholeNumber(p.colorStock?.[i]) }));
+/** A price of its own in cents, or null: nothing, zero and anything that is not a sum mean "as the product". */
+const ownPrice = (v: unknown) => (typeof v === "number" && Number.isInteger(v) && v > 0 && v <= 10_000_000 ? v : null);
+
+/** A product's colours with their quantities and own prices. A colour without a recorded quantity counts as none left. */
+export function colorChoices(p: {
+  colors?: readonly string[] | null;
+  colorStock?: readonly number[] | null;
+  colorPrices?: readonly (number | null)[] | null;
+}): ColorChoice[] {
+  return (p.colors ?? []).map((name, i) => ({ name, stock: wholeNumber(p.colorStock?.[i]), price: ownPrice(p.colorPrices?.[i]) }));
 }
 
-/** The product form's list (`[{ name, stock }]`), tidied the way `cleanColors` tidies names. */
+/** The product form's list (`[{ name, stock, price }]`), tidied the way `cleanColors` tidies names. */
 export function cleanColorChoices(input: unknown): ColorChoice[] {
   if (!Array.isArray(input)) return [];
-  const rows = input.filter((r): r is { name: string; stock?: unknown } => typeof r === "object" && r !== null && typeof (r as { name?: unknown }).name === "string");
-  const stockOf = new Map<string, number>();
+  const rows = input.filter(
+    (r): r is { name: string; stock?: unknown; price?: unknown } => typeof r === "object" && r !== null && typeof (r as { name?: unknown }).name === "string",
+  );
+  const first = new Map<string, { stock: number; price: number | null }>();
   for (const r of rows) {
     const k = key(r.name.replace(/\s+/g, " ").trim().slice(0, MAX_COLOR_LENGTH));
-    if (!stockOf.has(k)) stockOf.set(k, wholeNumber(r.stock));
+    if (!first.has(k)) first.set(k, { stock: wholeNumber(r.stock), price: ownPrice(r.price) });
   }
-  return cleanColors(rows.map((r) => r.name)).map((name) => ({ name, stock: stockOf.get(key(name)) ?? 0 }));
+  return cleanColors(rows.map((r) => r.name)).map((name) => ({ name, stock: first.get(key(name))?.stock ?? 0, price: first.get(key(name))?.price ?? null }));
+}
+
+/** What the price helpers need of a product: a card (`colors`) or a row of the table (`colorOptions`). */
+type Priced = {
+  /** As the customer pays it now: a live promotion is already taken off. */
+  price: number;
+  oldPrice?: number | null;
+  colors?: readonly string[] | null;
+  colorOptions?: readonly string[] | null;
+  colorPrices?: readonly (number | null)[] | null;
+  promoPercent?: number | null;
+};
+
+/**
+ * A colour's own price as the customer pays it now, or null when the colour costs what the product does.
+ * A live promotion comes off it by the same percent as off the product (and with the same rounding as in
+ * lib/pricing.ts); the product's hand-written "old price" and its price for quantity do not apply to it.
+ */
+export function ownColorPrice(p: Priced, color: string | null | undefined): { price: number; oldPrice: number | null } | null {
+  if (!color) return null;
+  const index = (p.colors ?? p.colorOptions ?? []).findIndex((c) => key(c) === key(color));
+  const own = index < 0 ? null : ownPrice(p.colorPrices?.[index]);
+  if (own === null) return null;
+  const percent = p.promoPercent ?? 0;
+  return percent > 0 ? { price: Math.round((own * (100 - percent)) / 100), oldPrice: own } : { price: own, oldPrice: null };
+}
+
+/** The cheapest and the dearest the product can be bought for across its colours; the same number twice when they all cost the same. */
+export function priceRange(p: Priced): { min: number; max: number } {
+  const prices = (p.colors ?? p.colorOptions ?? []).map((c) => ownColorPrice(p, c)?.price ?? p.price);
+  return prices.length ? { min: Math.min(...prices), max: Math.max(...prices) } : { min: p.price, max: p.price };
 }
 
 /** The colour as the product lists it, whatever the letter case it was asked in; null when it has none such. */
