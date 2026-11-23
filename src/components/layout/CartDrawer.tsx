@@ -10,7 +10,7 @@ import { btn } from "@/components/ui";
 import { formatPrice, unitPriceFor } from "@/lib/format";
 import { ColorTag } from "@/components/product/ColorTag";
 import { StockPill } from "@/components/product/StockPill";
-import { colorChoices, ownColorPrice } from "@/lib/product-colors";
+import { choiceWord, colorChoices, ownColorPrice } from "@/lib/product-colors";
 import { cartTotals, lineKey, useCart, useHydrated, type CartItem } from "@/lib/store";
 
 export function CartLine({ item, onNavigate }: { item: CartItem; onNavigate?: () => void }) {
@@ -47,11 +47,11 @@ export function CartLine({ item, onNavigate }: { item: CartItem; onNavigate?: ()
         <p className="text-xs text-ink-soft">
           {[item.brand, item.unit].filter(Boolean).join(" · ")}
         </p>
-        {item.chosenColor && <ColorTag name={item.chosenColor} className="mt-1" />}
+        {item.chosenColor && <ColorTag name={item.chosenColor} of={item.colors} className="mt-1" />}
         <StockPill product={item} notable className="mt-1 self-start" />
         {left < item.qty && (
           <p className="mt-1 text-xs font-semibold text-tomato" role="status">
-            {left <= 0 ? (item.chosenColor ? "Този цвят е изчерпан — махни го, за да поръчаш." : "Изчерпан — махни го, за да поръчаш.") : `Остават само ${left} бр.`}
+            {left <= 0 ? (item.chosenColor ? `Този ${choiceWord(item.colors?.length ? item.colors : [item.chosenColor])} е изчерпан — махни го, за да поръчаш.` : "Изчерпан — махни го, за да поръчаш.") : `Остават само ${left} бр.`}
           </p>
         )}
         <div className="mt-auto flex items-center justify-between pt-2">

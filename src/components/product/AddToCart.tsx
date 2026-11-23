@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import type { ProductCardData } from "@/lib/queries";
 import { availabilityOf } from "@/lib/availability";
 import { formatPrice } from "@/lib/format";
-import { colorChoices, ownColorPrice, priceRange } from "@/lib/product-colors";
+import { choiceTitle, choiceWord, colorChoices, ownColorPrice, priceRange } from "@/lib/product-colors";
 import { lineKey, useCart, useHydrated, useWishlist } from "@/lib/store";
 import { useColorChoice } from "./ColorChoice";
 import { ColorDot } from "./ColorTag";
@@ -71,9 +71,9 @@ export function CardAddButton({ product }: { product: ProductCardData }) {
     return (
       <Link
         href={`/produkt/${product.slug}`}
-        onClick={() => toast("Избери цвят", { description: product.name, duration: 2500 })}
+        onClick={() => toast(`Избери ${choiceWord(product.colors)}`, { description: product.name, duration: 2500 })}
         className="grid h-11 w-11 place-items-center rounded-full bg-forest text-white transition duration-200 hover:scale-105 hover:bg-forest-deep active:scale-95"
-        aria-label={`Избери цвят: ${product.name}`}
+        aria-label={`Избери ${choiceWord(product.colors)}: ${product.name}`}
       >
         <Plus className="h-5 w-5" aria-hidden />
       </Link>
@@ -123,6 +123,8 @@ export function BuyBox({ product }: { product: ProductCardData }) {
   const [qty, setQty] = useState(1);
   const [done, setDone] = useState(false);
   const colors = colorChoices(product);
+  // "цвят", or "вариант" when the list holds sizes or models.
+  const word = choiceWord(product.colors);
   // Shared with the price above the box, which follows a colour that has a price of its own.
   const [color, setColor] = useColorChoice(product);
   // Each colour says what it costs once at least one of them costs something else.
@@ -140,7 +142,8 @@ export function BuyBox({ product }: { product: ProductCardData }) {
       {colors.length > 0 && (
         <fieldset className="w-full">
           <legend className="mb-2 text-sm font-medium">
-            Цвят{color ? <span className="text-ink-soft">: {color}</span> : <span className="text-tomato" aria-hidden> *</span>}
+            {choiceTitle(product.colors)}
+            {color ? <span className="text-ink-soft">: {color}</span> : <span className="text-tomato" aria-hidden> *</span>}
           </legend>
           <div className="flex flex-wrap gap-2">
             {colors.map((c) => (
@@ -176,11 +179,11 @@ export function BuyBox({ product }: { product: ProductCardData }) {
             ))}
           </div>
           {color && left !== null && left <= 5 && (
-            <p className="mt-2 text-sm font-medium text-tomato">{left === 1 ? "Остава само 1 брой от този цвят." : `Остават само ${left} броя от този цвят.`}</p>
+            <p className="mt-2 text-sm font-medium text-tomato">{left === 1 ? `Остава само 1 брой от този ${word}.` : `Остават само ${left} броя от този ${word}.`}</p>
           )}
           {missing && (
             <p role="alert" className="mt-2 text-sm font-medium text-tomato">
-              Избери цвят, за да добавиш продукта в количката.
+              Избери {word}, за да добавиш продукта в количката.
             </p>
           )}
         </fieldset>

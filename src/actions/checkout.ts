@@ -15,7 +15,7 @@ import { sendOrderPlaced } from "@/lib/order-mail";
 import { orderNumber } from "@/lib/orders";
 import { getLoyaltySettings, pointsBalance, redeemable, syncOrderPoints } from "@/lib/loyalty";
 import { pricedColumns } from "@/lib/pricing";
-import { colorChoices, matchColor } from "@/lib/product-colors";
+import { choiceTitle, choiceWord, colorChoices, matchColor } from "@/lib/product-colors";
 import { deliveryNote } from "@/lib/availability";
 import { takeStock } from "@/lib/stock";
 import { getAvailableCities, savedOffice } from "@/lib/courier-offices";
@@ -159,7 +159,7 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
       if (i.id !== p.id) continue;
       const color = matchColor(p.colorOptions, i.color);
       if (!color) {
-        return { ok: false, error: `Избери цвят за „${p.name}“ от страницата на продукта и го добави отново в количката.` };
+        return { ok: false, error: `Избери ${choiceWord(p.colorOptions)} за „${p.name}“ от страницата на продукта и го добави отново в количката.` };
       }
       qtyByColor.set(color, (qtyByColor.get(color) ?? 0) + i.qty);
     }
@@ -169,7 +169,10 @@ export async function placeOrder(raw: CheckoutInput): Promise<CheckoutResult> {
       if (left < qty) {
         return {
           ok: false,
-          error: left === 0 ? `Цвят „${color}“ на „${p.name}“ е изчерпан. Избери друг цвят или го махни от количката.` : `От „${p.name}“ в цвят „${color}“ остават само ${left} бр.`,
+          error:
+            left === 0
+              ? `${choiceTitle(p.colorOptions)} „${color}“ на „${p.name}“ е изчерпан. Избери друг ${choiceWord(p.colorOptions)} или го махни от количката.`
+              : `От „${p.name}“ — ${choiceWord(p.colorOptions)} „${color}“ — остават само ${left} бр.`,
         };
       }
       // A colour with a price of its own costs that, whatever the product's price for quantity is.

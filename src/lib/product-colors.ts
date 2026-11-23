@@ -37,6 +37,33 @@ const HEX = new Map(COLOR_PRESETS.map((c) => [key(c.name), c.hex]));
 /** The dot for a colour name; null for a name the shop has no paint for ("Шарен", "Камуфлаж"). */
 export const swatchOf = (name: string) => HEX.get(key(name)) ?? null;
 
+/** Ready-made sizes for the admin's picker, next to the colours: the same list holds both. */
+export const SIZE_PRESETS = ["Малък", "Среден", "Голям"];
+
+const SIZE_WORDS = new Set(
+  "малък малка малко малки среден средна средно средни голям голяма голямо големи най-малък най-голям xxs xs s m l xl xxl xxxl 2xl 3xl 4xl".split(" "),
+);
+
+/** Whether the name is a size ("Среден", "Голяма", "XL", "Малък размер") and not a colour. */
+export const isSizeName = (name: string) => SIZE_WORDS.has(key(name).replace(/\s*размер$/, ""));
+
+/**
+ * What the choice is called for the customer: "цвят" when every entry is a colour the shop has paint for,
+ * "размер" when every entry is a size, otherwise "вариант" (models, a mix, colours the shop cannot tell).
+ * All three words are masculine, so the sentences around them stay the same. Pass the product's whole list
+ * where it is at hand, so one product is called one thing; an order line only has its own name.
+ */
+export function choiceWord(names: readonly string[] | null | undefined) {
+  if (!names?.length || names.every((n) => swatchOf(n))) return "цвят";
+  return names.every(isSizeName) ? "размер" : "вариант";
+}
+
+/** The same word with a capital letter: "Цвят", "Размер" or "Вариант". */
+export function choiceTitle(names: readonly string[] | null | undefined) {
+  const word = choiceWord(names);
+  return word[0].toLocaleUpperCase("bg") + word.slice(1);
+}
+
 /** A tidy list out of anything: trimmed, without repeats, capitalised, within the limits. */
 export function cleanColors(input: unknown): string[] {
   if (!Array.isArray(input)) return [];

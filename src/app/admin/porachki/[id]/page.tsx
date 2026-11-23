@@ -32,6 +32,7 @@ import { findFlag, getFlagIndex } from "@/lib/flags";
 import { formatDate, formatPrice, formatTimestamp } from "@/lib/format";
 import { DELIVERY_METHODS, ORDER_STATUS_LABELS, site } from "@/lib/site";
 import { ColorDot } from "@/components/product/ColorTag";
+import { choiceTitle } from "@/lib/product-colors";
 
 export const metadata: Metadata = { title: "Поръчка" };
 
@@ -204,7 +205,7 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
                               <p className="mt-1">
                                 <span className="inline-flex items-center gap-1.5 rounded-full bg-lime px-2.5 py-1 text-xs font-semibold">
                                   <ColorDot name={i.color} />
-                                  Цвят: {i.color}
+                                  {choiceTitle([i.color])}: {i.color}
                                 </span>
                               </p>
                             )}
