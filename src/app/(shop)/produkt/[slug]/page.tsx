@@ -6,6 +6,7 @@ import { ProductAdminActions } from "@/components/admin/ProductAdminActions";
 import { ViewCount } from "@/components/admin/ProductViews";
 import { BuyBox } from "@/components/product/AddToCart";
 import { Carousel } from "@/components/product/Carousel";
+import { ColorChoiceProvider, ProductPrice } from "@/components/product/ColorChoice";
 import { ProductVisual } from "@/components/product/PackShot";
 import { Badges, ProductCard, ProductStamp } from "@/components/product/ProductCard";
 import { ProductZoom } from "@/components/product/ProductZoom";
@@ -17,7 +18,7 @@ import { StockPill } from "@/components/product/StockPill";
 import { Breadcrumbs, SectionHeading } from "@/components/ui";
 import { getSession } from "@/lib/auth";
 import { stockState } from "@/lib/availability";
-import { discountPercent, formatPrice } from "@/lib/format";
+import { priceRange } from "@/lib/product-colors";
 import { getProduct } from "@/lib/queries";
 import { absoluteUrl, breadcrumbJsonLd, jsonLdHtml, organizationId, productDescription, productImageUrl, productTitle, returnPolicy, schemaAvailability, shippingDetails } from "@/lib/seo";
 import { FREE_BOXNOW_LINE, ORIGIN_LABELS, site } from "@/lib/site";
@@ -52,7 +53,6 @@ async function Content({ params }: Pick<Props, "params">) {
   }
   const { product, category, parent, related } = data;
   const { description, ...cardData } = product;
-  const off = discountPercent(product.price, product.oldPrice);
   const root = parent ?? category;
   const state = stockState(product);
 
@@ -73,7 +73,8 @@ async function Content({ params }: Pick<Props, "params">) {
   const offer = {
     "@type": "Offer",
     url,
-    price: (product.price / 100).toFixed(2),
+    // What the page shows before a colour is chosen: the lowest price among the colours.
+    price: (priceRange(product).min / 100).toFixed(2),
     priceCurrency: "EUR",
     availability: schemaAvailability(product),
     itemCondition: "https://schema.org/NewCondition",
@@ -161,27 +162,13 @@ async function Content({ params }: Pick<Props, "params">) {
               </a>
             ) : null}
 
-            <div className="mt-7 flex flex-wrap items-end gap-x-4 gap-y-1">
-              <p className={`text-4xl font-bold tabular-nums ${off ? "text-tomato" : ""}`}>{formatPrice(product.price)}</p>
-              {off > 0 && product.oldPrice && (
-                <p className="pb-1 text-lg text-ink-soft line-through tabular-nums">{formatPrice(product.oldPrice)}</p>
-              )}
-              <p className="w-full text-sm text-ink-soft">Цена с ДДС</p>
-            </div>
-
-            {product.bulkMinQty && product.bulkPrice && (
-              <p className="mt-5 inline-flex items-center gap-3 rounded-2xl bg-lime px-4 py-3 font-medium">
-                <span className="grid h-9 min-w-9 place-items-center rounded-full bg-ink px-2 text-sm font-bold text-lime">{product.bulkMinQty}+</span>
-                <span>
-                  Вземи {product.bulkMinQty} или повече за{" "}
-                  <strong className="tabular-nums">{formatPrice(product.bulkPrice)}</strong> на брой
-                </span>
-              </p>
-            )}
-
-            <div className="mt-7">
-              <BuyBox product={cardData} />
-            </div>
+            {/* The price follows the colour (or size) chosen in the buy box when that one has a price of its own. */}
+            <ColorChoiceProvider product={cardData}>
+              <ProductPrice product={cardData} />
+              <div className="mt-7">
+                <BuyBox product={cardData} />
+              </div>
+            </ColorChoiceProvider>
             <p className="mt-4 flex">
               <StockPill product={product} large>
                 {state.kind === "available" && "Налично — изпращаме до 24 часа"}

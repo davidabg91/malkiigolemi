@@ -90,7 +90,7 @@ export async function orderFromClaim(claimId: number, _prev: FbFormState, formDa
   const city = pickup ? STORE.city : (office?.city ?? d.city);
   const address = pickup ? STORE.address : (office?.address ?? d.address);
 
-  const price = product ? unitPriceFor(product, d.qty) : post.price!;
+  const price = product ? unitPriceFor(product, d.qty, color) : post.price!;
   const subtotal = price * d.qty;
   const shipping = shippingFor(d.delivery, subtotal, d.courier);
   const number = orderNumber();

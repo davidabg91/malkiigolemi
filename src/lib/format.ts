@@ -1,3 +1,5 @@
+import { ownColorPrice } from "./product-colors";
+
 const eur = new Intl.NumberFormat("bg-BG", {
   style: "currency",
   currency: "EUR",
@@ -49,11 +51,17 @@ export function formatTimestamp(d: Date | number) {
   return stampFmt.format(d);
 }
 
-/** Price for one unit, taking the "buy N or more" price into account. */
+/**
+ * Price for one unit, taking the "buy N or more" price into account. A colour (or size) with a price of
+ * its own always costs that price: the price for quantity is the product's, not the colour's.
+ */
 export function unitPriceFor(
-  item: { price: number; bulkMinQty?: number | null; bulkPrice?: number | null },
+  item: Parameters<typeof ownColorPrice>[0] & { bulkMinQty?: number | null; bulkPrice?: number | null },
   qty: number,
+  color?: string | null,
 ) {
+  const own = ownColorPrice(item, color);
+  if (own) return own.price;
   if (item.bulkMinQty && item.bulkPrice && qty >= item.bulkMinQty) return item.bulkPrice;
   return item.price;
 }

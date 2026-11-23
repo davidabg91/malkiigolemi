@@ -59,7 +59,7 @@ function ProductFields({ product, brands, categories, returnUrl, fresh }: Props 
   const [color, setColor] = useState(product?.color ?? "#1F5C3F");
   const [brandId, setBrandId] = useState(product?.brandId ? String(product.brandId) : "");
   const [newBrand, setNewBrand] = useState("");
-  const [initialColors] = useState(() => colorChoices({ colors: product?.colorOptions, colorStock: product?.colorStock }));
+  const [initialColors] = useState(() => colorChoices({ colors: product?.colorOptions, colorStock: product?.colorStock, colorPrices: product?.colorPrices }));
   // With colours the product has as many as its colours together; null = no colours, the number is typed.
   const [colorTotal, setColorTotal] = useState<number | null>(() => (initialColors.length > 0 ? initialColors.reduce((sum, c) => sum + c.stock, 0) : null));
   const [availability, setAvailability] = useState<Availability>(() => (product ? availabilityOf(product) : "available"));
@@ -174,13 +174,14 @@ function ProductFields({ product, brands, categories, returnUrl, fresh }: Props 
           {colorTotal === null ? (
             input("stock", "Наличност (бр)", { inputMode: "numeric", defaultValue: product?.stock ?? 100 })
           ) : (
-            <div>
+            // Its own key: the typed field above and this read-only sum must not share one input.
+            <div key="stock-sum">
               <label htmlFor={`${uid}-stock`} className="mb-1.5 block text-sm font-medium">
                 Наличност (бр)
               </label>
               <input id={`${uid}-stock`} name="stock" readOnly value={colorTotal} className="field bg-sand/60 text-ink-soft" aria-describedby={`${uid}-stock-hint`} />
               <p id={`${uid}-stock-hint`} className="mt-1.5 text-xs text-ink-soft">
-                Сбор от цветовете — променя се от раздел „Цветове“ по-долу.
+                Сбор от цветовете — променя се от раздел „Цветове и размери“ по-долу.
               </p>
             </div>
           )}
@@ -240,7 +241,7 @@ function ProductFields({ product, brands, categories, returnUrl, fresh }: Props 
           </fieldset>
         </Group>
 
-        <Group title="Цветове">
+        <Group title="Цветове и размери">
           <ColorOptions initial={initialColors} onTotal={setColorTotal} />
         </Group>
 

@@ -188,7 +188,7 @@ async function AdminFbPost({ params }: Pick<PageProps<"/admin/facebook/[id]">, "
           </div>
           {c.status === "pending" && !needsProduct && (
             <div className="mt-4 border-t border-line pt-4">
-              <ClaimOrderForm claimId={c.id} qty={c.qty} prefill={match.prefill} colors={product ? colorChoices({ colors: product.colorOptions, colorStock: product.colorStock }) : []} />
+              <ClaimOrderForm claimId={c.id} qty={c.qty} prefill={match.prefill} colors={product ? colorChoices({ colors: product.colorOptions, colorStock: product.colorStock, colorPrices: product.colorPrices }) : []} />
             </div>
           )}
         </Panel>

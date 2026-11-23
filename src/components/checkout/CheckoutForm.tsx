@@ -399,7 +399,7 @@ export function CheckoutForm({ defaults }: { defaults: CheckoutDefaults }) {
                   <StockPill product={i} notable />
                 </span>
               </span>
-              <span className="text-sm font-semibold tabular-nums">{formatPrice(unitPriceFor(i, perProduct.get(i.id) ?? i.qty) * i.qty)}</span>
+              <span className="text-sm font-semibold tabular-nums">{formatPrice(unitPriceFor(i, perProduct.get(i.id) ?? i.qty, i.chosenColor) * i.qty)}</span>
             </li>
           ))}
         </ul>

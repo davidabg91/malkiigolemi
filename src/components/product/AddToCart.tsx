@@ -6,8 +6,10 @@ import { useState } from "react";
 import { toast } from "sonner";
 import type { ProductCardData } from "@/lib/queries";
 import { availabilityOf } from "@/lib/availability";
-import { colorChoices } from "@/lib/product-colors";
+import { formatPrice } from "@/lib/format";
+import { colorChoices, ownColorPrice, priceRange } from "@/lib/product-colors";
 import { lineKey, useCart, useHydrated, useWishlist } from "@/lib/store";
+import { useColorChoice } from "./ColorChoice";
 import { ColorDot } from "./ColorTag";
 import { NotifyMe } from "./NotifyMe";
 
@@ -121,9 +123,11 @@ export function BuyBox({ product }: { product: ProductCardData }) {
   const [qty, setQty] = useState(1);
   const [done, setDone] = useState(false);
   const colors = colorChoices(product);
-  const available = colors.filter((c) => c.stock > 0);
-  // With one colour left there is nothing to choose; with several the customer has to.
-  const [color, setColor] = useState<string | null>(available.length === 1 ? available[0].name : null);
+  // Shared with the price above the box, which follows a colour that has a price of its own.
+  const [color, setColor] = useColorChoice(product);
+  // Each colour says what it costs once at least one of them costs something else.
+  const { min, max } = priceRange(product);
+  const priced = min < max;
   // How many can be taken: of the chosen colour, or of the product.
   const left = colors.length > 0 ? (colors.find((c) => c.name === color)?.stock ?? null) : product.stock;
   const [missing, setMissing] = useState(false);
@@ -163,7 +167,11 @@ export function BuyBox({ product }: { product: ProductCardData }) {
                 />
                 <ColorDot name={c.name} className={`h-4 w-4 ${c.stock > 0 ? "" : "opacity-50"}`} />
                 <span className={c.stock > 0 ? "" : "line-through"}>{c.name}</span>
-                {c.stock <= 0 && <span className="text-xs">изчерпан</span>}
+                {c.stock <= 0 ? (
+                  <span className="text-xs">изчерпан</span>
+                ) : (
+                  priced && <span className="text-xs font-semibold tabular-nums opacity-80">{formatPrice(ownColorPrice(product, c.name)?.price ?? product.price)}</span>
+                )}
               </label>
             ))}
           </div>

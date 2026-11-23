@@ -39,6 +39,8 @@ export const pricedColumns = {
   oldPrice: effectiveOldPrice,
   bulkPrice: effectiveBulkPrice,
   bulkMinQty: effectiveBulkMinQty,
+  // The live promotion itself, for the colours that have a price of their own (lib/product-colors.ts).
+  promoPercent,
 };
 
 /**
