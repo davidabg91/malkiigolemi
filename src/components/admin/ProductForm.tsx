@@ -3,7 +3,7 @@
 import { ImagePlus, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { startTransition, useActionState, useId, useState, type ReactNode } from "react";
-import { saveProduct } from "@/actions/admin";
+import { saveProduct, type AdminFormState } from "@/actions/admin";
 import { PackShot } from "@/components/product/PackShot";
 import { btn } from "@/components/ui";
 import { StockPill } from "@/components/product/StockPill";
@@ -11,6 +11,7 @@ import { CategoryPicker } from "./CategoryPicker";
 import { ColorOptions } from "./ColorOptions";
 import type { Brand, Product } from "@/db/schema";
 import { AVAILABILITY_OPTIONS, availabilityOf, type Availability } from "@/lib/availability";
+import { useFreshForm, type FreshForm } from "@/lib/fresh-form";
 import { MAX_IMAGE_MB, PACKS } from "@/lib/listing";
 import { colorChoices, DELIVERY_TIME_PRESETS, MAX_DELIVERY_TIME_LENGTH } from "@/lib/product-colors";
 import { megabytes, replaceChosenFile, shrinkImage, UPLOAD_LIMIT } from "@/lib/shrink-image";
@@ -29,20 +30,31 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-export function ProductForm({
-  product,
-  brands,
-  categories,
-  returnUrl,
-}: {
+type Props = {
   product?: Product;
   brands: Brand[];
   categories: CategoryOption[];
   returnUrl?: string;
-}) {
+};
+
+/**
+ * The product form. `version` changes whenever the product does in the database (see ProductEditor): the
+ * form then starts over with the new values, unless something is being typed in it (see useFreshForm).
+ */
+export function ProductForm({ version, ...props }: Props & { version: string }) {
+  const { key, ...fresh } = useFreshForm(version);
+  return <ProductFields key={key} {...props} fresh={fresh} />;
+}
+
+function ProductFields({ product, brands, categories, returnUrl, fresh }: Props & { fresh: FreshForm }) {
   // Per-form id prefix: the new and edit pages can both stay mounted (hidden) after navigating.
   const uid = useId();
-  const [state, action, pending] = useActionState(saveProduct.bind(null, product?.id ?? null), undefined);
+  const [state, action, pending] = useActionState(async (prev: AdminFormState, formData: FormData) => {
+    const next = await saveProduct(product?.id ?? null, prev, formData);
+    // An answer means the product was not saved (a save leads to another page): keep what was typed.
+    if (next?.error) fresh.done(false);
+    return next;
+  }, undefined);
   const [pack, setPack] = useState(product?.pack ?? "box");
   const [color, setColor] = useState(product?.color ?? "#1F5C3F");
   const [brandId, setBrandId] = useState(product?.brandId ? String(product.brandId) : "");
@@ -88,8 +100,12 @@ export function ProductForm({
       onSubmit={(e) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
+        fresh.done();
         startTransition(() => action(formData));
       }}
+      onInput={fresh.touch}
+      // Adding or removing a colour is a button, not a field.
+      onClick={(e) => (e.target as HTMLElement).closest("button") && fresh.touch()}
       className="grid items-start gap-6 xl:grid-cols-[1fr_20rem]"
     >
       {returnUrl && <input type="hidden" name="returnUrl" value={returnUrl} />}
@@ -332,7 +348,7 @@ export function ProductForm({
             {pending && <Loader2 className="h-5 w-5 animate-spin" aria-hidden />}
             {product ? "Запази промените" : "Създай продукта"}
           </button>
-          <Link href={returnUrl || "/admin/produkti"} className={btn.ghost}>
+          <Link href={returnUrl || "/admin/produkti"} onClick={() => fresh.done()} className={btn.ghost}>
             Отказ
           </Link>
         </div>
