@@ -3,6 +3,7 @@
 import { Loader2, Search } from "lucide-react";
 import { useActionState, useMemo, useState } from "react";
 import { savePromotion } from "@/actions/promotions";
+import { useFreshForm, type FreshForm } from "@/lib/fresh-form";
 import { btn } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
 
@@ -19,18 +20,27 @@ export type PromotionInitial = {
   productIds: number[];
 };
 
-export function PromotionForm({
-  id,
-  initial,
-  products,
-  categories,
-}: {
+type Props = {
   id: number | null;
   initial: PromotionInitial;
   products: Option[];
   categories: CategoryOption[];
-}) {
-  const [state, action, pending] = useActionState(savePromotion.bind(null, id), undefined);
+};
+
+/** The promotion form; it starts over with the saved values once it was sent and left (see useFreshForm). */
+export function PromotionForm(props: Props) {
+  // A new promotion's suggested dates move with the clock, so they are not a reason to start over.
+  const { key, ...fresh } = useFreshForm(props.id ? JSON.stringify(props.initial) : "new");
+  return <PromotionFields key={key} {...props} fresh={fresh} />;
+}
+
+function PromotionFields({ id, initial, products, categories, fresh }: Props & { fresh: FreshForm }) {
+  const [state, action, pending] = useActionState(async (prev: Awaited<ReturnType<typeof savePromotion>>, formData: FormData) => {
+    const next = await savePromotion(id, prev, formData);
+    // An answer means the promotion was not saved (a save leads to the list): keep what was typed.
+    if (next?.error) fresh.done(false);
+    return next;
+  }, undefined);
   const [target, setTarget] = useState<"products" | "category">(initial.categoryId ? "category" : "products");
   const [picked, setPicked] = useState<Set<number>>(new Set(initial.productIds));
   const [query, setQuery] = useState("");
@@ -53,7 +63,14 @@ export function PromotionForm({
   const error = (k: string) => err[k] && <p className="mt-1.5 text-sm font-medium text-tomato">{err[k]}</p>;
 
   return (
-    <form action={action} className="space-y-5">
+    <form
+      action={action}
+      onSubmit={() => fresh.done()}
+      onInput={fresh.touch}
+      // Ticking a product is a field; this also counts the buttons.
+      onClick={(e) => (e.target as HTMLElement).closest("button") && fresh.touch()}
+      className="space-y-5"
+    >
       <div className="grid gap-4 md:grid-cols-[1fr_8rem]">
         <div>
           <label htmlFor="promo-name" className={label}>

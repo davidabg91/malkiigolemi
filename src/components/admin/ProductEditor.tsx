@@ -32,7 +32,15 @@ export async function ProductEditor({ id, returnUrl }: { id?: number; returnUrl?
         {returnUrl ? "Назад към обявата в сайта" : "Всички продукти"}
       </Link>
       <h1 className="mb-6 font-display text-2xl font-semibold tracking-tight sm:text-3xl">{product[0]?.name ?? "Нов продукт"}</h1>
-      <ProductForm key={product[0]?.id ?? "new"} product={product[0]} brands={allBrands} categories={tree} returnUrl={returnUrl} />
+      <ProductForm
+        key={product[0]?.id ?? "new"}
+        // What the form shows; the view counter and the place in the listings change without it.
+        version={product[0] ? JSON.stringify({ ...product[0], views: 0, rank: null }) : "new"}
+        product={product[0]}
+        brands={allBrands}
+        categories={tree}
+        returnUrl={returnUrl}
+      />
     </>
   );
 }
