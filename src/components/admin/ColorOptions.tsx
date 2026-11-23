@@ -4,7 +4,7 @@ import { Plus, X } from "lucide-react";
 import { useId, useState } from "react";
 import { ColorDot } from "@/components/product/ColorTag";
 import { parseEuro } from "@/lib/format";
-import { cleanColorChoices, COLOR_PRESETS, MAX_COLOR_LENGTH, MAX_COLORS, type ColorChoice } from "@/lib/product-colors";
+import { cleanColorChoices, COLOR_PRESETS, MAX_COLOR_LENGTH, MAX_COLORS, SIZE_PRESETS, type ColorChoice } from "@/lib/product-colors";
 
 /**
  * The colours (or sizes) a product is sold in, in the admin's product form, each with how many there are
@@ -123,9 +123,24 @@ export function ColorOptions({ initial, onTotal }: { initial: ColorChoice[]; onT
         ))}
       </div>
 
-      <div className="mt-3 flex gap-2">
+      <p className="mb-2 mt-4 text-sm font-medium">Добави размер</p>
+      <div className="flex flex-wrap gap-2">
+        {SIZE_PRESETS.filter((name) => !has(name)).map((name) => (
+          <button
+            key={name}
+            type="button"
+            disabled={full}
+            onClick={() => update([...colors, { name, stock: 0 }])}
+            className="inline-flex h-10 items-center rounded-full border border-line bg-paper px-3.5 text-sm font-medium transition hover:border-forest disabled:opacity-40"
+          >
+            {name}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-4 flex gap-2">
         <label htmlFor={`${uid}-typed`} className="sr-only">
-          Друг цвят
+          Друг цвят или размер
         </label>
         <input
           id={`${uid}-typed`}
@@ -139,7 +154,7 @@ export function ColorOptions({ initial, onTotal }: { initial: ColorChoice[]; onT
           }}
           maxLength={MAX_COLOR_LENGTH * 4}
           disabled={full}
-          placeholder="Друг цвят или размер, напр. Шарен, Малка, Голяма…"
+          placeholder="Друг цвят или размер, напр. Шарен, XL, Голяма…"
           className="field flex-1"
         />
         <button
