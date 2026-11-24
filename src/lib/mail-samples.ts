@@ -1,6 +1,16 @@
 import "server-only";
 import { sendMail } from "./mail";
-import { type Mail, type MailOrder, orderPlacedMail, orderShippedMail, shopNewOrderMail } from "./order-mail";
+import {
+  type Mail,
+  type MailOrder,
+  orderCancelledMail,
+  orderConfirmedMail,
+  orderDeliveredMail,
+  orderPlacedMail,
+  orderReadyMail,
+  orderShippedMail,
+  shopNewOrderMail,
+} from "./order-mail";
 import { site } from "./site";
 import { backInStockMail } from "./stock-alerts";
 import { confirmationHtml, confirmationSubject, shopWithdrawalMail } from "./withdrawals";
@@ -30,6 +40,9 @@ const sampleOrder: MailOrder = {
   ],
 };
 
+const samplePickup: MailOrder = { ...sampleOrder, delivery: "store", courier: null, officeName: null, shipping: 0, total: 3110, trackingNumber: null };
+const samplePaid: MailOrder = { ...sampleOrder, payment: "card" };
+
 const sampleWithdrawal = {
   orderNumber: sampleOrder.number,
   name: sampleOrder.name,
@@ -43,7 +56,12 @@ function samples(): Mail[] {
   const back = backInStockMail("Кафе на зърна Lavazza Qualità Oro 1 кг", `${site.url}/produkti`);
   return [
     orderPlacedMail(sampleOrder),
+    orderConfirmedMail(sampleOrder),
     orderShippedMail(sampleOrder),
+    { ...orderReadyMail(samplePickup), subject: `${orderReadyMail(samplePickup).subject} (при вземане от магазина)` },
+    orderDeliveredMail(sampleOrder),
+    orderCancelledMail(sampleOrder, "none"),
+    { ...orderCancelledMail(samplePaid, "done"), subject: `${orderCancelledMail(samplePaid, "done").subject} (платена с карта)` },
     { subject: confirmationSubject(sampleWithdrawal), html: confirmationHtml(sampleWithdrawal) },
     back,
     { ...shopNewOrderMail(sampleOrder), subject: `${shopNewOrderMail(sampleOrder).subject} (до магазина)` },
