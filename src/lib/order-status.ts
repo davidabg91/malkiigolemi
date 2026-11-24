@@ -3,7 +3,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { orderItems, orders, type OrderStatus } from "@/db/schema";
 import { syncOrderPoints } from "./loyalty";
-import { sendOrderShipped } from "./order-mail";
+import { sendOrderStatus } from "./order-mail";
 import { notifyOrderStatus } from "./push";
 import { refundOrder } from "./stripe";
 import { moveStock } from "./stock";
@@ -15,8 +15,8 @@ import { notifyRestocked } from "./stock-alerts";
  * - changes the status only if it is still `from` (or any of `allowedFrom`), so two clicks cannot both apply;
  * - returns goods to stock when an order is cancelled, and takes them again if it is re-opened;
  * - keeps loyalty points in step (earned on delivery, used points returned on cancel).
- * Afterwards, anyone waiting for a product that came back in stock is told, a shipped order's customer gets an e-mail,
- * and the customer's phone gets a notification about the new status.
+ * Afterwards, anyone waiting for a product that came back in stock is told, and the customer hears about the new
+ * status by e-mail and by a notification on the phone.
  */
 export async function changeOrderStatus(
   orderId: number,
@@ -50,7 +50,6 @@ export async function changeOrderStatus(
     return "changed" as const;
   });
   if (restocked.length) await notifyRestocked(restocked);
-  if (result === "changed" && to === "shipped") await sendOrderShipped(orderId);
   // The customer's phone hears about every step, when notifications are on there.
   if (result === "changed") await notifyOrderStatus(orderId);
   // A cancelled order paid by card gets its money back; if Stripe refuses, the admin sees a note to do it by hand.
@@ -60,6 +59,8 @@ export async function changeOrderStatus(
       .set({ note: sql`trim(coalesce(${orders.note}, '') || char(10) || 'Връщането на сумата в Stripe не успя — направи го ръчно от Stripe.')` })
       .where(eq(orders.id, orderId));
   }
+  // After the refund, so the e-mail about a cancelled order can say whether the money has gone back.
+  if (result === "changed") await sendOrderStatus(orderId);
   return result;
 }
 
