@@ -247,7 +247,7 @@ export const orders = sqliteTable(
     readyAt: integer("ready_at", { mode: "timestamp" }),
     createdAt: createdAt(),
   },
-  (t) => [index("orders_user_idx").on(t.userId), index("orders_fb_name_idx").on(t.fbName)],
+  (t) => [index("orders_user_idx").on(t.userId), index("orders_fb_name_idx").on(t.fbName), index("orders_intent_idx").on(t.stripePaymentIntent)],
 );
 
 export const orderItems = sqliteTable(
@@ -566,18 +566,59 @@ export const withdrawals = sqliteTable(
  * A card payment taken in the physical shop: the customer scans the QR code at the till, types the amount
  * on /plati and pays through Stripe. A row is written only once Stripe confirms the money.
  */
-export const storePayments = sqliteTable("store_payments", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  /** Euro cents. */
-  amount: integer("amount").notNull(),
-  /** What the customer wrote about the payment (a name, what it is for). */
-  note: text("note"),
-  stripeSessionId: text("stripe_session_id").notNull().unique(),
-  stripePaymentIntent: text("stripe_payment_intent"),
-  /** When the shop marked it as seen at the till; until then it counts as an admin notification. */
-  seenAt: integer("seen_at", { mode: "timestamp" }),
-  createdAt: createdAt(),
-});
+export const storePayments = sqliteTable(
+  "store_payments",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    /** Euro cents. */
+    amount: integer("amount").notNull(),
+    /** What the customer wrote about the payment (a name, what it is for). */
+    note: text("note"),
+    stripeSessionId: text("stripe_session_id").notNull().unique(),
+    stripePaymentIntent: text("stripe_payment_intent"),
+    /** When the shop marked it as seen at the till; until then it counts as an admin notification. */
+    seenAt: integer("seen_at", { mode: "timestamp" }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("store_payments_intent_idx").on(t.stripePaymentIntent)],
+);
+
+/**
+ * A copy of every card payment Stripe knows about (a Stripe "charge"), failed tries included, so the admin
+ * reads the whole history with the card, the customer, the fee and the refunds without opening Stripe.
+ * Stripe stays the source of truth: lib/stripe-ledger.ts brings the rows up to date.
+ */
+export const stripePayments = sqliteTable(
+  "stripe_payments",
+  {
+    /** Stripe's charge id (ch_… or py_…). */
+    id: text("id").primaryKey(),
+    /** Joins the row to store_payments or orders. */
+    paymentIntent: text("payment_intent"),
+    /** When the customer paid (or tried to). */
+    created: integer("created", { mode: "timestamp" }).notNull(),
+    /** Cents, in `currency`. */
+    amount: integer("amount").notNull(),
+    amountRefunded: integer("amount_refunded").notNull().default(0),
+    /** Stripe's fee and what is left for the shop; null until Stripe has booked the payment. */
+    fee: integer("fee"),
+    net: integer("net"),
+    currency: text("currency").notNull().default("eur"),
+    /** succeeded, failed or pending. */
+    status: text("status").notNull(),
+    disputed: integer("disputed", { mode: "boolean" }).notNull().default(false),
+    /** store (QR code at the till), order (an order on the site) or other. */
+    kind: text("kind").notNull().default("other"),
+    // Kept as columns for the search; everything else is in `data`.
+    name: text("name"),
+    email: text("email"),
+    last4: text("last4"),
+    /** The rest of what Stripe says about the payment, as JSON (PaymentDetails in lib/stripe-labels.ts). */
+    data: text("data").notNull().default("{}"),
+    syncedAt: integer("synced_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  },
+  (t) => [index("stripe_payments_created_idx").on(t.created), index("stripe_payments_intent_idx").on(t.paymentIntent)],
+);
 
 /**
  * Anonymous visit statistics for the admin (Админ → Посетители): page views, time on page, clicks,
@@ -627,6 +668,7 @@ export type OrderItem = typeof orderItems.$inferSelect;
 export type Setting = typeof settings.$inferSelect;
 export type Withdrawal = typeof withdrawals.$inferSelect;
 export type StorePayment = typeof storePayments.$inferSelect;
+export type StripePayment = typeof stripePayments.$inferSelect;
 export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 export type ChatThread = typeof chatThreads.$inferSelect;
 export type ChatMessage = typeof chatMessages.$inferSelect;
