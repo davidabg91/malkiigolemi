@@ -19,7 +19,8 @@ export function OrderProgress({ status, pickup }: { status: string; pickup: bool
           <li key={s.id} className="flex flex-col gap-1.5" aria-current={i === current ? "step" : undefined}>
             <span className={`h-1.5 rounded-full ${done ? "bg-forest" : "bg-line"}`} aria-hidden />
             <span className={`flex items-center gap-1 text-[0.72rem] leading-tight sm:text-xs ${done ? "font-semibold text-ink" : "text-ink-soft"}`}>
-              {done && <Check className="h-3 w-3 shrink-0 text-forest" aria-hidden />}
+              {/* On a phone the four labels fill the row; the coloured bar already says "done". */}
+              {done && <Check className="hidden h-3 w-3 shrink-0 text-forest sm:block" aria-hidden />}
               {s.label}
             </span>
           </li>
