@@ -1,5 +1,5 @@
 import "server-only";
-import { desc, eq, gte, isNull, sql } from "drizzle-orm";
+import { eq, gte, isNull, sql } from "drizzle-orm";
 import { after } from "next/server";
 import type Stripe from "stripe";
 import { db } from "@/db";
@@ -9,6 +9,7 @@ import { escapeHtml, mailLayout, sendMail } from "./mail";
 import { notifyAdminsStorePayment } from "./push";
 import { site } from "./site";
 import { stripe } from "./stripe";
+import { syncStripePayments } from "./stripe-ledger";
 
 /**
  * Card payments at the till: the customer scans the shop's QR code, types the sum on /plati and pays on
@@ -57,6 +58,8 @@ export async function recordStorePayment(session: Stripe.Checkout.Session): Prom
     return existing ?? null;
   }
   after(() => notifyAdminsStorePayment(added.amount, added.id, added.note));
+  // The card, the customer and the fee, for the list in the admin.
+  after(() => syncStripePayments());
   after(() =>
     sendMail(
       site.email,
@@ -79,7 +82,7 @@ export async function storePaymentOf(sessionId: string) {
 
 const sofiaClock = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Sofia", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
 
-/** The latest payments with what came in today (Bulgarian time) and in the last 30 days, for the admin. */
+/** What came in today (Bulgarian time) and in the last 30 days, and how many payments the shop has not seen yet. */
 export async function getStorePayments() {
   const now = Date.now();
   const [h, m, s] = sofiaClock.format(now).split(":").map(Number);
@@ -89,12 +92,11 @@ export async function getStorePayments() {
       .select({ sum: sql<number>`coalesce(sum(${storePayments.amount}), 0)`, n: sql<number>`count(*)` })
       .from(storePayments)
       .where(gte(storePayments.createdAt, since));
-  const [list, [today], [month], [unseen]] = await Promise.all([
-    db.select().from(storePayments).orderBy(desc(storePayments.createdAt)).limit(200),
+  const [[today], [month], [unseen]] = await Promise.all([
     totals(dayStart),
     totals(new Date(now - 30 * 86_400_000)),
     db.select({ n: sql<number>`count(*)` }).from(storePayments).where(isNull(storePayments.seenAt)),
   ]);
   const num = (t: { sum: number; n: number }) => ({ sum: Number(t.sum), n: Number(t.n) });
-  return { list, today: num(today), month: num(month), unseen: Number(unseen.n) };
+  return { today: num(today), month: num(month), unseen: Number(unseen.n) };
 }

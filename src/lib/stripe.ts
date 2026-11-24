@@ -21,6 +21,9 @@ export function stripe() {
   return client;
 }
 
+/** Copies the payment's details into the admin's payment history. Imported late: the ledger needs this file. */
+const syncLedger = () => import("./stripe-ledger").then((m) => m.syncStripePayments());
+
 /** How long a customer has to pay before the order is cancelled and its goods go back on sale. */
 const PAY_WITHIN_MINUTES = 60;
 
@@ -79,7 +82,10 @@ export async function recordPayment(session: Stripe.Checkout.Session) {
     .set({ paidAt: new Date(), stripePaymentIntent: intent })
     .where(and(eq(orders.id, orderId), isNull(orders.paidAt)))
     .returning({ id: orders.id });
-  if (updated.length) after(() => sendOrderPlaced(orderId));
+  if (updated.length) {
+    after(() => sendOrderPlaced(orderId));
+    after(syncLedger);
+  }
   return true;
 }
 
@@ -97,6 +103,7 @@ export async function refundOrder(orderId: number) {
   try {
     await stripe().refunds.create({ payment_intent: order.stripePaymentIntent }, { idempotencyKey: `refund-order-${order.id}` });
     await db.update(orders).set({ refundedAt: new Date() }).where(eq(orders.id, order.id));
+    after(syncLedger);
     return true;
   } catch (e) {
     console.error("Stripe refund failed", order.number, e);

@@ -10,6 +10,7 @@ import { assertAdmin, tooManyAttempts } from "@/lib/auth";
 import { formatPrice, parseEuro } from "@/lib/format";
 import { createStoreCheckout, STORE_PAY_MAX, STORE_PAY_MIN } from "@/lib/store-payments";
 import { stripeConfigured } from "@/lib/stripe";
+import { syncStripePayments } from "@/lib/stripe-ledger";
 
 export type StorePayState = { error: string } | null;
 
@@ -45,5 +46,12 @@ export async function markStorePaymentSeen(id: number, seen: boolean) {
 export async function markAllStorePaymentsSeen() {
   await assertAdmin();
   await db.update(storePayments).set({ seenAt: new Date() }).where(isNull(storePayments.seenAt));
+  refresh();
+}
+
+/** Admin: reads the whole payment history from Stripe again, for when something looks out of date. */
+export async function refreshStripeLedger() {
+  await assertAdmin();
+  await syncStripePayments(true);
   refresh();
 }
