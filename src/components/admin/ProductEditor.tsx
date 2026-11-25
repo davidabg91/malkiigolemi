@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { brands, categories, products } from "@/db/schema";
-import { ShareButton } from "@/components/product/ShareButton";
+import { ShareButton } from "@/components/ShareButton";
 import { btn } from "@/components/ui";
 import { requireAdmin } from "@/lib/auth";
 import { absoluteUrl, productTitle } from "@/lib/seo";

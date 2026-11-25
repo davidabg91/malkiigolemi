@@ -2,9 +2,11 @@ import { SearchX } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ProductCard } from "@/components/product/ProductCard";
+import { ShareButton } from "@/components/ShareButton";
 import { Breadcrumbs, btn } from "@/components/ui";
 import { SORTS, type SortKey } from "@/lib/listing";
 import { listProducts, type ListingScope } from "@/lib/queries";
+import { site } from "@/lib/site";
 import { ListingShell, type Current } from "./ListingShell";
 import { SortableGrid } from "./SortableGrid";
 
@@ -73,7 +75,11 @@ export function ListingHeader({
 }) {
   return (
     <header className="mb-8">
-      <Breadcrumbs items={crumbs} />
+      <div className="flex items-start justify-between gap-3">
+        <Breadcrumbs items={crumbs} />
+        {/* Sends the listing as it is shown now, with its filters and search words. */}
+        <ShareButton title={`${title} · ${site.name}`} className="-mt-2 shrink-0" />
+      </div>
       <h1 className="mt-4 font-display text-3xl font-semibold leading-tight tracking-tight sm:text-[2.6rem]">{title}</h1>
       {description && <p className="mt-3 max-w-2xl text-lg text-ink-soft">{description}</p>}
       {children}

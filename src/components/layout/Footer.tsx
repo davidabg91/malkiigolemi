@@ -1,5 +1,6 @@
 import { ArrowUpRight, Clock, Mail, MapPin, Phone, Smartphone } from "lucide-react";
 import Link from "next/link";
+import { ShareButton } from "@/components/ShareButton";
 import { FacebookIcon, Logo } from "@/components/ui";
 import { getCategoryTree } from "@/lib/queries";
 import { COMPANY, site } from "@/lib/site";
@@ -34,6 +35,14 @@ export async function Footer() {
             <FacebookIcon className="h-4 w-4 text-cyan-300" />
             <span>Facebook група (30 000+ членове)</span>
           </a>
+          <ShareButton
+            url="/"
+            title={site.title}
+            label="Сподели магазина"
+            className="mt-3 w-fit"
+            buttonClassName="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-xs font-semibold text-white backdrop-blur transition hover:bg-white/20 [&>svg]:text-cyan-300"
+            menuClassName="left-0 bottom-full mb-2"
+          />
         </div>
         <nav aria-label="Категории във футъра">
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-[0.16em] text-cyan-300">Категории</h2>

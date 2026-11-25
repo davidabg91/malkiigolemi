@@ -15,6 +15,7 @@ import { BoxNowParcel, type ExistingParcel } from "@/components/admin/BoxNowParc
 import { EcontWaybill, type ExistingWaybill } from "@/components/admin/EcontWaybill";
 import { FlagBanner, FlagPanel } from "@/components/admin/Flag";
 import { ProductVisual } from "@/components/product/PackShot";
+import { ShareButton } from "@/components/ShareButton";
 import { StatusPill } from "@/components/StatusPill";
 import { btn } from "@/components/ui";
 import { db } from "@/db";
@@ -460,6 +461,9 @@ async function AdminOrder({ params }: Pick<PageProps<"/admin/porachki/[id]">, "p
                 <a href={`/porachka/${order.number}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
                   Страницата на поръчката за клиента
                 </a>
+              </li>
+              <li className="pl-7">
+                <ShareButton url={`/porachka/${order.number}`} title={`Поръчка ${order.number} · ${site.name}`} label="Изпрати я на клиента" menuClassName="left-0 top-full mt-2" />
               </li>
               {order.fbUserId && (
                 <li className="flex gap-3">
