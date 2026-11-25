@@ -1,6 +1,7 @@
 import { Clock, Mail, MapPin, Phone, Store } from "lucide-react";
 import Link from "next/link";
 import type { ComponentType, ReactNode } from "react";
+import { ShareButton } from "@/components/ShareButton";
 import { Breadcrumbs, btn, FacebookIcon, ShopMark } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
 import { COMPANY, DELIVERY_METHODS, shippingFor, site, STORE } from "@/lib/site";
@@ -8,7 +9,10 @@ import { COMPANY, DELIVERY_METHODS, shippingFor, site, STORE } from "@/lib/site"
 export function InfoPage({ title, lead, children }: { title: string; lead?: string; children: ReactNode }) {
   return (
     <div className="container-shop max-w-3xl pt-6 sm:pt-8">
-      <Breadcrumbs items={[{ label: title }]} />
+      <div className="flex items-start justify-between gap-3">
+        <Breadcrumbs items={[{ label: title }]} />
+        <ShareButton title={`${title} · ${site.name}`} className="-mt-2 shrink-0" />
+      </div>
       <h1 className="mt-4 font-display text-3xl font-semibold leading-tight tracking-tight sm:text-[2.6rem]">{title}</h1>
       {lead && <p className="mt-4 text-lg text-ink-soft">{lead}</p>}
       <div className="mt-8 space-y-5 leading-relaxed text-ink-soft [&_h2]:mt-10 [&_h2]:font-display [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-ink [&_li]:ml-5 [&_li]:list-disc [&_strong]:text-ink [&_ul]:space-y-2">

@@ -1,6 +1,7 @@
 import { ArrowUpRight, CheckCircle2, MessageCircle, Tag, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
+import { ShareButton } from "@/components/ShareButton";
 import { Breadcrumbs, FacebookIcon } from "@/components/ui";
 import { site } from "@/lib/site";
 
@@ -13,7 +14,10 @@ export const metadata: Metadata = {
 export default function FacebookPage() {
   return (
     <div className="container-shop max-w-4xl pt-6 sm:pt-8">
-      <Breadcrumbs items={[{ label: "Facebook общност" }]} />
+      <div className="flex items-start justify-between gap-3">
+        <Breadcrumbs items={[{ label: "Facebook общност" }]} />
+        <ShareButton title={`Facebook общност · ${site.name}`} className="-mt-2 shrink-0" />
+      </div>
 
       <div className="mt-6 overflow-hidden rounded-tile border border-sky-100 bg-paper shadow-lift">
         {/* Cover Header with Original Photo */}

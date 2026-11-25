@@ -11,7 +11,7 @@ import { ProductVisual } from "@/components/product/PackShot";
 import { Badges, ProductCard, ProductStamp } from "@/components/product/ProductCard";
 import { ProductZoom } from "@/components/product/ProductZoom";
 import { RecentlyViewed } from "@/components/product/Recent";
-import { ShareButton } from "@/components/product/ShareButton";
+import { ShareButton } from "@/components/ShareButton";
 import { Reviews } from "@/components/product/Reviews";
 import { ratingLabel, Stars } from "@/components/product/Stars";
 import { StockPill } from "@/components/product/StockPill";

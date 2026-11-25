@@ -14,6 +14,7 @@ import { site } from "@/lib/site";
 import { cartTotals, useCart, useHydrated, useWishlist } from "@/lib/store";
 import { AccountButton } from "./AccountButton";
 import { AdminViewsLoader } from "@/components/admin/ProductViews";
+import { ShareButton } from "@/components/ShareButton";
 import { arrayMove, CategoryNav } from "./CategoryNav";
 import { SearchBox } from "./SearchBox";
 
@@ -667,6 +668,12 @@ export function HeaderClient({ tree, isAdmin, adminAlerts = null }: { tree: Menu
                       <Phone className="h-4 w-4 text-forest" aria-hidden />
                       {site.phone}
                     </a>
+                    {/* The installed app has no address bar: this sends whatever page is open behind the menu. */}
+                    <ShareButton
+                      label="Сподели тази страница"
+                      buttonClassName="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-sand py-2.5 text-sm font-semibold text-ink [&>svg]:text-forest"
+                      menuClassName="left-0 bottom-full mb-2"
+                    />
                   </div>
                 </motion.div>
               </div>
