@@ -53,6 +53,8 @@ export function AdminNav({ name, alerts }: { name: string; alerts: AdminAlerts }
             <Link
               key={href}
               href={href}
+              // Sixteen sections, each a server render: fetch one when it is pointed at, not all of them on every page.
+              prefetch={false}
               aria-current={active ? "page" : undefined}
               className={`flex h-11 items-center gap-3 whitespace-nowrap rounded-xl px-3.5 text-[0.95rem] font-medium transition ${active ? "bg-forest text-white" : "text-ink-soft hover:bg-sand hover:text-ink"}`}
             >
