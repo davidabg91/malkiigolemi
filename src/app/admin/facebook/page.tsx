@@ -26,6 +26,9 @@ const sameDay = (a: number, b: number) => dayLabel.format(a) === dayLabel.format
 /** "14:35", or "утре в 08:10" / "12.11 в 08:10" when it is not today. */
 const whenAt = (at: number, now: number) => (sameDay(at, now) ? clock.format(at) : `${sameDay(at, now + 86400000) ? "утре" : dayLabel.format(at)} в ${clock.format(at)}`);
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const bgDay = (day: string) => day.split("-").reverse().join(".");
+/** "на 20.11.2026", "от 20.11.2026 до 22.11.2026", "от 25.11.2026 нататък" */
+const collectDays = (p: { from: string; to: string | null }) => (!p.to ? `от ${bgDay(p.from)} нататък` : p.to === p.from ? `на ${bgDay(p.from)}` : `от ${bgDay(p.from)} до ${bgDay(p.to)}`);
 
 const RUN_KIND = { auto: "Автоматично", manual: "На ръка, всички постове", post: "На ръка, един пост" } as const;
 const MESSAGE_PROBLEMS: Record<string, string> = {
@@ -256,10 +259,10 @@ async function AdminFacebook({ searchParams }: Pick<PageProps<"/admin/facebook">
             <h2 className="font-display text-lg font-semibold">Постове</h2>
             <p className="mt-1 text-sm text-ink-soft">
               Всеки пост, който скриптът е обходил, с продукта му и какво е станало с коментарите.
-              {data.since && (
+              {data.periods.length > 0 && (
                 <>
                   {" "}
-                  Събира от постове, публикувани от <span className="font-semibold text-ink">{data.since.split("-").reverse().join(".")}</span> нататък; по-старите подминава.
+                  Събира от постове, публикувани <span className="font-semibold text-ink">{data.periods.map(collectDays).join("; ")}</span>; останалите подминава.
                 </>
               )}
             </p>
@@ -358,7 +361,7 @@ async function AdminFacebook({ searchParams }: Pick<PageProps<"/admin/facebook">
                         {plural(r.visited, "пост", "поста")}
                         {r.failed > 0 && <span className="font-semibold text-tomato"> ({r.failed} {r.failed === 1 ? "не се отвори" : "не се отвориха"})</span>} · {plural(r.added, "нова заявка", "нови заявки")} · {r.ordered} в поръчки
                         {r.replied > 0 && ` · ${plural(r.replied, "отговор", "отговора")}`}
-                        {r.skippedOld > 0 && ` · ${plural(r.skippedOld, "стар пост подминат", "стари поста подминати")}`}
+                        {r.skippedOld > 0 && ` · ${plural(r.skippedOld, "пост извън датите подминат", "поста извън датите подминати")}`}
                       </p>
                       {problem && <p className="mt-0.5 font-medium text-tomato">{problem}</p>}
                     </li>
@@ -397,7 +400,7 @@ async function AdminFacebook({ searchParams }: Pick<PageProps<"/admin/facebook">
       <h2 className="mb-4 mt-10 font-display text-xl font-semibold">Настройки и инсталация</h2>
       <div className="space-y-6">
         <FbExtensionCard token={fbExtensionToken()} latest={extension.version} />
-        <FbOrdersForm auto={orderSettings.auto} message={orderSettings.message} since={orderSettings.since} />
+        <FbOrdersForm auto={orderSettings.auto} message={orderSettings.message} periods={orderSettings.periods} />
         <FbAutoReplyForm enabled={reply.enabled} text={reply.text} pauseSeconds={FB_REPLY_LIMITS.pauseMs / 1000} perRun={FB_REPLY_LIMITS.perRun} maxAgeHours={FB_REPLY_LIMITS.maxAgeHours} />
       </div>
     </>

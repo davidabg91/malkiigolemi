@@ -5,6 +5,7 @@ import { type FbClaim, fbClaims, fbContacts, fbMessages, type FbPost, fbPosts, t
 import { deliveryNote } from "./availability";
 import { fbContactKey } from "./fb-contacts";
 import { quantityOf } from "./fb-parse";
+import type { FbPeriod } from "./fb-since";
 import { savedOffice } from "./courier-offices";
 import { quoteShipping } from "./delivery-quote";
 import { formatPrice, formatTimestamp, unitPriceFor } from "./format";
@@ -29,16 +30,16 @@ export type FbOrderSettings = {
   /** The message for "Готова за взимане"; {име}, {продукти}, {сума} and {адрес} are filled in. */
   message: string;
   /**
-   * The day collecting starts ("YYYY-MM-DD", Bulgarian time): posts published before it are left alone when the
-   * script goes through the group, because their orders were taken by hand. Null collects from every post.
+   * The days collecting covers: posts published outside these periods are left alone when the script goes
+   * through the group, because their orders were taken by hand. No periods collects from every post.
    */
-  since: string | null;
+  periods: FbPeriod[];
 };
 
 export const DEFAULT_FB_ORDERS: FbOrderSettings = {
   auto: true,
   // The owner asked on this day for only the posts from then on: the earlier ones were already written down by hand.
-  since: "2026-11-18",
+  periods: [{ from: "2026-11-18", to: null }],
   message:
     "Здравейте, {име}! Пристигнаха продуктите от Вашата поръчка:\n{продукти}\nОбщо: {сума}\nВижте поръчката си тук: {линк}\nМоже да я вземете от магазина ({адрес}) или на същия линк да оставите данни за доставка с куриер.\nРаботно време: Вторник - Петък / 11:30-18:30ч\nБлагодарим Ви!",
 };
@@ -55,7 +56,10 @@ export async function getFbOrderSettings(): Promise<FbOrderSettings> {
   const [row] = await db.select().from(settings).where(eq(settings.key, KEY)).limit(1);
   if (!row) return { ...DEFAULT_FB_ORDERS };
   try {
-    const saved = { ...DEFAULT_FB_ORDERS, ...(JSON.parse(row.value) as Partial<FbOrderSettings>) };
+    const raw = JSON.parse(row.value) as Partial<FbOrderSettings> & { since?: string | null };
+    // Saved before there were periods: one day collecting started on, or none.
+    const periods = Array.isArray(raw.periods) ? raw.periods : "since" in raw ? (raw.since ? [{ from: raw.since, to: null }] : []) : DEFAULT_FB_ORDERS.periods;
+    const saved: FbOrderSettings = { auto: raw.auto ?? DEFAULT_FB_ORDERS.auto, message: raw.message ?? DEFAULT_FB_ORDERS.message, periods };
     return EARLIER_MESSAGES.includes(saved.message.replace(/\r\n/g, "\n").trim()) ? { ...saved, message: DEFAULT_FB_ORDERS.message } : saved;
   } catch {
     return { ...DEFAULT_FB_ORDERS };

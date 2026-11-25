@@ -12,7 +12,7 @@ import { isCourierId } from "@/lib/couriers";
 import { fbContactKey } from "@/lib/fb-contacts";
 import { addClaimByHand, autoOrderClaims, markOrderReady, removeOrderItems, saveFbOrderSettings, splitOrder, unmarkOrderReady } from "@/lib/fb-orders";
 import { saveFbReplySettings } from "@/lib/fb-reply";
-import { startOfSofiaDay } from "@/lib/fb-since";
+import { type FbPeriod, startOfSofiaDay } from "@/lib/fb-since";
 import { unitPriceFor } from "@/lib/format";
 import { orderNumber } from "@/lib/orders";
 import { pricedColumns } from "@/lib/pricing";
@@ -210,9 +210,23 @@ export async function saveFbOrders(_prev: FbFormState, formData: FormData): Prom
   await assertAdmin();
   const message = String(formData.get("message") ?? "").replace(/\r\n/g, "\n").trim();
   if (message.length < 10 || message.length > 1000) return { error: "Напиши съобщението (до 1000 знака).", fieldErrors: { message: "Напиши съобщението (до 1000 знака)." } };
-  const since = String(formData.get("since") ?? "").trim();
-  if (since && startOfSofiaDay(since) === null) return { error: "Невалидна дата.", fieldErrors: { since: "Избери дата от календара." } };
-  await saveFbOrderSettings({ auto: formData.get("auto") === "on", message, since: since || null });
+  // The days collecting covers: rows of "from" and "to"; a row left empty is not a period.
+  const froms = formData.getAll("from").map((v) => String(v).trim());
+  const tos = formData.getAll("to").map((v) => String(v).trim());
+  const periods: FbPeriod[] = [];
+  const wrong = (text: string): FbFormState => ({ error: text, fieldErrors: { periods: text } });
+  for (let i = 0; i < froms.length; i++) {
+    const from = froms[i];
+    const to = tos[i] ?? "";
+    if (!from && !to) continue;
+    if (!from) return wrong("Избери начална дата за всеки период.");
+    if (startOfSofiaDay(from) === null || (to && startOfSofiaDay(to) === null)) return wrong("Избери датите от календара.");
+    if (to && to < from) return wrong("Крайната дата не може да е преди началната.");
+    periods.push({ from, to: to || null });
+  }
+  if (periods.length > 30) return wrong("Най-много 30 периода.");
+  periods.sort((a, b) => a.from.localeCompare(b.from));
+  await saveFbOrderSettings({ auto: formData.get("auto") === "on", message, periods });
   refresh();
   return { ok: true };
 }
