@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import SiteImage from "@/app/opengraph-image";
 import { discountPercent, formatPrice } from "@/lib/format";
-import { LOGO_RATIO, LOGO_SRC, OG_FONTS, OG_SIZE, productPhoto, tint } from "@/lib/og";
+import { LOGO_RATIO, LOGO_SRC, OG_CACHE, OG_FONTS, OG_SIZE, productPhoto, tint } from "@/lib/og";
 import { getProduct } from "@/lib/queries";
 import { site } from "@/lib/site";
 
@@ -64,6 +64,6 @@ export default async function Image({ params }: { params: Promise<{ slug: string
         </div>
       </div>
     ),
-    { ...size, fonts: OG_FONTS },
+    { ...size, fonts: OG_FONTS, headers: { "Cache-Control": OG_CACHE } },
   );
 }

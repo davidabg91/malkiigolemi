@@ -6,6 +6,14 @@ import sharp from "sharp";
 /** Share-image size used by Facebook, Viber, WhatsApp, Messenger and X. */
 export const OG_SIZE = { width: 1200, height: 630 };
 
+/**
+ * Lets Vercel's CDN keep a drawn product share image for a day, and go on serving it for up to a week
+ * while a new one is drawn in the background. Without it every preview Facebook, Messenger or Viber asks
+ * for is drawn again (about a third of a second of CPU each), which alone used up most of the plan's
+ * monthly CPU time. A price change therefore reaches the share image within a day, not at once.
+ */
+export const OG_CACHE = "public, s-maxage=86400, stale-while-revalidate=604800";
+
 // Read once per server instance: none of it depends on the request. Spelled-out paths let the build
 // ship exactly these files with the image routes.
 const [onestMedium, onestBold, unboundedBold, logo] = await Promise.all([
