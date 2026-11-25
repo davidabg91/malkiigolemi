@@ -407,8 +407,8 @@ export async function fbDashboard(period: FbPeriodId) {
     demand: [...demand.values()].sort((a, b) => b.ordered + b.waiting - (a.ordered + a.waiting)),
     days: [...perDay.entries()].map(([day, v]) => ({ day, ...v })),
     openMessages: failedMessages,
-    /** The day collecting starts ("YYYY-MM-DD"), or null when every post counts. */
-    since: orderSettings.since,
+    /** The days collecting covers; none when every post counts. */
+    periods: orderSettings.periods,
   };
 }
 

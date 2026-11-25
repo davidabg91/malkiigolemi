@@ -1,17 +1,24 @@
 "use client";
 
-import { Loader2, PackageCheck } from "lucide-react";
+import { Loader2, PackageCheck, Plus, X } from "lucide-react";
 import { useActionState, useState } from "react";
 import { saveFbOrders } from "@/actions/facebook";
 import { btn } from "@/components/ui";
+import type { FbPeriod } from "@/lib/fb-since";
+
+type Row = { id: number; from: string; to: string };
+const nextId = (rows: Row[]) => rows.reduce((max, r) => Math.max(max, r.id), -1) + 1;
 
 /**
  * Админ → От Facebook: whether a clear claim goes into its person's order by itself, and the wording of the
  * message "Готова за взимане" sends to the person's chat.
  */
-export function FbOrdersForm({ auto, message, since }: { auto: boolean; message: string; since: string | null }) {
+export function FbOrdersForm({ auto, message, periods }: { auto: boolean; message: string; periods: FbPeriod[] }) {
   const [state, action, pending] = useActionState(saveFbOrders, undefined);
   const [on, setOn] = useState(auto);
+  // The days collecting covers, one row per period; an empty "to" is "from that day on".
+  const [rows, setRows] = useState<Row[]>(() => periods.map((p, id) => ({ id, from: p.from, to: p.to ?? "" })));
+  const change = (id: number, value: Partial<Row>) => setRows((all) => all.map((r) => (r.id === id ? { ...r, ...value } : r)));
 
   return (
     <form action={action} className="rounded-card bg-paper p-5 shadow-soft sm:p-6">
@@ -37,17 +44,52 @@ export function FbOrdersForm({ auto, message, since }: { auto: boolean; message:
         <li>Поръчка, отбелязана „Готова за взимане“, не приема повече продукти: следващият коментар на човека отваря нова.</li>
       </ul>
 
-      <div className="mt-5">
-        <label htmlFor="fb-since" className="mb-1.5 block text-sm font-medium">
-          Събирай от постове, публикувани от
-        </label>
-        <input id="fb-since" type="date" name="since" defaultValue={since ?? ""} className="field w-auto" aria-invalid={Boolean(state?.fieldErrors?.since)} />
-        {state?.fieldErrors?.since && <p className="mt-1.5 text-sm font-medium text-tomato">{state.fieldErrors.since}</p>}
+      <fieldset className="mt-5">
+        <legend className="mb-1.5 text-sm font-medium">Събирай от постове, публикувани</legend>
+        <ul className="space-y-2">
+          {rows.map((r, i) => (
+            <li key={r.id} className="flex flex-wrap items-center gap-2">
+              <label htmlFor={`fb-from-${r.id}`} className="text-sm text-ink-soft">
+                от
+              </label>
+              <input
+                id={`fb-from-${r.id}`}
+                type="date"
+                name="from"
+                value={r.from}
+                max={r.to || undefined}
+                onChange={(e) => change(r.id, { from: e.target.value })}
+                className="field w-auto"
+                aria-invalid={Boolean(state?.fieldErrors?.periods)}
+              />
+              <label htmlFor={`fb-to-${r.id}`} className="text-sm text-ink-soft">
+                до
+              </label>
+              <input id={`fb-to-${r.id}`} type="date" name="to" value={r.to} min={r.from || undefined} onChange={(e) => change(r.id, { to: e.target.value })} className="field w-auto" />
+              {!r.to && r.from && <span className="text-sm text-ink-soft">нататък</span>}
+              <button
+                type="button"
+                onClick={() => setRows((all) => all.filter((x) => x.id !== r.id))}
+                className="grid h-10 w-10 place-items-center rounded-full text-ink-soft transition hover:bg-sand hover:text-tomato"
+                aria-label={`Махни период ${i + 1}`}
+                title="Махни периода"
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </button>
+            </li>
+          ))}
+        </ul>
+        {rows.length === 0 && <p className="text-sm font-medium">Няма избрани дати: събира от всички постове.</p>}
+        <button type="button" onClick={() => setRows((all) => [...all, { id: nextId(all), from: "", to: "" }])} className={`${btn.sm} mt-2`}>
+          <Plus className="h-4 w-4" aria-hidden />
+          Добави период
+        </button>
+        {state?.fieldErrors?.periods && <p className="mt-1.5 text-sm font-medium text-tomato">{state.fieldErrors.periods}</p>}
         <p className="mt-1.5 max-w-2xl text-sm text-ink-soft">
-          По-старите постове скриптът подминава, когато обхожда групата: поръчките от тях вече са записани на ръка. Остави празно, за да събира от всички. Пост, който отвориш сам и натиснеш „Вземи поръчките от този пост“, се взима
-          винаги.
+          Постовете, публикувани извън тези дати, скриптът подминава, когато обхожда групата. Двете дати се включват: за един ден сложи една и съща дата в „от“ и „до“. Празно „до“ значи от началната дата нататък. Без нито един
+          период събира от всички постове. Пост, който отвориш сам и натиснеш „Вземи поръчките от този пост“, се взима винаги.
         </p>
-      </div>
+      </fieldset>
 
       <div className="mt-5">
         <label htmlFor="fb-pickup-message" className="mb-1.5 block text-sm font-medium">

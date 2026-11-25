@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { fbPosts } from "@/db/schema";
 import { FB_COLLECT_DAYS, isFbExtensionRequest } from "@/lib/fb-ingest";
 import { getFbOrderSettings } from "@/lib/fb-orders";
-import { startOfSofiaDay } from "@/lib/fb-since";
+import { inPeriods, periodBounds } from "@/lib/fb-since";
 import { site } from "@/lib/site";
 
 /**
@@ -13,8 +13,8 @@ import { site } from "@/lib/site";
 export async function GET(request: Request) {
   if (!isFbExtensionRequest(request)) return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
   const since = new Date(Date.now() - FB_COLLECT_DAYS * 24 * 60 * 60 * 1000);
-  // Posts from before the day collecting starts are neither followed nor opened when met in the group.
-  const start = startOfSofiaDay((await getFbOrderSettings()).since);
+  // Posts published outside the days collecting covers are neither followed nor opened when met in the group.
+  const bounds = periodBounds((await getFbOrderSettings()).periods);
   const [followed, closed] = await Promise.all([
     db
       .select({ fbId: fbPosts.fbId, url: fbPosts.url, postedAt: fbPosts.postedAt, createdAt: fbPosts.createdAt })
@@ -22,7 +22,7 @@ export async function GET(request: Request) {
       .where(and(isNotNull(fbPosts.fbId), isNull(fbPosts.closedAt), gte(fbPosts.createdAt, since))),
     db.select({ fbId: fbPosts.fbId }).from(fbPosts).where(and(isNotNull(fbPosts.fbId), isNotNull(fbPosts.closedAt))),
   ]);
-  const isOld = (p: (typeof followed)[number]) => start !== null && (p.postedAt ?? p.createdAt).getTime() < start;
+  const isOld = (p: (typeof followed)[number]) => !inPeriods((p.postedAt ?? p.createdAt).getTime(), bounds);
   const open = followed.filter((p) => !isOld(p)).map((p) => ({ fbId: p.fbId, url: p.url }));
   return Response.json(
     { ok: true, group: site.facebookUrl, open, closed: [...closed.map((p) => p.fbId), ...followed.filter(isOld).map((p) => p.fbId)] },

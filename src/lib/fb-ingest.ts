@@ -8,7 +8,7 @@ import { fbContactKey } from "./fb-contacts";
 import { autoOrderClaims, getFbOrderSettings } from "./fb-orders";
 import { quantityOf } from "./fb-parse";
 import { commentAgeHours, FB_REPLY_LIMITS, getFbReplySettings } from "./fb-reply";
-import { startOfSofiaDay, stampToTime } from "./fb-since";
+import { inPeriods, periodBounds, placeInPeriods, type Span, stampToSpan } from "./fb-since";
 
 /**
  * Comments read by the browser extension (see /extension) arrive here and become fbPosts and fbClaims,
@@ -200,21 +200,27 @@ async function productOf(input: FbIngest) {
  * About when a post was published: the date it shows, and never later than its oldest comment
  * (which also works for extensions that do not read the date of the post itself).
  */
-function postedTime(input: FbIngest, now = Date.now()) {
-  const times = [stampToTime(input.stamp, now), ...input.comments.map((c) => stampToTime(c.time, now))].filter((t): t is number => t !== null);
-  return times.length > 0 ? Math.min(...times) : null;
+function postedSpan(input: FbIngest, now = Date.now()): Span | null {
+  const own = stampToSpan(input.stamp, now);
+  const latests = [own?.latest, ...input.comments.map((c) => stampToSpan(c.time, now)?.latest)].filter((t): t is number => t != null);
+  if (latests.length === 0) return null;
+  const latest = Math.min(...latests);
+  return { earliest: Math.min(own?.earliest ?? latest, latest), latest };
 }
+
+/** A moment the site already keeps for a post. */
+const kept = (at: Date): Span => ({ earliest: at.getTime(), latest: at.getTime() });
 
 type FoundPost = { fbId: string; url: string; stamp?: string };
 
 /**
  * What "collect from all posts" should open: the posts the extension met in the group plus the ones the site is
- * still collecting from, without the stopped ones and without the ones from before the day collecting starts.
- * A post is judged once, by the date it showed the first time; `old` counts the ones left out for their age.
+ * still collecting from, without the stopped ones and without the ones published outside the days collecting covers.
+ * A post is judged once, by the date it showed the first time; `old` counts the ones left out for their date.
  */
 export async function fbQueue(found: FoundPost[]): Promise<{ queue: { fbId: string; url: string }[]; old: number }> {
   const now = Date.now();
-  const since = startOfSofiaDay((await getFbOrderSettings()).since);
+  const bounds = periodBounds((await getFbOrderSettings()).periods);
   const known = await db.select().from(fbPosts).where(isNotNull(fbPosts.fbId));
   const byId = new Map(known.map((p) => [p.fbId as string, p]));
   const collectFrom = now - FB_COLLECT_DAYS * 24 * 60 * 60 * 1000;
@@ -226,9 +232,10 @@ export async function fbQueue(found: FoundPost[]): Promise<{ queue: { fbId: stri
     const row = byId.get(f.fbId);
     if (row?.closedAt) continue;
     // A post the site knows keeps the date it was given first; one read before dates were kept counts from when the site met it.
-    const posted = row?.postedAt?.getTime() ?? stampToTime(f.stamp, now) ?? (row ? row.createdAt.getTime() : null);
-    if (row && !row.postedAt && posted !== null) await db.update(fbPosts).set({ postedAt: new Date(posted) }).where(eq(fbPosts.id, row.id));
-    if (since !== null && posted !== null && posted < since) {
+    const span = row?.postedAt ? kept(row.postedAt) : (stampToSpan(f.stamp, now) ?? (row ? kept(row.createdAt) : null));
+    const at = span && placeInPeriods(span, bounds);
+    if (row && !row.postedAt && span) await db.update(fbPosts).set({ postedAt: new Date(at ?? span.latest) }).where(eq(fbPosts.id, row.id));
+    if (span && at === null) {
       old++;
       continue;
     }
@@ -237,7 +244,7 @@ export async function fbQueue(found: FoundPost[]): Promise<{ queue: { fbId: stri
   // Posts the site still follows that the first screens of the group did not show this time.
   for (const row of known) {
     if (!row.fbId || !row.url || row.closedAt || queue.has(row.fbId) || row.createdAt.getTime() < collectFrom) continue;
-    if (since !== null && (row.postedAt ?? row.createdAt).getTime() < since) continue;
+    if (!inPeriods((row.postedAt ?? row.createdAt).getTime(), bounds)) continue;
     queue.set(row.fbId, { fbId: row.fbId, url: row.url });
   }
   return { queue: [...queue.values()], old };
@@ -254,12 +261,14 @@ export async function ingestFbPost(input: FbIngest): Promise<FbIngestResult> {
       .limit(1);
   }
 
-  // A post from before the day collecting starts is left alone, unless an admin opened it and asked for it.
-  const posted = post?.postedAt?.getTime() ?? postedTime(input);
+  // A post published outside the days collecting covers is left alone, unless an admin opened it and asked for it.
+  const span = post?.postedAt ? kept(post.postedAt) : postedSpan(input);
+  const within = span && input.crawl !== false ? placeInPeriods(span, periodBounds((await getFbOrderSettings()).periods)) : null;
+  // The date kept for the post lies inside the period that took it, so the next look at it decides the same.
+  const posted = span ? (within ?? span.latest) : null;
   if (post && !post.postedAt && posted !== null) await db.update(fbPosts).set({ postedAt: new Date(posted) }).where(eq(fbPosts.id, post.id));
   if (input.crawl !== false) {
-    const since = startOfSofiaDay((await getFbOrderSettings()).since);
-    if (since !== null && posted !== null && posted < since) {
+    if (span && within === null) {
       return { saved: false, postId: post?.id ?? null, product: null, added: 0, pending: 0, ordered: 0, stockChanged: false, reply: null, old: true };
     }
   }
