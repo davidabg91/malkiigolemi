@@ -150,16 +150,6 @@ export function BoxNowSettingsForm({
       <fieldset>
         <legend className="mb-3 font-semibold">Пратки по подразбиране</legend>
         <div className="grid gap-4 sm:grid-cols-3">
-          <div>
-            <label htmlFor={`${uid}-size`} className="mb-1.5 block text-sm font-medium">
-              Размер на клетката
-            </label>
-            <select id={`${uid}-size`} name="defaultSize" defaultValue={String(initial.defaultSize)} className="field">
-              <option value="1">Малка (до 8 см височина)</option>
-              <option value="2">Средна (до 17 см)</option>
-              <option value="3">Голяма (до 36 см)</option>
-            </select>
-          </div>
           {field("defaultWeight", "Тегло (кг)", { inputMode: "decimal", required: true })}
         </div>
         <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-line p-3.5 has-[:checked]:border-forest has-[:checked]:bg-lime/20">
@@ -169,7 +159,7 @@ export function BoxNowSettingsForm({
             <span className="text-sm text-ink-soft">Клиентът може да върне пратката от автомат (само ако договорът го включва).</span>
           </span>
         </label>
-        <p className="mt-2 text-xs text-ink-soft">Клетката е 45 × 60 см; BOX NOW приема пратки до 20 кг.</p>
+        <p className="mt-2 text-xs text-ink-soft">Размерът на клетката се избира за всяка пратка, при създаването ѝ. BOX NOW приема пратки до 20 кг.</p>
       </fieldset>
 
       <fieldset>

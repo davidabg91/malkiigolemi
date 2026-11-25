@@ -18,6 +18,13 @@ export type ExistingParcel = {
   trackedAt: string | null;
 };
 
+/** BOX NOW's compartments; every one is 45 × 60 cm, only the height differs. */
+const SIZES = [
+  { id: 1, name: "Малка", height: 8 },
+  { id: 2, name: "Средна", height: 17 },
+  { id: 3, name: "Голяма", height: 36 },
+] as const;
+
 const when = (iso: string) =>
   new Date(iso).toLocaleString("bg-BG", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Sofia" });
 
@@ -38,7 +45,7 @@ export function BoxNowParcel({
   existing: ExistingParcel | null;
   blocker: string | null;
   missingSettings: string[];
-  defaults: BoxNowParcelOptions;
+  defaults: Omit<BoxNowParcelOptions, "size">;
   paidByCard: boolean;
   /** The shop drops parcels in a BOX NOW locker itself (origin "any-apm"); otherwise a courier collects them. */
   dropOff: boolean;
@@ -49,7 +56,9 @@ export function BoxNowParcel({
   const [pending, start] = useTransition();
   const [busy, setBusy] = useState<"create" | "cancel" | "refresh" | null>(null);
   const [error, setError] = useState("");
-  const [o, setO] = useState({ size: defaults.size, weight: String(defaults.weight), cod: defaults.cod.toFixed(2), description: defaults.description });
+  // No size is chosen beforehand: a parcel made with a guessed size does not fit the door the locker opens.
+  const [size, setSize] = useState<BoxNowParcelOptions["size"] | null>(null);
+  const [o, setO] = useState({ weight: String(defaults.weight), cod: defaults.cod.toFixed(2), description: defaults.description });
 
   const act = (kind: NonNullable<typeof busy>, work: () => Promise<{ ok: boolean; error?: string }>) => {
     setError("");
@@ -91,7 +100,10 @@ export function BoxNowParcel({
           </p>
           {existing.trackedAt && <p className="text-xs text-ink-soft">Обновено {when(existing.trackedAt)}</p>}
           {dropOff && existing.events.length <= 1 && (
-            <p className="mt-2 rounded-xl bg-paper px-3 py-2 text-sm">Разпечатай етикета, залепи го на пратката и я остави в автомат на BOX NOW{dropOffLocker ? ` — ${dropOffLocker}` : ""}.</p>
+            <p className="mt-2 rounded-xl bg-paper px-3 py-2 text-sm">
+              Разпечатай етикета, залепи го на пратката и я остави в автомат на BOX NOW{dropOffLocker ? ` — ${dropOffLocker}` : ""}. Ако вратата, която автоматът отвори, е малка за
+              пратката, не я оставяй: откажи пратката оттук и я създай наново с по-голяма клетка.
+            </p>
           )}
           <TrackingTimeline events={existing.events} />
         </div>
@@ -134,17 +146,31 @@ export function BoxNowParcel({
   return (
     <div className="mt-4 rounded-xl border border-line bg-sand/30 p-4">
       <p className="mb-3 font-semibold">Нова пратка BOX NOW</p>
-      <div className="grid grid-cols-3 gap-2">
-        <div>
-          <label htmlFor={`${uid}-size`} className="mb-1 block text-xs font-medium text-ink-soft">
-            Клетка
-          </label>
-          <select id={`${uid}-size`} value={o.size} onChange={(e) => setO({ ...o, size: Number(e.target.value) as 1 | 2 | 3 })} className="field h-10 text-sm">
-            <option value={1}>Малка</option>
-            <option value={2}>Средна</option>
-            <option value={3}>Голяма</option>
-          </select>
-        </div>
+      <p id={`${uid}-size`} className="mb-1 text-xs font-medium text-ink-soft">
+        Клетка в автомата <span className="text-tomato">*</span>
+      </p>
+      <div role="radiogroup" aria-labelledby={`${uid}-size`} className="grid grid-cols-3 gap-2">
+        {SIZES.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            role="radio"
+            aria-checked={size === s.id}
+            onClick={() => {
+              setSize(s.id);
+              setError("");
+            }}
+            className={`rounded-xl border px-2 py-2.5 text-center transition ${size === s.id ? "border-forest bg-forest text-white" : "border-line bg-paper hover:border-ink"}`}
+          >
+            <span className="block text-sm font-semibold">{s.name}</span>
+            <span className={`block text-xs ${size === s.id ? "text-white/85" : "text-ink-soft"}`}>до {s.height} см висока</span>
+          </button>
+        ))}
+      </div>
+      <p className="mt-1.5 text-xs text-ink-soft">
+        Всяка клетка е 45 × 60 см, разликата е във височината. Автоматът отваря врата точно с избрания размер и той не може да се смени след създаването.
+      </p>
+      <div className="mt-3 grid grid-cols-2 gap-2">
         <div>
           <label htmlFor={`${uid}-weight`} className="mb-1 block text-xs font-medium text-ink-soft">
             Тегло (кг)
@@ -175,10 +201,12 @@ export function BoxNowParcel({
           type="button"
           disabled={pending}
           onClick={() => {
-            if (!confirm(`Да създам ли истинска пратка в BOX NOW? Тя се таксува по договора${dropOff ? `; после я оставяш с етикета в автомата${dropOffLocker ? ` на ${dropOffLocker}` : ""}` : " и куриер ще дойде да я вземе"}.`)) return;
+            const chosen = SIZES.find((s) => s.id === size);
+            if (!chosen) return setError("Избери размер на клетката: малка, средна или голяма.");
+            if (!confirm(`Да създам ли истинска пратка в BOX NOW с ${chosen.name.toUpperCase()} клетка (до ${chosen.height} см висока)? Тя се таксува по договора${dropOff ? `; после я оставяш с етикета в автомата${dropOffLocker ? ` на ${dropOffLocker}` : ""}` : " и куриер ще дойде да я вземе"}.`)) return;
             act("create", () =>
               createBoxNowParcelAction(orderId, {
-                size: o.size,
+                size: chosen.id,
                 weight: Number(o.weight.replace(",", ".")),
                 cod: paidByCard ? 0 : Number(o.cod.replace(",", ".")) || 0,
                 description: o.description,

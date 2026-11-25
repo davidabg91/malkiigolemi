@@ -24,8 +24,6 @@ export type BoxNowSettings = {
   senderName: string;
   senderPhone: string;
   senderEmail: string;
-  /** Compartment size unless changed on the parcel: 1 small (8 cm), 2 medium (17 cm), 3 large (36 cm). */
-  defaultSize: 1 | 2 | 3;
   /** Kilograms per parcel unless changed. */
   defaultWeight: number;
   /** Let the customer return the parcel through BOX NOW. */
@@ -40,7 +38,6 @@ export const DEFAULT_BOXNOW_SETTINGS: BoxNowSettings = {
   senderName: COMPANY.name,
   senderPhone: site.phone,
   senderEmail: site.email,
-  defaultSize: 2,
   defaultWeight: 1,
   allowReturn: false,
 };
