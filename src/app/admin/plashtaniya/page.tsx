@@ -39,6 +39,24 @@ export const metadata: Metadata = { title: "Плащания в магазина
 const action = "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-ink-soft hover:bg-sand hover:text-ink";
 const PAGE = 50;
 
+/**
+ * The shop's QR code as an SVG for the page and a large PNG to download. It is always the same picture,
+ * and drawing the PNG takes about as much CPU as the rest of the page together, while this page reloads
+ * itself every few seconds: draw both once per server instance.
+ */
+let storeQr: Promise<[string, string]> | undefined;
+function storeQrCodes() {
+  if (!storeQr) {
+    storeQr = Promise.all([
+      QRCode.toString(STORE_PAY_URL, { type: "svg", margin: 1, errorCorrectionLevel: "M" }),
+      QRCode.toDataURL(STORE_PAY_URL, { width: 1200, margin: 3, errorCorrectionLevel: "M" }),
+    ]);
+    // A failed drawing is not kept: the next look tries again.
+    storeQr.catch(() => (storeQr = undefined));
+  }
+  return storeQr;
+}
+
 const KIND_LABELS: Record<LedgerFilter["kind"], string> = { store: "В магазина", order: "Онлайн поръчки", all: "Всички" };
 const STATUS_LABELS: Record<LedgerFilter["status"], string> = { all: "Всички", paid: "Успешни", refunded: "Върнати", failed: "Неуспешни" };
 
@@ -323,12 +341,11 @@ async function StorePayments({ searchParams }: Pick<PageProps<"/admin/plashtaniy
   };
   const narrowed = Boolean(filter.q || fromDay || toDay || filter.status !== "all");
 
-  const [{ today, month, unseen }, ledger, plain, qrSvg, qrPng] = await Promise.all([
+  const [{ today, month, unseen }, ledger, plain, [qrSvg, qrPng]] = await Promise.all([
     getStorePayments(),
     getLedger(filter),
     getUnsyncedStorePayments(filter),
-    QRCode.toString(STORE_PAY_URL, { type: "svg", margin: 1, errorCorrectionLevel: "M" }),
-    QRCode.toDataURL(STORE_PAY_URL, { width: 1200, margin: 3, errorCorrectionLevel: "M" }),
+    storeQrCodes(),
   ]);
   // Bring Stripe's details up to date for the next look (the page reloads itself), sooner when a payment waits for them.
   after(() => syncStripeIfStale(plain.length ? 10 : 60));
