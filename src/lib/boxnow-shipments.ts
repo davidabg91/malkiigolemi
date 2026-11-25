@@ -19,8 +19,12 @@ import { changeOrderStatus } from "./order-status";
 import { lineName } from "./product-colors";
 import { awaitsCardPayment } from "./stripe";
 
-/** Per-parcel choices the admin can change before creating it. */
+/** Per-parcel choices the admin makes before creating it. */
 export type BoxNowParcelOptions = {
+  /**
+   * The compartment: 1 small (8 cm high), 2 medium (17 cm), 3 large (36 cm). The locker opens a door of exactly
+   * this size when the parcel is dropped in, and BOX NOW lets nobody change it afterwards — so it has no default.
+   */
   size: 1 | 2 | 3;
   weight: number;
   /** Cash on delivery in euro (only for orders not paid by card). */
@@ -40,10 +44,9 @@ export function boxnowBlocker(order: Order): string | null {
   return null;
 }
 
-export function defaultParcel(order: OrderWithItems, s: BoxNowSettings): BoxNowParcelOptions {
+export function defaultParcel(order: OrderWithItems, s: BoxNowSettings): Omit<BoxNowParcelOptions, "size"> {
   const goods = order.items.map((i) => `${lineName(i.name, i.color)}${i.qty > 1 ? ` ×${i.qty}` : ""}`).join(", ");
   return {
-    size: s.defaultSize,
     weight: s.defaultWeight,
     cod: order.payment === "cod" ? order.total / 100 : 0,
     description: `Поръчка ${order.number}: ${goods}`.slice(0, 200),

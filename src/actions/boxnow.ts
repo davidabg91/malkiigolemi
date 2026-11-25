@@ -23,7 +23,6 @@ const settingsSchema = z.object({
   senderName: z.string().trim().min(2, "Въведи име на подателя.").max(100),
   senderPhone: z.string().trim().regex(/^[+\d][\d\s-]{5,19}$/, "Въведи телефон."),
   senderEmail: z.email("Въведи имейл.").max(120),
-  defaultSize: z.enum(["1", "2", "3"]).transform((v) => Number(v) as 1 | 2 | 3),
   defaultWeight: z
     .string()
     .trim()
